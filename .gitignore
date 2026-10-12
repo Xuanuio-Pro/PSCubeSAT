@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PTIT-STEM-CUBE — GITIGNORE CONFIGURATION
+# ── Environment Variables & Credentials (BẢO MẬT: BẮT BUỘC IGNORE) ──────────
+.env
+.env.*
+!.env.example
+!.env.template
+# ── MQTT Server ────────────────────────────────────────────────────────────────
+mqtt-server/
+# ── Node.js / React / Vite Frontend ──────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── Python / FastAPI Backend ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+fastapi-backend/logs/
+fastapi-backend/data/
+
+# ── PlatformIO & Compiler Build Cache ─────────────────────────────────────────
+.pio/
+.pioenvs/
+.piolibdeps/
+build_cache/
+fastapi-backend/build_cache/
+*.bin
+*.elf
+*.hex
+
+# ── Mosquitto MQTT Runtime & Database ─────────────────────────────────────────
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+
+# ── System & IDE Files ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.bak
+
+# Temporary / Scratch files
+scratch/
+tmp/
+*.tmp
