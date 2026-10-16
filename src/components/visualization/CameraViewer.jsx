@@ -1,26 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useTelemetry } from '../../contexts/telemetry-api';
 
 export default function CameraViewer() {
-  const { subscribe } = useSerial();
-  const [currentImage, setCurrentImage] = useState(null);
-  const [gallery, setGallery] = useState([]);
-
-  useEffect(() => {
-    const unsub = subscribe((entry) => {
-      if (entry.type !== 'rx') return;
-      const text = entry.text.trim();
-      // Detect Base64 image data
-      if (text.startsWith('IMG:') || text.startsWith('data:image')) {
-        const imgData = text.startsWith('IMG:')
-          ? `data:image/jpeg;base64,${text.substring(4)}`
-          : text;
-        setCurrentImage(imgData);
-        setGallery(prev => [imgData, ...prev.slice(0, 9)]);
-      }
-    });
-    return unsub;
-  }, [subscribe]);
+  const { history, generation } = useTelemetry();
+  const images = [...new Set(history.filter(frame => frame.imageData).map(frame => frame.imageData))].slice(-10).reverse();
+  const [selected, setSelected] = useState(null);
+  useEffect(() => setSelected(null), [generation]);
+  const currentImage = selected && images.includes(selected) ? selected : images[0] ?? null;
+  const gallery = images;
 
   return (
     <div className="card">
@@ -57,7 +44,7 @@ export default function CameraViewer() {
               Chờ ảnh từ Camera vệ tinh...
             </span>
             <span style={{ fontSize: 'var(--font-size-xs)' }}>
-              Ảnh sẽ hiển thị khi nhận dữ liệu Base64 qua Serial
+              Ảnh hiển thị từ thiết bị và nguồn dữ liệu đã chọn
             </span>
           </div>
         )}
@@ -75,7 +62,7 @@ export default function CameraViewer() {
                 key={i}
                 src={img}
                 alt={`Capture ${i}`}
-                onClick={() => setCurrentImage(img)}
+                onClick={() => setSelected(img)}
                 style={{
                   width: '50px',
                   height: '50px',

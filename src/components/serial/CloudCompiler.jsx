@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useSerial } from '../../contexts/SerialContext';
-import { TOKEN_KEY } from '../../contexts/AuthContext';
+import { useSerial } from '../../contexts/serial-api';
+import { TOKEN_KEY } from '../../contexts/auth-api';
 
-export default function CloudCompiler({ code, labId, onBinaryReady, inline = false, showIcon = true, buttonClassName }) {
+export default function CloudCompiler({ code, labId, onBinaryReady = undefined, inline = false, showIcon = true, buttonClassName = '' }) {
   const [status, setStatus] = useState('idle');
   const [output, setOutput] = useState('');
-  const { print } = useSerial();
+  const { print, boards, selectBoard, saveBuild, isFlashing } = useSerial();
+  const board = boards[labId] || 'esp32';
 
   const appendLog = (msg, type = 'system') => {
     setOutput(prev => prev + msg + '\n');
@@ -19,6 +20,8 @@ export default function CloudCompiler({ code, labId, onBinaryReady, inline = fal
       return;
     }
 
+    if (isFlashing) return;
+    saveBuild(labId, null);
     setStatus('compiling');
     appendLog('🔨 Bắt đầu biên dịch trên Cloud...', 'system');
 
@@ -30,12 +33,13 @@ export default function CloudCompiler({ code, labId, onBinaryReady, inline = fal
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ code, board: 'esp32s3', lab_id: labId }),
+        body: JSON.stringify({ code, board, lab_id: labId, include_binary: !!onBinaryReady }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
+      if (res.ok && data.success) {
+        saveBuild(labId, { artifact: data.artifact, source: code });
         setStatus('success');
         if (data.logs) {
           data.logs.split('\n').forEach(line => appendLog(line, 'rx'));
@@ -45,7 +49,7 @@ export default function CloudCompiler({ code, labId, onBinaryReady, inline = fal
         if (onBinaryReady) onBinaryReady(data.binBase64, data.fileName);
       } else {
         setStatus('error');
-        appendLog(data.message || 'Lỗi biên dịch không xác định', 'error');
+        appendLog(data.message || (typeof data.detail === 'string' ? data.detail : `Lỗi biên dịch (HTTP ${res.status})`), 'error');
         if (data.logs) {
           data.logs.split('\n').forEach(line => appendLog(line, 'error'));
         }
@@ -63,16 +67,24 @@ export default function CloudCompiler({ code, labId, onBinaryReady, inline = fal
     error: '❌',
   };
 
+  const boardSelector = (
+    <select aria-label="Board biên dịch" value={board} disabled={status === 'compiling' || isFlashing}
+      onChange={event => { selectBoard(labId, event.target.value); setStatus('idle'); }}>
+      <option value="esp32s3">ESP32-S3</option>
+      <option value="esp32">ESP32</option>
+    </select>
+  );
+
   if (inline) {
     return (
-      <button
+      <>{boardSelector}<button
         className={`btn btn-sm ${buttonClassName || (status === 'compiling' ? 'btn-secondary' : 'btn-primary')}`}
         onClick={handleCompile}
-        disabled={status === 'compiling'}
+        disabled={status === 'compiling' || isFlashing}
         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
       >
         {showIcon && statusIcon[status]} {status === 'compiling' ? 'Đang biên dịch...' : 'Biên dịch'}
-      </button>
+      </button></>
     );
   }
 
@@ -80,10 +92,11 @@ export default function CloudCompiler({ code, labId, onBinaryReady, inline = fal
     <div className="card">
       <div className="card-header">
         <h3>{statusIcon[status]} Biên dịch (Build)</h3>
+        {boardSelector}
         <button
           className={`btn btn-sm ${status === 'compiling' ? 'btn-secondary' : 'btn-primary'}`}
           onClick={handleCompile}
-          disabled={status === 'compiling'}
+          disabled={status === 'compiling' || isFlashing}
         >
           {status === 'compiling' ? 'Đang biên dịch...' : 'Biên dịch'}
         </button>

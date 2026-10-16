@@ -6,7 +6,22 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'fastapi-backend/data/**']),
+  {
+    files: ['src/**/*.{js,jsx}'],
+    extends: [js.configs.recommended],
+    plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
+    languageOptions: {
+      globals: globals.browser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

@@ -1,0 +1,19 @@
+name: pscubesat-dev
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./fastapi-backend/data/local-services/config:/mosquitto/config:ro
+    restart: unless-stopped

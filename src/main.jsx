@@ -6,12 +6,13 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { SerialProvider } from './contexts/SerialContext'
 import { AuthProvider } from './contexts/AuthContext'
+import { TelemetryProvider } from './contexts/TelemetryContext'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AuthProvider>
       <SerialProvider>
-        <App />
+        <TelemetryProvider><App /></TelemetryProvider>
       </SerialProvider>
     </AuthProvider>
   </BrowserRouter>

@@ -1,0 +1,13 @@
+# ── Mosquitto ACL Configuration ──────────────────────────────────────────────
+
+# Backend Service Account (Full Access)
+user backend-service
+topic readwrite #
+
+# Manual Test Device Account
+user esp32_device
+topic write sensors/esp32_device/telemetry
+topic read cmd/esp32_device/#
+
+# ── AUTO-MANAGED DEVICES (do NOT edit manually) ──
+

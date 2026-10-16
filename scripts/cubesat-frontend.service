@@ -1,0 +1,14 @@
+[Unit]
+Description=CubeSat Frontend Vite Dev Server
+After=network.target
+
+[Service]
+User=sonar2
+WorkingDirectory=/home/sonar2/Desktop/PTIT-STEM-CUBE
+ExecStart=/usr/bin/npm run dev
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=development
+
+[Install]
+WantedBy=multi-user.target

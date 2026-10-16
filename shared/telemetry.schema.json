@@ -1,0 +1,333 @@
+{
+  "additionalProperties": false,
+  "description": "The versioned wire/store contract. Missing measurements remain null.",
+  "properties": {
+    "type": {
+      "const": "telemetry",
+      "default": "telemetry",
+      "title": "Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "device_id": {
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "source": {
+      "default": "hardware",
+      "enum": [
+        "hardware",
+        "simulator",
+        "demo"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "timestamp": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timestamp"
+    },
+    "received_at": {
+      "minimum": 0.0,
+      "title": "Received At",
+      "type": "number"
+    },
+    "seq": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Seq"
+    },
+    "accX": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accx"
+    },
+    "accY": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accy"
+    },
+    "accZ": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accz"
+    },
+    "gyroX": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gyrox"
+    },
+    "gyroY": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gyroy"
+    },
+    "gyroZ": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gyroz"
+    },
+    "magX": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Magx"
+    },
+    "magY": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Magy"
+    },
+    "magZ": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Magz"
+    },
+    "temperatureC": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temperaturec"
+    },
+    "voltageV": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Voltagev"
+    },
+    "humidityPct": {
+      "anyOf": [
+        {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Humiditypct"
+    },
+    "pressureHpa": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pressurehpa"
+    },
+    "gpsLat": {
+      "anyOf": [
+        {
+          "maximum": 90.0,
+          "minimum": -90.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gpslat"
+    },
+    "gpsLon": {
+      "anyOf": [
+        {
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gpslon"
+    },
+    "gpsAlt": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gpsalt"
+    },
+    "uptimeMs": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Uptimems"
+    },
+    "ledOn": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ledon"
+    },
+    "imageData": {
+      "anyOf": [
+        {
+          "maxLength": 60000,
+          "pattern": "^data:image/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Imagedata"
+    }
+  },
+  "required": [
+    "type",
+    "schema_version",
+    "device_id",
+    "source",
+    "timestamp",
+    "received_at",
+    "seq",
+    "accX",
+    "accY",
+    "accZ",
+    "gyroX",
+    "gyroY",
+    "gyroZ",
+    "magX",
+    "magY",
+    "magZ",
+    "temperatureC",
+    "voltageV",
+    "humidityPct",
+    "pressureHpa",
+    "gpsLat",
+    "gpsLon",
+    "gpsAlt",
+    "uptimeMs",
+    "ledOn",
+    "imageData"
+  ],
+  "title": "TelemetryFrame",
+  "type": "object"
+}

@@ -1,0 +1,6 @@
+[
+  {"input": {"device_id": "cube_test", "acc_x": 0, "acc_y": 0, "acc_z": 0, "battery_v": 0, "temp": 0, "lat": 0, "lng": 0, "timestamp": 0}, "expected": {"accX": 0, "accY": 0, "accZ": 0, "voltageV": 0, "temperatureC": 0, "gpsLat": 0, "gpsLon": 0, "timestamp": 0, "gyroX": null}},
+  {"input": {"device_id": "cube_test", "acc": {"x": 1, "y": 2}, "gyro": {"z": 3}, "gps": {"lat": 21, "lon": 105, "alt": 0}, "temperature": 25, "humidity": 50}, "expected": {"accX": 1, "accY": 2, "accZ": null, "gyroZ": 3, "gpsAlt": 0, "temperatureC": 25, "humidityPct": 50, "voltageV": null}},
+  {"input": {"device_id": "cube_test", "acc": {"x": null}, "acc_x": 9, "acc_y": 0, "temperature": 0, "temperatureC": 99}, "expected": {"accX": null, "accY": 0, "temperatureC": 0}},
+  {"input": {"device_id": "cube_test", "uptime_ms": 1000, "led_on": false, "seq": 0}, "expected": {"uptimeMs": 1000, "ledOn": false, "seq": 0, "temperatureC": null, "accZ": null}}
+]

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { request } from '../../contexts/AuthContext';
+import { request } from '../../contexts/auth-api';
 
 export default function DeviceManager() {
   const [devices, setDevices] = useState([]);

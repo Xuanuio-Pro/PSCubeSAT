@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import TabPanel from '../common/TabPanel';
 import BlocklyEditor from './BlocklyEditor';
 import MonacoEditor from './MonacoEditor';
@@ -21,7 +20,7 @@ export default function IDEPanel({ labId, code, setCode, variant = 'default', sh
   const toolbar = (
     <div style={{ display: 'flex', gap: '12px' }}>
       <CloudCompiler code={code} labId={labId} inline={true} />
-      <WebFlasher inline={true} />
+      <WebFlasher code={code} labId={labId} inline={true} />
     </div>
   );
 

@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 
 const DOCS = import.meta.glob('/src/data/docs/*.md', { query: '?raw', import: 'default' });
 
-export default function DocViewer({ docPath, content: directContent }) {
+export default function DocViewer({ docPath, content: directContent = '' }) {
   const [content, setContent] = useState(directContent || '');
   const [loading, setLoading] = useState(!directContent);
 

@@ -1,24 +1,5 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-
-const AuthContext = createContext(null);
-export const TOKEN_KEY = 'access_token';
-
-export async function request(path, options = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.message || data.detail || 'Đã có lỗi xảy ra, vui lòng thử lại.');
-  }
-  return data;
-}
+import { useEffect, useState, useCallback } from 'react';
+import { AuthContext, TOKEN_KEY, request } from './auth-api';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -55,6 +36,16 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  const loginGoogle = useCallback(async (credential) => {
+    const data = await request('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    });
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await request('/api/auth/logout', { method: 'POST' });
@@ -83,16 +74,10 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, login, register, logout, isAuthenticated: !!user,
+      user, loading, login, loginGoogle, register, logout, isAuthenticated: !!user,
       changePassword, markVideoWatched, markDocViewed,
     }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
 }

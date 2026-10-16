@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { SerialProvider } from './contexts/SerialContext';
+import TelemetryControls from './components/groundstation/TelemetryControls';
 import Header from './components/layout/Header';
 import LoadingScreen from './components/common/LoadingScreen';
 import NotFoundPage from './pages/NotFoundPage';
@@ -22,12 +22,13 @@ export default function App() {
   const isLabRoute = /^\/lab[0-8]$/.test(normalizedPath);
 
   return (
-    <SerialProvider>
+    <>
       <Suspense fallback={<LoadingScreen />}>
         <div className="app-container">
           {!isAuthRoute && !isNotFoundRoute && <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>}
           {!isAuthRoute && !isNotFoundRoute && <Header />}
           <main id="main-content" className={isAuthRoute || isNotFoundRoute ? '' : `main-content${isLabRoute ? ' is-lab-route' : ''}`}>
+            {!isAuthRoute && !isNotFoundRoute && !isLabRoute && <TelemetryControls />}
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -41,6 +42,6 @@ export default function App() {
           </main>
         </div>
       </Suspense>
-    </SerialProvider>
+    </>
   );
 }

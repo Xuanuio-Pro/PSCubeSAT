@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, request } from '../contexts/AuthContext';
+import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/labs';
 import DeviceManager from '../components/profile/DeviceManager';
 

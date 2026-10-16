@@ -20,9 +20,7 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, minHeight = '40
 
       // Build includes
       const includes = new Set(['#include <Arduino.h>', '#include "PTITCube.h"']);
-      const globals = [];
       const setupLines = [];
-      const loopLines = [];
 
       allBlocks.forEach(block => {
         const gen = block.type;

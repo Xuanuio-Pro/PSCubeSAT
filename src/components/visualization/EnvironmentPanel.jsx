@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useTelemetry } from '../../contexts/telemetry-api';
 
 const MAX_POINTS = 60;
 
 // ---------- helpers ----------
-function makeSparkOption({ title, unit, color, data, min, max, markLines = [] }) {
+function makeSparkOption({ title, unit, color, data, min = undefined, max = undefined, markLines = [] }) {
   return {
     backgroundColor: 'transparent',
     grid: { top: 38, right: 12, bottom: 12, left: 12, containLabel: true },
@@ -35,8 +34,8 @@ function makeSparkOption({ title, unit, color, data, min, max, markLines = [] })
     },
     yAxis: {
       type: 'value',
-      min: min ?? ((v) => Math.floor(v.min - 2)),
-      max: max ?? ((v) => Math.ceil(v.max + 2)),
+      min: min ?? ((v) => Number.isFinite(v.min) ? Math.floor(v.min - 2) : 0),
+      max: max ?? ((v) => Number.isFinite(v.max) ? Math.ceil(v.max + 2) : 1),
       axisLine: { lineStyle: { color: '#30363d' } },
       axisLabel: { color: '#8b949e', fontSize: 9, formatter: `{value}` },
       splitLine: { lineStyle: { color: '#1a1f2e' } },
@@ -77,53 +76,15 @@ function makeSparkOption({ title, unit, color, data, min, max, markLines = [] })
   };
 }
 
-function makeDemoSeries(base, amplitude, length = 30) {
-  return Array.from({ length }, (_, i) => ({
-    time: i,
-    value: base + Math.sin(i * 0.35) * amplitude + (Math.random() - 0.5) * amplitude * 0.4,
-  }));
-}
-
-// ---------- Component ----------
 export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
-  const { subscribe } = useSerial();
-  const tickRef = useRef(0);
-
-  const [temp, setTemp] = useState(() => makeDemoSeries(28, 3));
-  const [hum, setHum] = useState(() => makeDemoSeries(55, 8));
-  const [pres, setPres] = useState(() => makeDemoSeries(1013, 5));
-
-  // Latest values for badge display
-  const latest = {
-    temp: temp[temp.length - 1]?.value ?? 0,
-    hum:  hum[hum.length - 1]?.value ?? 0,
-    pres: pres[pres.length - 1]?.value ?? 0,
-  };
-
-  useEffect(() => {
-    const push = (setter, value, tick) =>
-      setter(prev => {
-        const next = [...prev, { time: tick, value }];
-        return next.length > maxPoints ? next.slice(-maxPoints) : next;
-      });
-
-    const unsub = subscribe((entry) => {
-      if (entry.type !== 'rx') return;
-      try {
-        const text = entry.text.trim();
-        if (!text.startsWith('{')) return;
-        const json = JSON.parse(text);
-        tickRef.current++;
-        const t = tickRef.current;
-        if (json.temp_c     !== undefined) push(setTemp, json.temp_c, t);
-        if (json.temperature !== undefined) push(setTemp, json.temperature, t);
-        if (json.humidity   !== undefined) push(setHum, json.humidity, t);
-        if (json.pressure   !== undefined) push(setPres, json.pressure, t);
-        if (json.baro_hpa   !== undefined) push(setPres, json.baro_hpa, t);
-      } catch { /* not JSON */ }
-    });
-    return unsub;
-  }, [subscribe, maxPoints]);
+  const { latest: frame, history, status } = useTelemetry();
+  const series = key => history.filter(sample => sample[key] !== null).slice(-maxPoints)
+    .map(sample => ({ time: new Date(sample.received_at * 1000).toLocaleTimeString(), value: sample[key] }));
+  const temp = series('temperatureC');
+  const hum = series('humidityPct');
+  const pres = series('pressureHpa');
+  const latest = { temp: frame?.temperatureC, hum: frame?.humidityPct, pres: frame?.pressureHpa };
+  const display = value => value == null ? '—' : value.toFixed(1);
 
   const charts = [
     {
@@ -172,13 +133,13 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
   ];
 
   const badges = [
-    { label: 'Nhiệt độ',   value: latest.temp.toFixed(1), unit: '°C',   color: '#f85149', emoji: '🌡️' },
-    { label: 'Độ ẩm',      value: latest.hum.toFixed(1),  unit: '%RH',  color: '#388bfd', emoji: '💧' },
-    { label: 'Áp suất',    value: latest.pres.toFixed(1), unit: 'hPa',  color: '#a371f7', emoji: '🔵' },
+    { label: 'Nhiệt độ',   value: display(latest.temp), unit: '°C',   color: '#f85149', emoji: '🌡️' },
+    { label: 'Độ ẩm',      value: display(latest.hum),  unit: '%RH',  color: '#388bfd', emoji: '💧' },
+    { label: 'Áp suất',    value: display(latest.pres), unit: 'hPa',  color: '#a371f7', emoji: '🔵' },
   ];
 
   return (
-    <div className="card environment-panel">
+    <div className="card environment-panel" style={{ opacity: status === 'live' ? 1 : 0.65 }}>
       {/* Header */}
       <div className="card-header">
         <h3>🌍 Cảm biến Môi trường</h3>

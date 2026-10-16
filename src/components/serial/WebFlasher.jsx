@@ -1,36 +1,43 @@
 import { useState } from 'react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useSerial } from '../../contexts/serial-api';
+import { TOKEN_KEY } from '../../contexts/auth-api';
+import { downloadFlashFiles, writeArtifact } from './flash-artifact';
 
-export default function WebFlasher({ inline = false, showIcon = true, buttonClassName, label = 'Nạp Code' }) {
-  const { isConnected, print } = useSerial();
+export default function WebFlasher({ code = '', labId = undefined, inline = false, showIcon = true, buttonClassName = '', label = 'Nạp Code' }) {
+  const { builds, boards, isFlashing, withFlashPort, print } = useSerial();
+  const build = builds[labId];
+  const ready = !!build && build.source === code && build.artifact?.board === (boards[labId] || 'esp32');
   const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
+  const [completedId, setCompletedId] = useState(null);
+  const finished = status === 'done' && ready && completedId === build?.artifact?.id;
 
   const handleFlash = async () => {
-    if (!isConnected) {
-      alert('Vui lòng kết nối Serial trước khi nạp code.');
-      return;
-    }
-
+    if (!ready || isFlashing) return;
     setStatus('flashing');
     setProgress(0);
-    if (print) print('⚡ Bắt đầu nạp Firmware xuống vệ tinh...', 'system');
-
-    // Simulate flashing progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setStatus('done');
-          if (print) print('✅ Firmware đã được nạp thành công!', 'system');
-          return 100;
+    try {
+      await withFlashPort(async port => {
+        print('Đang kiểm tra và tải bộ firmware...', 'system');
+        const files = await downloadFlashFiles(build.artifact, code, localStorage.getItem(TOKEN_KEY));
+        const { ESPLoader, Transport } = await import('esptool-js');
+        const transport = new Transport(port);
+        const loader = new ESPLoader({ transport, baudrate: 115200,
+          terminal: { clean() {}, write: text => print(text, 'system'), writeLine: text => print(text, 'system') } });
+        try {
+          print('Đang kết nối bootloader. Nếu không kết nối được, giữ BOOT và nhấn RESET.', 'system');
+          await writeArtifact(loader, build.artifact, files, setProgress);
+          print('Firmware đã ghi và xác minh hash trên chip. Đang mở lại Serial...', 'system');
+        } finally {
+          await transport.disconnect().catch(() => {});
         }
-        if (print && Math.random() > 0.7) {
-          print(`Writing at 0x${Math.floor(Math.random()*100000).toString(16)}... (${Math.round(prev)}%)`, 'rx');
-        }
-        return prev + Math.random() * 15;
       });
-    }, 300);
+      setCompletedId(build.artifact.id);
+      setStatus('done');
+    } catch (error) {
+      setStatus('error');
+      print(`Nạp thất bại: ${error.message}`, 'error');
+    }
   };
 
   if (inline) {
@@ -38,10 +45,10 @@ export default function WebFlasher({ inline = false, showIcon = true, buttonClas
       <button
         className={`btn btn-sm ${buttonClassName || (status === 'flashing' ? 'btn-secondary' : 'btn-success')}`}
         onClick={handleFlash}
-        disabled={status === 'flashing'}
+        disabled={!ready || isFlashing} title={!ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB'}
         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
       >
-        {showIcon && '⚡'} {status === 'flashing' ? `Đang nạp... ${Math.round(progress)}%` : status === 'done' ? `${showIcon ? '✅ ' : ''}Nạp xong` : label}
+        {showIcon && '⚡'} {status === 'flashing' ? `Đang nạp... ${Math.round(progress)}%` : finished ? `${showIcon ? '✅ ' : ''}Nạp xong` : label}
       </button>
     );
   }
@@ -53,12 +60,12 @@ export default function WebFlasher({ inline = false, showIcon = true, buttonClas
         <button
           className={`btn btn-sm ${status === 'flashing' ? 'btn-secondary' : 'btn-success'}`}
           onClick={handleFlash}
-          disabled={status === 'flashing'}
+          disabled={!ready || isFlashing} title={!ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB'}
         >
-          {status === 'flashing' ? 'Đang nạp...' : status === 'done' ? '✅ Hoàn tất' : 'Nạp code'}
+          {status === 'flashing' ? 'Đang nạp...' : finished ? '✅ Hoàn tất' : 'Nạp code'}
         </button>
       </div>
-      {status !== 'idle' && (
+      {(status === 'flashing' || status === 'error' || finished) && (
         <div className="card-body">
           <div style={{
             width: '100%',
@@ -70,7 +77,7 @@ export default function WebFlasher({ inline = false, showIcon = true, buttonClas
             <div style={{
               width: `${Math.min(progress, 100)}%`,
               height: '100%',
-              background: status === 'done' ? 'var(--accent-green)' : 'var(--gradient-primary)',
+              background: finished ? 'var(--accent-green)' : 'var(--gradient-primary)',
               borderRadius: 'var(--radius-full)',
               transition: 'width 0.3s ease',
             }} />
@@ -81,9 +88,9 @@ export default function WebFlasher({ inline = false, showIcon = true, buttonClas
             color: 'var(--text-secondary)',
             fontFamily: 'var(--font-mono)',
           }}>
-            {status === 'done'
-              ? '✅ Firmware đã được nạp thành công!'
-              : `Đang nạp... ${Math.round(Math.min(progress, 100))}%`
+            {finished
+              ? '✅ Firmware đã được ghi và xác minh.'
+              : status === 'error' ? 'Nạp thất bại — xem log Serial.' : `Đang nạp... ${Math.round(Math.min(progress, 100))}%`
             }
           </div>
         </div>

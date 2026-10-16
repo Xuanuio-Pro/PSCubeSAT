@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSerial } from '../../contexts/SerialContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSerial } from '../../contexts/serial-api';
+import { useAuth } from '../../contexts/auth-api';
 import { getLabBySlug } from '../../data/labs';
 import logoSvg from '../../assets/logo.svg';
 import {

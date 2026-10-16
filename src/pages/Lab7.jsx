@@ -3,7 +3,6 @@ import { getLabById } from '../data/labs';
 import LabLayout from '../components/layout/LabLayout';
 import IDEPanel from '../components/editor/IDEPanel';
 import LabPracticeActions from '../components/editor/LabPracticeActions';
-import SerialMonitor from '../components/serial/SerialMonitor';
 import AttitudeViewer3D from '../components/visualization/AttitudeViewer3D';
 import GPSMap from '../components/visualization/GPSMap';
 import VoltageChart from '../components/visualization/VoltageChart';

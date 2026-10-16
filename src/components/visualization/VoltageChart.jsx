@@ -1,42 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useTelemetry } from '../../contexts/telemetry-api';
 
 export default function VoltageChart({ maxPoints = 60 }) {
-  const { subscribe } = useSerial();
-  const [data, setData] = useState([]);
-  const timeRef = useRef(0);
-
-  useEffect(() => {
-    const unsub = subscribe((entry) => {
-      if (entry.type !== 'rx') return;
-      try {
-        // Try to parse JSON with battery_v or temp
-        const text = entry.text.trim();
-        if (text.startsWith('{')) {
-          const json = JSON.parse(text);
-          if (json.battery_v !== undefined) {
-            timeRef.current++;
-            setData(prev => {
-              const next = [...prev, { time: timeRef.current, value: json.battery_v }];
-              return next.length > maxPoints ? next.slice(-maxPoints) : next;
-            });
-          }
-        }
-      } catch { /* not JSON */ }
-    });
-    return unsub;
-  }, [subscribe, maxPoints]);
-
-  // Demo data if no real serial
-  useEffect(() => {
-    if (data.length > 0) return;
-    const demo = [];
-    for (let i = 0; i < 30; i++) {
-      demo.push({ time: i, value: 3.7 + Math.sin(i * 0.3) * 0.3 + (Math.random() - 0.5) * 0.1 });
-    }
-    setData(demo);
-  }, []);
+  const { history, status } = useTelemetry();
+  const data = history.filter(frame => frame.voltageV !== null).slice(-maxPoints)
+    .map(frame => ({ time: new Date(frame.received_at * 1000).toLocaleTimeString(), value: frame.voltageV }));
 
   const option = {
     backgroundColor: 'transparent',
@@ -106,7 +74,8 @@ export default function VoltageChart({ maxPoints = 60 }) {
   };
 
   return (
-    <div className="card">
+    <div className="card" style={{ opacity: status === 'live' ? 1 : 0.65 }}>
+      {data.length === 0 && <p className="telemetry-empty">Chờ điện áp từ nguồn đã chọn</p>}
       <ReactECharts option={option} style={{ height: '300px' }} notMerge={true} />
     </div>
   );

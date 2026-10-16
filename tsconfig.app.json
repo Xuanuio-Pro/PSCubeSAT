@@ -4,9 +4,12 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
-    "types": ["vite/client"],
+    "types": ["vite/client", "w3c-web-serial"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true,
+    "strict": false,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -22,5 +25,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
 }

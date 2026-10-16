@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import { EyeIcon } from '../components/common/AuthIcons';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/auth-api';
+import GoogleSignIn from '../components/common/GoogleSignIn';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -14,14 +15,16 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
 
   function validate() {
+    /** @type {Record<string, string>} */
     const next = {};
     if (!fullName.trim()) next.fullName = 'Vui lòng nhập họ và tên';
-    if (!EMAIL_PATTERN.test(email)) next.email = 'Email không hợp lệ';
+    if (!EMAIL_PATTERN.test(email.trim())) next.email = 'Email không hợp lệ';
     if (password.length < 6) next.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    if (new TextEncoder().encode(password).length > 72) next.password = 'Mật khẩu không được vượt quá 72 byte UTF-8';
     if (confirmPassword !== password) next.confirmPassword = 'Mật khẩu không khớp';
     return next;
   }
@@ -47,6 +50,8 @@ export default function SignUpPage() {
     <AuthLayout>
       <h1 className="auth-title">Tạo tài khoản mới</h1>
       <p className="auth-subtitle">Vui lòng điền thông tin để bắt đầu.</p>
+
+      <GoogleSignIn signup />
 
       <div className="auth-divider">Hoặc</div>
 

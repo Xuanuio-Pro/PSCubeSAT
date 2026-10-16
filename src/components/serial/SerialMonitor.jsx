@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useSerial } from '../../contexts/serial-api';
 
+/** @param {{height?: number|string, variant?: string}} props */
 export default function SerialMonitor({ height = 350, variant = 'default' }) {
   const { isConnected, lines, send, clearLines, connect } = useSerial();
   const [input, setInput] = useState('');

@@ -1,0 +1,15 @@
+[Unit]
+Description=CubeSat Compiler Backend Node Server
+After=network.target
+
+[Service]
+User=sonar2
+WorkingDirectory=/home/sonar2/Desktop/PTIT-STEM-CUBE/compiler-backend
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3001
+
+[Install]
+WantedBy=multi-user.target

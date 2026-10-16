@@ -1,9 +1,13 @@
-import { useState, useCallback } from 'react';
-import { ResponsiveGridLayout } from 'react-grid-layout';
+import { useState } from 'react';
+import { useTelemetry } from '../../contexts/telemetry-api';
+import { useSerial } from '../../contexts/serial-api';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import VoltageChart from '../visualization/VoltageChart';
 import GPSMap from '../visualization/GPSMap';
 import AttitudeViewer3D from '../visualization/AttitudeViewer3D';
 import SerialMonitor from '../serial/SerialMonitor';
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const WIDGET_TYPES = [
   { type: 'chart', label: '📈 Đồ thị', icon: '📈', w: 6, h: 4 },
@@ -17,10 +21,11 @@ const WIDGET_TYPES = [
 ];
 
 function GaugeWidget({ config }) {
-  const value = config?.value ?? 72;
-  const max = config?.max ?? 100;
-  const label = config?.label ?? 'Battery';
-  const pct = Math.min((value / max) * 100, 100);
+  const { latest } = useTelemetry();
+  const value = latest?.voltageV ?? null;
+  const max = config?.max ?? 4.2;
+  const label = config?.label ?? 'Pin (V)';
+  const pct = value === null ? 0 : Math.max(0, Math.min((value / max) * 100, 100));
   const color = pct > 60 ? 'var(--accent-green)' : pct > 30 ? 'var(--accent-orange)' : 'var(--accent-red)';
 
   return (
@@ -37,7 +42,7 @@ function GaugeWidget({ config }) {
           boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
         }}>
           <span style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color, textShadow: `0 0 10px ${color}40` }}>
-            {value.toFixed(1)}
+            {value === null ? '—' : value.toFixed(1)}
           </span>
         </div>
       </div>
@@ -47,9 +52,11 @@ function GaugeWidget({ config }) {
 }
 
 function AlertWidget({ config }) {
-  const [active, setActive] = useState(false);
+  const { latest } = useTelemetry();
+  const temperature = latest?.temperatureC ?? null;
   const label = config?.label ?? 'Nhiệt độ cao';
   const threshold = config?.threshold ?? 45;
+  const active = temperature !== null && temperature > threshold;
 
   return (
     <div style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -59,17 +66,16 @@ function AlertWidget({ config }) {
         boxShadow: active ? '0 0 25px rgba(248,81,73,0.6)' : 'inset 0 4px 8px rgba(0,0,0,0.4)',
         animation: active ? 'pulse-orange 1s ease-in-out infinite' : 'none',
         border: active ? '2px solid rgba(255,255,255,0.8)' : '2px solid var(--border-subtle)',
-        cursor: 'pointer', transition: 'all 0.3s'
+        transition: 'all 0.3s'
       }}
-        onClick={() => setActive(!active)}
       />
-      <div style={{ fontSize: '1rem', fontWeight: 700, color: active ? 'var(--accent-red)' : 'var(--text-heading)' }}>{active ? '⚠️ NGUY HIỂM' : `🚨 ${label}`}</div>
+      <div style={{ fontSize: '1rem', fontWeight: 700, color: active ? 'var(--accent-red)' : 'var(--text-heading)' }}>{temperature === null ? 'Chờ nhiệt độ' : active ? '⚠️ NGUY HIỂM' : `🚨 ${label}`}</div>
       <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>Ngưỡng cảnh báo: &gt; {threshold}°C</div>
     </div>
   );
 }
 
-function ButtonWidget({ config, onSend }) {
+function ButtonWidget({ config, onSend = undefined }) {
   const label = config?.label ?? 'Chụp ảnh';
   const command = config?.command ?? 'capture';
 
@@ -77,6 +83,7 @@ function ButtonWidget({ config, onSend }) {
     <div style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <button
         className="btn btn-primary"
+        disabled={!onSend}
         onClick={() => onSend?.(command)}
         style={{ width: '85%', padding: '16px', fontSize: '1rem', borderRadius: '12px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)', transition: 'all 0.2s' }}
       >
@@ -90,6 +97,8 @@ function ButtonWidget({ config, onSend }) {
 }
 
 export default function DashboardBuilder() {
+  const { mode } = useTelemetry();
+  const { isConnected, send } = useSerial();
   const [widgets, setWidgets] = useState([
     { i: '1', type: 'chart', title: 'Điện áp Pin', x: 0, y: 0, w: 6, h: 4, config: {} },
     { i: '2', type: 'gauge', title: 'Battery Level', x: 6, y: 0, w: 3, h: 3, config: { value: 3.72, max: 4.2, label: 'Pin (V)' } },
@@ -107,7 +116,8 @@ export default function DashboardBuilder() {
   };
 
   // RGL triggers this when an external item is dropped
-  const onDrop = (layout, layoutItem, _event) => {
+  const onDrop = (_layout, layoutItem, _event) => {
+    if (!layoutItem) return;
     const type = _event.dataTransfer.getData('text/plain');
     if (!type) {
       setDroppingItem(null);
@@ -157,7 +167,7 @@ export default function DashboardBuilder() {
       case '3d': return <div style={{ height: '100%', minHeight: '200px' }}><AttitudeViewer3D height="100%" /></div>;
       case 'gauge': return <GaugeWidget config={widget.config} />;
       case 'alert': return <AlertWidget config={widget.config} />;
-      case 'button': return <ButtonWidget config={widget.config} />;
+      case 'button': return <ButtonWidget config={widget.config} onSend={mode === 'serial' && isConnected ? send : undefined} />;
       case 'terminal': return <SerialMonitor height="100%" />;
       case 'image': return (
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>
@@ -226,7 +236,7 @@ export default function DashboardBuilder() {
           onLayoutChange={onLayoutChange}
           onDrop={onDrop}
           isDroppable={true}
-          droppingItem={droppingItem}
+          droppingItem={droppingItem ? { ...droppingItem, x: 0, y: 0 } : undefined}
           onDropDragOver={() => ({ w: droppingItem?.w || 6, h: droppingItem?.h || 4 })}
           draggableHandle=".dashboard-widget-header"
           resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 's', 'n']}

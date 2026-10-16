@@ -1,0 +1,70 @@
+services:
+
+  # ── Cloudflare Tunnel Service ────────────────────────────────────────────────
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   environment:
+  #     - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+  #   command: tunnel --no-autoupdate run
+  #   depends_on:
+  #     - frontend
+  #   networks:
+  #     - cubesat_net
+
+  # ── React + Vite Frontend (Nginx Proxy) ──────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - fastapi
+    networks:
+      cubesat_net:
+        aliases:
+          - nginx
+
+  # ── FastAPI Backend ───────────────────────────────────────────────────────────
+  fastapi:
+    build:
+      context: ./fastapi-backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    ports:
+      - "8003:8000"
+    env_file:
+      - ./fastapi-backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=https://cubesat.p-tech.xyz,http://localhost:5173,http://localhost:8003
+    volumes:
+      - ./fastapi-backend/app:/app/app
+      - ./fastapi-backend/build_cache:/app/build_cache
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+    networks:
+      - cubesat_net
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - cubesat_net
+
+networks:
+  cubesat_net:
+    driver: bridge
+
+volumes:
+  redis_data:

@@ -1,17 +1,17 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Text } from '@react-three/drei';
-import { useSerial } from '../../contexts/SerialContext';
+import { useTelemetry } from '../../contexts/telemetry-api';
 import * as THREE from 'three';
 
 function CubeSatModel({ rotation }) {
-  const meshRef = useRef();
+  const meshRef = useRef(null);
 
   useFrame(() => {
     if (meshRef.current && rotation) {
-      meshRef.current.rotation.x = THREE.MathUtils.degToRad(rotation.pitch || 0);
+      meshRef.current.rotation.x = THREE.MathUtils.degToRad(rotation.roll ?? 0);
       meshRef.current.rotation.y = THREE.MathUtils.degToRad(rotation.yaw || 0);
-      meshRef.current.rotation.z = THREE.MathUtils.degToRad(rotation.roll || 0);
+      meshRef.current.rotation.z = THREE.MathUtils.degToRad(rotation.pitch ?? 0);
     }
   });
 
@@ -56,8 +56,8 @@ function CubeSatModel({ rotation }) {
       </mesh>
 
       {/* Camera lens */}
-      <mesh position={[0, 0, 0.52]}>
-        <cylinderGeometry args={[0.12, 0.15, 0.06, 16]} rotation={[Math.PI / 2, 0, 0]} />
+      <mesh position={[0, 0, 0.52]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.15, 0.06, 16]} />
         <meshStandardMaterial color="#333" metalness={0.9} />
       </mesh>
       <mesh position={[0, 0, 0.55]}>
@@ -77,8 +77,8 @@ function AxisHelper() {
   return (
     <group>
       {/* X axis - Red */}
-      <mesh position={[1.5, 0, 0]}>
-        <cylinderGeometry args={[0.01, 0.01, 3, 4]} rotation={[0, 0, Math.PI / 2]} />
+      <mesh position={[1.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.01, 0.01, 3, 4]} />
         <meshBasicMaterial color="#f85149" />
       </mesh>
       <Text position={[3.2, 0, 0]} fontSize={0.15} color="#f85149">X (Roll)</Text>
@@ -100,64 +100,23 @@ function AxisHelper() {
   );
 }
 
+/** @param {{height?: number|string}} props */
 export default function AttitudeViewer3D({ height = 350 }) {
-  const { subscribe } = useSerial();
-  const [rotation, setRotation] = useState({ pitch: 0, roll: 0, yaw: 0 });
-
-  // Parse IMU data from serial
-  useEffect(() => {
-    const unsub = subscribe((entry) => {
-      if (entry.type !== 'rx') return;
-      try {
-        const text = entry.text.trim();
-        if (text.startsWith('{')) {
-          const json = JSON.parse(text);
-          if (json.gyro_x !== undefined) {
-            setRotation(prev => ({
-              pitch: prev.pitch + json.gyro_x * 0.1,
-              roll: prev.roll + json.gyro_y * 0.1,
-              yaw: prev.yaw + json.gyro_z * 0.1,
-            }));
-          }
-          if (json.acc_x !== undefined) {
-            const pitch = Math.atan2(json.acc_y, json.acc_z) * 180 / Math.PI;
-            const roll = Math.atan2(-json.acc_x, Math.sqrt(json.acc_y * json.acc_y + json.acc_z * json.acc_z)) * 180 / Math.PI;
-            setRotation(prev => ({ ...prev, pitch, roll }));
-          }
-        }
-      } catch { /* not JSON */ }
-    });
-    return unsub;
-  }, [subscribe]);
-
-  // Demo animation if no serial data
-  useEffect(() => {
-    let frame;
-    let t = 0;
-    const animate = () => {
-      t += 0.02;
-      setRotation({
-        pitch: Math.sin(t * 0.7) * 15,
-        roll: Math.sin(t * 0.5) * 20,
-        yaw: t * 10 % 360,
-      });
-      frame = requestAnimationFrame(animate);
-    };
-    animate();
-    return () => cancelAnimationFrame(frame);
-  }, []);
+  const { attitude: rotation, attitudeReceivedAt, now, status } = useTelemetry();
+  const imuFresh = attitudeReceivedAt !== null && now - attitudeReceivedAt <= 5000;
+  const display = value => value == null ? '—' : value.toFixed(1);
 
   return (
-    <div className="card">
+    <div className="card" style={{ opacity: status === 'live' && imuFresh ? 1 : 0.65 }}>
       <div className="card-header">
-        <h3>🛰️ 3D Attitude Viewer</h3>
+        <h3>🛰️ 3D Attitude Viewer {!imuFresh && <small>· {attitudeReceivedAt === null ? 'chờ IMU' : 'IMU stale'}</small>}</h3>
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
-          <span style={{ color: 'var(--accent-red)' }}>P: {rotation.pitch.toFixed(1)}°</span>
-          <span style={{ color: 'var(--accent-green)' }}>R: {rotation.roll.toFixed(1)}°</span>
-          <span style={{ color: 'var(--accent-blue)' }}>Y: {rotation.yaw.toFixed(1)}°</span>
+          <span style={{ color: 'var(--accent-red)' }}>P: {display(rotation.pitch)}°</span>
+          <span style={{ color: 'var(--accent-green)' }}>R: {display(rotation.roll)}°</span>
+          <span style={{ color: 'var(--accent-blue)' }}>Y tương đối: {display(rotation.yaw)}°</span>
         </div>
       </div>
-      <div style={{ height: `${height}px`, background: '#070b14' }}>
+      <div style={{ height, background: '#070b14' }}>
         <Canvas camera={{ position: [3, 2, 3], fov: 50 }}>
           <ambientLight intensity={0.4} />
           <directionalLight position={[5, 5, 5]} intensity={0.8} />

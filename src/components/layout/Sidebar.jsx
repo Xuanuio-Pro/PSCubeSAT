@@ -1,9 +1,8 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { LABS } from '../../data/labs';
 import logoSvg from '../../assets/logo.svg';
 
 export default function Sidebar() {
-  const location = useLocation();
 
   return (
     <aside className="sidebar">

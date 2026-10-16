@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import CourseSidebar from './CourseSidebar';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth-api';
+import TelemetryControls from '../groundstation/TelemetryControls';
 
-function LabStateTitle({ step, section, children, description, compact }) {
+function LabStateTitle({ step, section, children, description = '', compact = false }) {
   return (
     <header className={`lab-state-title${compact ? ' lab-state-title--compact' : ''}`}>
       <div className="lab-state-meta">
@@ -17,7 +18,7 @@ function LabStateTitle({ step, section, children, description, compact }) {
   );
 }
 
-export default function LabLayout({ lab, editorPanel, visualizationPanel, practiceActions, practiceVariant = 'split' }) {
+export default function LabLayout({ lab, editorPanel, visualizationPanel, practiceActions = null, practiceVariant = 'split' }) {
   const mainRef = useRef(null);
   const { isAuthenticated, markVideoWatched, markDocViewed } = useAuth();
 
@@ -36,7 +37,7 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
     if (!isAuthenticated || !lab) return;
     if (activeLesson === 0) markVideoWatched(lab.id).catch(() => {});
     if (activeLesson === 1) markDocViewed(lab.id).catch(() => {});
-  }, [isAuthenticated, lab?.id, activeLesson, markVideoWatched, markDocViewed]);
+  }, [isAuthenticated, lab, activeLesson, markVideoWatched, markDocViewed]);
 
   if (!lab) return <div>Lab không tồn tại</div>;
 
@@ -57,6 +58,7 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
 
       {/* Main Content Area */}
       <div className="player-main" ref={mainRef}>
+        <TelemetryControls />
         <nav className="lab-mobile-lessons" aria-label={`Nội dung Lab ${lab.id}`}>
           {lessonLabels.map((label, lessonId) => (
             <button

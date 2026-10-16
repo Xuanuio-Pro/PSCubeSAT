@@ -12,6 +12,7 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+.certs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -49,6 +50,8 @@ fastapi-backend/build_cache/
 
 # ── Mosquitto MQTT Runtime & Database ─────────────────────────────────────────
 mosquitto/data/*
+mosquitto/config/passwd
+logs/
 !mosquitto/data/.gitkeep
 mosquitto/log/*
 !mosquitto/log/.gitkeep

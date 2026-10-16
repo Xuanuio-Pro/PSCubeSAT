@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useSerial } from '../../contexts/SerialContext';
+import { useState, useEffect } from 'react';
+import { useTelemetry } from '../../contexts/telemetry-api';
+import { useSerial } from '../../contexts/serial-api';
 
 const PRESET_COMMANDS = [
   { cmd: 'ping', label: '🏓 Ping', desc: 'Kiểm tra đường truyền' },
@@ -18,11 +19,15 @@ const PRESET_COMMANDS = [
 
 export default function CommandPanel() {
   const { isConnected, send } = useSerial();
+  const { mode, generation } = useTelemetry();
+  const canSend = mode === 'serial' && isConnected;
   const [customCmd, setCustomCmd] = useState('');
   const [history, setHistory] = useState([]);
 
+  useEffect(() => setHistory([]), [generation]);
+
   const sendCommand = (cmd) => {
-    if (!isConnected) {
+    if (!canSend) {
       alert('Vui lòng kết nối Serial trước.');
       return;
     }
@@ -42,7 +47,7 @@ export default function CommandPanel() {
   return (
     <div className="card">
       <div className="card-header">
-        <h3>🎮 Command Uplink</h3>
+        <h3>🎮 Command Uplink · USB Serial</h3>
       </div>
       <div className="card-body">
         {/* Preset buttons */}
@@ -51,7 +56,7 @@ export default function CommandPanel() {
         </div>
         <div className="cmd-btn-grid">
           {PRESET_COMMANDS.map(({ cmd, label }) => (
-            <button key={cmd} className="cmd-btn" onClick={() => sendCommand(cmd)} title={cmd}>
+            <button key={cmd} disabled={!canSend} className="cmd-btn" onClick={() => sendCommand(cmd)} title={cmd}>
               {label}
             </button>
           ))}
@@ -65,12 +70,13 @@ export default function CommandPanel() {
           <div className="serial-input-bar" style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-primary)' }}>
             <input
               type="text"
+              disabled={!canSend}
               placeholder="Nhập lệnh (VD: ls /logs)..."
               value={customCmd}
               onChange={e => setCustomCmd(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCustomSend()}
             />
-            <button onClick={handleCustomSend}>Gửi ↑</button>
+            <button disabled={!canSend} onClick={handleCustomSend}>Gửi ↑</button>
           </div>
         </div>
 

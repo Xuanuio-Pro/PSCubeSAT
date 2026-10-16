@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
-import { GoogleIcon, EyeIcon } from '../components/common/AuthIcons';
-import { useAuth } from '../contexts/AuthContext';
+import { EyeIcon } from '../components/common/AuthIcons';
+import GoogleSignIn from '../components/common/GoogleSignIn';
+import { useAuth } from '../contexts/auth-api';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,12 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
 
   function validate() {
+    /** @type {Record<string, string>} */
     const next = {};
-    if (!EMAIL_PATTERN.test(email)) next.email = 'Email không hợp lệ';
+    if (!EMAIL_PATTERN.test(email.trim())) next.email = 'Email không hợp lệ';
     if (!password) next.password = 'Vui lòng nhập mật khẩu';
     return next;
   }
@@ -45,16 +47,13 @@ export default function LoginPage() {
       <h1 className="auth-title">Chào mừng trở lại</h1>
       <p className="auth-subtitle">Vui lòng đăng nhập để truy cập Dashboard</p>
 
-      <button type="button" className="auth-google-btn">
-        <GoogleIcon />
-        Đăng nhập với Google
-      </button>
+      <GoogleSignIn />
 
       <div className="auth-divider">Hoặc</div>
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="auth-field">
-          <label htmlFor="email">Tên đăng nhập hoặc Email</label>
+          <label htmlFor="email">Email</label>
           <div className={`auth-input-wrap ${errors.email ? 'has-error' : ''}`}>
             <input
               id="email"
