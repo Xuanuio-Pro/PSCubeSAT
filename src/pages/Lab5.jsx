@@ -10,7 +10,7 @@ export default function Lab5() {
   const lab = getLabById(5);
   const [code, setCode] = useState('');
 
-  const editorPanel = <IDEPanel labId={lab.id} code={code} setCode={setCode} variant="workspace" showToolbar={false} />;
+  const editorPanel = <IDEPanel labId={lab.id} setCode={setCode} variant="workspace" showToolbar={false} />;
 
   const vizPanel = (
     <div className="lab-visual-stack">

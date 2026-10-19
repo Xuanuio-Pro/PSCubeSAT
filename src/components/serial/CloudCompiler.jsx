@@ -80,7 +80,8 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
       <>{boardSelector}<button
         className={`btn btn-sm ${buttonClassName || (status === 'compiling' ? 'btn-secondary' : 'btn-primary')}`}
         onClick={handleCompile}
-        disabled={status === 'compiling' || isFlashing}
+        disabled={status === 'compiling' || isFlashing || !code?.trim()}
+        title={!code?.trim() ? 'Cần mã nguồn hợp lệ. Hãy sửa lỗi trong vùng Blockly hoặc nhập C++.' : undefined}
         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
       >
         {showIcon && statusIcon[status]} {status === 'compiling' ? 'Đang biên dịch...' : 'Biên dịch'}
@@ -96,7 +97,8 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
         <button
           className={`btn btn-sm ${status === 'compiling' ? 'btn-secondary' : 'btn-primary'}`}
           onClick={handleCompile}
-          disabled={status === 'compiling' || isFlashing}
+          disabled={status === 'compiling' || isFlashing || !code?.trim()}
+          title={!code?.trim() ? 'Cần mã nguồn hợp lệ. Hãy sửa lỗi trong vùng Blockly hoặc nhập C++.' : undefined}
         >
           {status === 'compiling' ? 'Đang biên dịch...' : 'Biên dịch'}
         </button>

@@ -1,414 +1,102 @@
 import * as Blockly from 'blockly';
+import 'blockly/blocks';
+import * as vi from 'blockly/msg/vi';
 
-/**
- * Register all custom PTITCube blocks for Blockly.
- * Maps 1:1 with the PTITCube firmware library API.
- */
+let registered = false;
+const statement = { previousStatement: null, nextStatement: null };
+const numberField = (name, value, max = 48) => ({ type: 'field_number', name, value, min: 0, max, precision: 1 });
+const valueInput = (name, check = null) => ({ type: 'input_value', name, ...(check ? { check } : {}) });
+const dropdown = (name, options) => ({ type: 'field_dropdown', name, options });
+
 export function registerCustomBlocks() {
-  // === Arduino Core ===
-  Blockly.Blocks['serial_print'] = {
-    init() {
-      this.appendDummyInput().appendField('Serial.println(').appendField(new Blockly.FieldTextInput('Hello CubeSat'), 'TEXT').appendField(')');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(160);
-      this.setTooltip('In một dòng văn bản ra Serial Monitor');
-    }
-  };
-
-  Blockly.Blocks['digital_write'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('digitalWrite(Pin')
-        .appendField(new Blockly.FieldNumber(2, 0, 39), 'PIN')
-        .appendField(',')
-        .appendField(new Blockly.FieldDropdown([['HIGH', 'HIGH'], ['LOW', 'LOW']]), 'STATE')
-        .appendField(')');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(160);
-      this.setTooltip('Bật/tắt một chân Digital (LED)');
-    }
-  };
-
-  Blockly.Blocks['digital_read'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('digitalRead(Pin')
-        .appendField(new Blockly.FieldNumber(4, 0, 39), 'PIN')
-        .appendField(')');
-      this.setOutput(true, 'Number');
-      this.setColour(160);
-      this.setTooltip('Đọc trạng thái chân Digital (HIGH/LOW)');
-    }
-  };
-
-  Blockly.Blocks['analog_read'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('analogRead(Pin')
-        .appendField(new Blockly.FieldNumber(34, 0, 39), 'PIN')
-        .appendField(')');
-      this.setOutput(true, 'Number');
-      this.setColour(160);
-      this.setTooltip('Đọc giá trị ADC (0-4095) từ chân Analog');
-    }
-  };
-
-  Blockly.Blocks['delay_ms'] = {
-    init() {
-      this.appendDummyInput().appendField('delay(').appendField(new Blockly.FieldNumber(1000, 0), 'MS').appendField('ms)');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(160);
-      this.setTooltip('Tạm dừng chương trình (mili-giây)');
-    }
-  };
-
-  Blockly.Blocks['pin_mode'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('pinMode(Pin')
-        .appendField(new Blockly.FieldNumber(2, 0, 39), 'PIN')
-        .appendField(',')
-        .appendField(new Blockly.FieldDropdown([['OUTPUT', 'OUTPUT'], ['INPUT', 'INPUT'], ['INPUT_PULLUP', 'INPUT_PULLUP']]), 'MODE')
-        .appendField(')');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(160);
-      this.setTooltip('Cài đặt chế độ cho chân I/O');
-    }
-  };
-
-  // === PTIT_Sensor ===
-  Blockly.Blocks['sensor_init'] = {
-    init() {
-      this.appendDummyInput().appendField('🔬 sensor.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(210);
-      this.setTooltip('Khởi tạo hệ thống cảm biến (BMP280 + MPU6050 + QMC5883L)');
-    }
-  };
-
-  Blockly.Blocks['sensor_read_temp'] = {
-    init() {
-      this.appendDummyInput().appendField('🌡️ sensor.getTemperature()');
-      this.setOutput(true, 'Number');
-      this.setColour(210);
-      this.setTooltip('Đọc nhiệt độ (°C) từ BMP280');
-    }
-  };
-
-  Blockly.Blocks['sensor_read_pressure'] = {
-    init() {
-      this.appendDummyInput().appendField('🌡️ sensor.getPressure()');
-      this.setOutput(true, 'Number');
-      this.setColour(210);
-      this.setTooltip('Đọc áp suất (hPa) từ BMP280');
-    }
-  };
-
-  Blockly.Blocks['imu_read_acc'] = {
-    init() {
-      this.appendDummyInput().appendField('📐 Đọc Gia tốc (Acc X/Y/Z)');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(210);
-      this.setTooltip('Đọc và in gia tốc 3 trục từ MPU6050');
-    }
-  };
-
-  Blockly.Blocks['imu_read_gyro'] = {
-    init() {
-      this.appendDummyInput().appendField('🔄 Đọc Gyro (X/Y/Z)');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(210);
-      this.setTooltip('Đọc và in gyroscope 3 trục từ MPU6050');
-    }
-  };
-
-  Blockly.Blocks['imu_read_mag'] = {
-    init() {
-      this.appendDummyInput().appendField('🧭 Đọc Từ trường (Mag X/Y/Z)');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(210);
-      this.setTooltip('Đọc la bàn từ trường 3 trục từ QMC5883L');
-    }
-  };
-
-  // === PTIT_EPS ===
-  Blockly.Blocks['eps_init'] = {
-    init() {
-      this.appendDummyInput().appendField('🔋 eps.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(120);
-      this.setTooltip('Khởi tạo hệ thống quản lý năng lượng');
-    }
-  };
-
-  Blockly.Blocks['eps_read_voltage'] = {
-    init() {
-      this.appendDummyInput().appendField('🔋 eps.getBatteryVoltage()');
-      this.setOutput(true, 'Number');
-      this.setColour(120);
-      this.setTooltip('Đọc điện áp pin (V) qua ADC');
-    }
-  };
-
-  // === PTIT_GPS ===
-  Blockly.Blocks['gps_init'] = {
-    init() {
-      this.appendDummyInput().appendField('🌍 gps.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(30);
-      this.setTooltip('Khởi tạo module GPS NEO');
-    }
-  };
-
-  Blockly.Blocks['gps_read'] = {
-    init() {
-      this.appendDummyInput().appendField('🌍 Đọc GPS (Lat/Lng)');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(30);
-      this.setTooltip('Cập nhật và in tọa độ GPS');
-    }
-  };
-
-  // === PTIT_Storage ===
-  Blockly.Blocks['storage_init'] = {
-    init() {
-      this.appendDummyInput().appendField('💾 storage.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(290);
-      this.setTooltip('Khởi tạo thẻ nhớ MicroSD');
-    }
-  };
-
-  Blockly.Blocks['storage_log'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('💾 storage.logData(')
-        .appendField(new Blockly.FieldTextInput('data'), 'DATA')
-        .appendField(')');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(290);
-      this.setTooltip('Ghi một dòng dữ liệu vào file log trên thẻ nhớ');
-    }
-  };
-
-  // === PTIT_COM ===
-  Blockly.Blocks['com_init'] = {
-    init() {
-      this.appendDummyInput().appendField('📡 lora.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(60);
-      this.setTooltip('Khởi tạo module LoRa E32');
-    }
-  };
-
-  Blockly.Blocks['com_send'] = {
-    init() {
-      this.appendDummyInput()
-        .appendField('📡 lora.sendMessage(')
-        .appendField(new Blockly.FieldTextInput('Hello'), 'MSG')
-        .appendField(')');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(60);
-      this.setTooltip('Gửi một tin nhắn qua LoRa');
-    }
-  };
-
-  // === PTIT_CDH ===
-  Blockly.Blocks['cdh_init'] = {
-    init() {
-      this.appendDummyInput().appendField('🧠 cdh.init()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(330);
-      this.setTooltip('Khởi tạo WiFi + MQTT');
-    }
-  };
-
-  // === Camera ===
-  Blockly.Blocks['camera_capture'] = {
-    init() {
-      this.appendDummyInput().appendField('📷 camera.capture()');
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-      this.setColour(0);
-      this.setTooltip('Chụp ảnh và gửi qua Serial');
-    }
-  };
+  if (registered) return;
+  registered = true;
+  /** @type {Record<string, string>} */
+  const messages = {};
+  for (const [key, message] of Object.entries(vi)) if (typeof message === 'string') messages[key] = message;
+  Blockly.setLocale(messages);
+  const blocks = [
+    { type: 'arduino_setup', message0: 'Khởi tạo · chạy một lần %1 %2', args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'DO' }], colour: '#376b9c' },
+    { type: 'arduino_loop', message0: 'Lặp liên tục %1 %2', args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'DO' }], colour: '#267e77' },
+    { type: 'serial_print', message0: 'Serial · in dòng %1', args0: [valueInput('VALUE')], ...statement, colour: '#267e77' },
+    { type: 'pin_mode', message0: 'Đặt chân %1 chế độ %2', args0: [numberField('PIN', 2), dropdown('MODE', [['Đầu ra', 'OUTPUT'], ['Đầu vào', 'INPUT'], ['Kéo lên', 'INPUT_PULLUP']])], ...statement, colour: '#267e77' },
+    { type: 'digital_write', message0: 'Ghi chân %1 mức %2', args0: [numberField('PIN', 2), dropdown('STATE', [['Bật / HIGH', 'HIGH'], ['Tắt / LOW', 'LOW']])], ...statement, colour: '#267e77' },
+    { type: 'digital_read', message0: 'Đọc digital chân %1', args0: [numberField('PIN', 4)], output: 'Number', colour: '#267e77' },
+    { type: 'analog_read', message0: 'Đọc ADC chân %1', args0: [numberField('PIN', 34)], output: 'Number', colour: '#267e77' },
+    { type: 'delay_ms', message0: 'Chờ %1 mili giây', args0: [numberField('MS', 1000, 3600000)], ...statement, colour: '#267e77' },
+    { type: 'millis_value', message0: 'Thời gian chạy (ms)', output: 'Number', colour: '#267e77' },
+    { type: 'com_send', message0: 'LoRa · gửi %1', args0: [valueInput('VALUE')], ...statement, colour: '#a37022' },
+    { type: 'com_receive', message0: 'LoRa · nhận tin nhắn', output: 'String', colour: '#a37022' },
+    { type: 'storage_log', message0: 'SD · ghi dòng %1', args0: [valueInput('VALUE')], ...statement, colour: '#8867a5' },
+    { type: 'camera_capture', message0: 'Camera · chụp ảnh vào thẻ SD', ...statement, colour: '#a45e70' },
+    { type: 'camera_init', message0: 'Khởi tạo camera · %1', args0: [dropdown('CONNECTION', [['Qua MUX (12/14)', 'MUX'], ['UART trực tiếp', 'DIRECT']])], ...statement, colour: '#a45e70' },
+    { type: 'sensor_init', message0: 'Khởi tạo cảm biến · %1', args0: [dropdown('SENSORS', [['Tất cả', 'ALL'], ['Môi trường (BMP280)', 'ENV'], ['IMU (MPU + QMC)', 'IMU']])], ...statement, colour: '#376b9c' },
+    { type: 'telemetry_send', message0: 'Gửi telemetry Serial · thiết bị %1', args0: [{ type: 'field_input', name: 'DEVICE', text: 'cubesat-01' }], ...statement, colour: '#376b9c', tooltip: 'Gửi JSON theo schema chung. Chỉ gồm cảm biến được dùng trong chương trình; giá trị lỗi là null.' },
+    { type: 'gps_read', message0: 'GPS · cập nhật vị trí', ...statement, colour: '#a37022' },
+    { type: 'gps_value', message0: 'GPS · %1', args0: [dropdown('AXIS', [['Vĩ độ', 'Lat'], ['Kinh độ', 'Lng'], ['Độ cao (m)', 'Altitude']])], output: 'Number', colour: '#a37022' },
+    { type: 'gps_has_fix', message0: 'GPS có vị trí hợp lệ', output: 'Boolean', colour: '#a37022' },
+    { type: 'imu_value', message0: 'IMU · %1', args0: [dropdown('AXIS', [['Gia tốc X (g)', 'AccX'], ['Gia tốc Y (g)', 'AccY'], ['Gia tốc Z (g)', 'AccZ'], ['Gyro X (°/s)', 'GyroX'], ['Gyro Y (°/s)', 'GyroY'], ['Gyro Z (°/s)', 'GyroZ'], ['Từ trường X (µT)', 'MagX'], ['Từ trường Y (µT)', 'MagY'], ['Từ trường Z (µT)', 'MagZ']])], output: 'Number', colour: '#376b9c' },
+  ];
+  for (const [type, text, colour] of [
+    ['eps_init', 'Khởi tạo nguồn EPS', '#71813e'],
+    ['gps_init', 'Khởi tạo GPS', '#a37022'], ['com_init', 'Khởi tạo LoRa', '#a37022'],
+    ['storage_init', 'Khởi tạo thẻ SD', '#8867a5'],
+    ['cdh_init', 'Khởi tạo WiFi / MQTT', '#8867a5'], ['cdh_update', 'Xử lý WiFi / MQTT', '#8867a5'],
+    ['sensor_update', 'Cập nhật cảm biến', '#376b9c'], ['eps_update', 'Cập nhật nguồn EPS', '#71813e'],
+    ['imu_read_acc', 'Serial · in gia tốc XYZ (g)', '#376b9c'], ['imu_read_gyro', 'Serial · in gyro XYZ (°/s)', '#376b9c'],
+    ['imu_read_mag', 'Serial · in từ trường XYZ (µT)', '#376b9c'],
+  ]) blocks.push({ type, message0: text, ...statement, colour });
+  for (const [type, text, colour] of [
+    ['sensor_read_temp', 'Nhiệt độ (°C)', '#376b9c'], ['sensor_read_pressure', 'Áp suất (hPa)', '#376b9c'],
+    ['eps_read_voltage', 'Điện áp pin (V)', '#71813e'], ['eps_read_percent', 'Dung lượng pin (%)', '#71813e'],
+  ]) blocks.push({ type, message0: text, output: 'Number', colour });
+  Blockly.common.defineBlocksWithJsonArray(blocks);
+  // This editor has numeric variables; text can be composed using text_join.
+  for (const type of ['variables_get', 'variables_set']) {
+    const original = Blockly.Blocks[type].init;
+    Blockly.Blocks[type].init = function () {
+      original.call(this);
+      if (type === 'variables_get') this.outputConnection.setCheck('Number');
+      else this.getInput('VALUE').setCheck('Number');
+    };
+  }
 }
 
-/**
- * Get the Blockly toolbox configuration for a given lab level.
- * Each lab progressively unlocks more block categories.
- */
+const block = type => ({ kind: 'block', type });
+const num = value => ({ shadow: { type: 'math_number', fields: { NUM: value } } });
+const text = value => ({ shadow: { type: 'text', fields: { TEXT: value } } });
+const category = (name, colour, contents) => ({ kind: 'category', name, colour, contents: contents.map(item => typeof item === 'string' ? block(item) : item) });
+
 export function getToolboxForLab(labId) {
-  const categories = [];
-
-  // Lab 1+: Arduino Core
-  if (labId >= 1) {
-    categories.push({
-      kind: 'category',
-      name: '🔧 Cơ bản (Arduino)',
-      colour: 160,
-      contents: [
-        { kind: 'block', type: 'pin_mode' },
-        { kind: 'block', type: 'digital_write' },
-        { kind: 'block', type: 'digital_read' },
-        { kind: 'block', type: 'delay_ms' },
-        { kind: 'block', type: 'serial_print' },
-      ],
-    });
-  }
-
-  // Lab 2+: EPS
-  if (labId >= 2) {
-    categories.push({
-      kind: 'category',
-      name: '🔋 Năng lượng (EPS)',
-      colour: 120,
-      contents: [
-        { kind: 'block', type: 'eps_init' },
-        { kind: 'block', type: 'eps_read_voltage' },
-        { kind: 'block', type: 'digital_read' },
-      ],
-    });
-  }
-
-  // Lab 3+: ADC + Storage
-  if (labId >= 3) {
-    categories.push({
-      kind: 'category',
-      name: '💾 Lưu trữ và ADC',
-      colour: 290,
-      contents: [
-        { kind: 'block', type: 'storage_init' },
-        { kind: 'block', type: 'storage_log' },
-        { kind: 'block', type: 'analog_read' },
-      ],
-    });
-  }
-
-  // Lab 4+: Sensors + GPS + Camera
-  if (labId >= 4) {
-    categories.push(
-      {
-        kind: 'category',
-        name: '🔬 Cảm biến',
-        colour: 210,
-        contents: [
-          { kind: 'block', type: 'sensor_init' },
-          { kind: 'block', type: 'sensor_read_temp' },
-          { kind: 'block', type: 'sensor_read_pressure' },
-          { kind: 'block', type: 'imu_read_acc' },
-          { kind: 'block', type: 'imu_read_gyro' },
-          { kind: 'block', type: 'imu_read_mag' },
-        ],
-      },
-      {
-        kind: 'category',
-        name: '🌍 GPS',
-        colour: 30,
-        contents: [
-          { kind: 'block', type: 'gps_init' },
-          { kind: 'block', type: 'gps_read' },
-        ],
-      },
-      {
-        kind: 'category',
-        name: '📷 Camera',
-        colour: 0,
-        contents: [
-          { kind: 'block', type: 'camera_capture' },
-        ],
-      }
-    );
-  }
-
-  // Lab 5+: COM
-  if (labId >= 5) {
-    categories.push({
-      kind: 'category',
-      name: '📡 Viễn thông (COM)',
-      colour: 60,
-      contents: [
-        { kind: 'block', type: 'com_init' },
-        { kind: 'block', type: 'com_send' },
-      ],
-    });
-  }
-
-  // Lab 7+: CDH + Full
-  if (labId >= 7) {
-    categories.push({
-      kind: 'category',
-      name: '🧠 CDH (WiFi/MQTT)',
-      colour: 330,
-      contents: [
-        { kind: 'block', type: 'cdh_init' },
-      ],
-    });
-  }
-
-  // Always include built-in logic/loops for Lab 1+
-  if (labId >= 1) {
-    categories.push(
-      { kind: 'sep' },
-      {
-        kind: 'category',
-        name: '🔀 Logic',
-        colour: 210,
-        contents: [
-          { kind: 'block', type: 'controls_if' },
-          { kind: 'block', type: 'logic_compare' },
-          { kind: 'block', type: 'logic_operation' },
-          { kind: 'block', type: 'logic_boolean' },
-        ],
-      },
-      {
-        kind: 'category',
-        name: '🔁 Vòng lặp',
-        colour: 120,
-        contents: [
-          { kind: 'block', type: 'controls_repeat_ext' },
-          { kind: 'block', type: 'controls_whileUntil' },
-          { kind: 'block', type: 'controls_for' },
-        ],
-      },
-      {
-        kind: 'category',
-        name: '🔢 Toán học',
-        colour: 230,
-        contents: [
-          { kind: 'block', type: 'math_number' },
-          { kind: 'block', type: 'math_arithmetic' },
-        ],
-      },
-      {
-        kind: 'category',
-        name: '📝 Văn bản',
-        colour: 160,
-        contents: [
-          { kind: 'block', type: 'text' },
-          { kind: 'block', type: 'text_join' },
-          { kind: 'block', type: 'text_print' },
-        ],
-      }
-    );
-  }
-
+  /** @type {Blockly.utils.toolbox.ToolboxItemInfo[]} */
+  const categories = [
+    category('Chương trình', '#376b9c', ['arduino_setup', 'arduino_loop']),
+    category('Arduino', '#267e77', ['pin_mode', 'digital_write', 'digital_read', 'analog_read', 'delay_ms', 'millis_value', { ...block('serial_print'), inputs: { VALUE: text('Hello CubeSat') } }]),
+  ];
+  if (labId >= 2) categories.push(category('Nguồn EPS', '#71813e', ['eps_init', 'eps_update', 'eps_read_voltage', 'eps_read_percent']));
+  if (labId >= 3) categories.push(category('Lưu trữ SD', '#8867a5', ['storage_init', { ...block('storage_log'), inputs: { VALUE: text('Dữ liệu') } }]));
+  if (labId >= 4) categories.push(
+    category('Cảm biến', '#376b9c', ['sensor_init', 'sensor_update', 'sensor_read_temp', 'sensor_read_pressure', 'imu_value', 'imu_read_acc', 'imu_read_gyro', 'imu_read_mag']),
+    category('GPS / Camera', '#a45e70', ['gps_init', 'gps_read', 'gps_has_fix', 'gps_value', 'camera_init', 'camera_capture']),
+  );
+  if (labId >= 5) categories.push(category('LoRa', '#a37022', ['com_init', { ...block('com_send'), inputs: { VALUE: text('Hello CubeSat') } }, 'com_receive']));
+  if (labId >= 7) categories.push(category('WiFi / MQTT', '#8867a5', ['cdh_init', 'cdh_update']));
+  categories.push(
+    category('Telemetry', '#376b9c', ['telemetry_send']),
+    { kind: 'sep' },
+    category('Điều kiện', '#526eaa', ['controls_if', { ...block('logic_compare'), inputs: { A: num(0), B: num(0) } }, 'logic_operation', 'logic_negate', 'logic_boolean']),
+    category('Vòng lặp', '#71813e', [{ ...block('controls_repeat_ext'), inputs: { TIMES: num(10) } }, 'controls_whileUntil', { ...block('controls_for'), inputs: { FROM: num(1), TO: num(10), BY: num(1) } }]),
+    category('Toán học', '#7064a0', ['math_number', { ...block('math_arithmetic'), inputs: { A: num(1), B: num(1) } }, { ...block('math_modulo'), inputs: { DIVIDEND: num(10), DIVISOR: num(2) } }]),
+    category('Văn bản', '#267e77', ['text', 'text_join', { ...block('text_print'), inputs: { TEXT: text('Hello CubeSat') } }]),
+    { kind: 'category', name: 'Biến số', colour: '#a45e70', custom: 'VARIABLE' },
+  );
   return { kind: 'categoryToolbox', contents: categories };
+}
+
+export function allowedBlockTypes(labId) {
+  const types = new Set(['variables_get', 'variables_set', 'math_change']);
+  for (const cat of getToolboxForLab(labId).contents) {
+    if ('contents' in cat) for (const item of cat.contents) if ('type' in item) types.add(item.type);
+  }
+  return types;
 }

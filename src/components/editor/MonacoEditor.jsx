@@ -27,7 +27,7 @@ export default function MonacoEditor({ code, onChange, readOnly = false, height 
       height={height}
       defaultLanguage="cpp"
       theme="vs-dark"
-      value={code || DEFAULT_CODE}
+      value={code ?? DEFAULT_CODE}
       onChange={onChange}
       options={{
         readOnly,
