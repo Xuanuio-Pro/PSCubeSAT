@@ -24,6 +24,10 @@ class SimulationMqttPublisher:
         self._stopping = asyncio.Event()
         self._publish_lock = asyncio.Lock()
 
+    @property
+    def connected(self) -> bool:
+        return self._connected.is_set()
+
     async def start(self) -> None:
         if self._task and not self._task.done():
             return
@@ -76,7 +80,7 @@ class SimulationMqttPublisher:
         logger.debug(f"[SIM MQTT] Published topic={topic} seq={payload.get('seq')}")
 
     async def _connection_loop(self) -> None:
-        reconnect_delay = 3
+        reconnect_delay = 1
 
         while not self._stopping.is_set():
             try:
@@ -96,28 +100,25 @@ class SimulationMqttPublisher:
                 ) as client:
                     self._client = client
                     self._connected.set()
-                    reconnect_delay = 3
+                    reconnect_delay = 1
                     logger.success("[SIM MQTT] Đã kết nối broker")
 
-                    await self._stopping.wait()
+                    # aiomqtt's message iterator wakes on broker disconnect,
+                    # even without subscriptions. Waiting only on stop hid outages.
+                    async for _ in client.messages:
+                        pass
+                    raise aiomqtt.MqttError('MQTT stream ended')
 
-            except aiomqtt.MqttError as exc:
-                if not self._stopping.is_set():
-                    logger.warning(
-                        f"[SIM MQTT] Mất kết nối: {exc}; "
-                        f"retry sau {reconnect_delay}s"
-                    )
-                    await asyncio.sleep(reconnect_delay)
-                    reconnect_delay = min(reconnect_delay * 2, 60)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                logger.error(f"[SIM MQTT] Lỗi publisher: {exc}")
-                if not self._stopping.is_set():
-                    await asyncio.sleep(reconnect_delay)
+                logger.warning(f'[SIM MQTT] Connection failed: {type(exc).__name__}; retry in {reconnect_delay}s')
             finally:
                 self._connected.clear()
                 self._client = None
+            if not self._stopping.is_set():
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 2, 30)
 
 
 simulation_mqtt_publisher = SimulationMqttPublisher()

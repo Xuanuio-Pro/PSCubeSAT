@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from app.services import compiler_svc, compiler_sandbox
+from app.services import mqtt_consumer
+from app.services.simulation.mqtt_publisher import simulation_mqtt_publisher
 
 router = APIRouter(prefix="/api", tags=["health"])
 
@@ -12,6 +14,8 @@ async def health():
         image = None
     return {
         "status": "online",
+        "mqtt": {**mqtt_consumer.connection_status(),
+                 "publisher_connected": simulation_mqtt_publisher.connected},
         "compiler_installed": bool(image),
         "compiler_backend": "docker-sandbox",
         "compiler_image_id": image,

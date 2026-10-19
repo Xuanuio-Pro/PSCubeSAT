@@ -5,6 +5,7 @@ from typing import Dict, Set
 from fastapi import WebSocket
 from loguru import logger
 
+SEND_TIMEOUT_SECONDS = 2.0
 
 class ConnectionManager:
     def __init__(self) -> None:
@@ -42,7 +43,7 @@ class ConnectionManager:
         async def _send(ws: WebSocket) -> WebSocket | None:
             try:
                 logger.debug(f"[WS] Gửi tới client ({device_uid}): {message[:80]}")
-                await ws.send_text(message)
+                await asyncio.wait_for(ws.send_text(message), timeout=SEND_TIMEOUT_SECONDS)
                 return None
             except Exception as e:
                 logger.warning(f"[WS] Lỗi gửi tin tới client ({device_uid}): {e}")

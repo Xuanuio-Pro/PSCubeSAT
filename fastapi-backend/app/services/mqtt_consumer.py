@@ -17,6 +17,12 @@ from app.websocket.ws_manager import ws_manager
 
 # In-memory latest telemetry per device
 _latest_state: dict = {}
+_connection_state = {'connected': False, 'last_message_at': None}
+
+
+def connection_status() -> dict:
+    return dict(_connection_state)
+
 
 # Ghi vị trí xuống DB tối đa 1 lần / khoảng thời gian này cho mỗi thiết bị — tránh
 # 1 round-trip DB (network tới Supabase) cho mỗi tin MQTT, việc từng làm consumer
@@ -71,6 +77,7 @@ async def _handle_message(message: aiomqtt.Message) -> None:
                 return
         normalized = payload.normalized()
         _latest_state[topic_uid] = normalized
+        _connection_state['last_message_at'] = time.time()
         logger.debug(f"[MQTT] Accepted telemetry for {topic_uid}")
         await ws_manager.send_to_device(
             device_uid=payload.device_id,
@@ -88,7 +95,7 @@ async def _handle_message(message: aiomqtt.Message) -> None:
 
 async def start() -> None:
     settings = get_settings()
-    reconnect_delay = 3
+    reconnect_delay = 1
 
     while True:
         try:
@@ -104,19 +111,22 @@ async def start() -> None:
                 password=settings.mqtt_password,
                 tls_context=tls_context,
             ) as client:
-                logger.success(f"[MQTT] ✅ Đã kết nối Mosquitto. Subscribe: {settings.mqtt_topic}")
-                reconnect_delay = 3
-                await client.subscribe(settings.mqtt_topic)
+                codes = await client.subscribe(settings.mqtt_topic, qos=1)
+                if any(getattr(code, 'value', code) >= 128 for code in codes or []):
+                    raise aiomqtt.MqttError('Telemetry subscription rejected')
+                _connection_state['connected'] = True
+                reconnect_delay = 1
+                logger.success(f"[MQTT] Connected and subscribed: {settings.mqtt_topic}")
                 async for message in client.messages:
                     await _handle_message(message)
+                raise aiomqtt.MqttError('MQTT stream ended')
 
-        except aiomqtt.MqttError as e:
-            logger.warning(f"[MQTT] Mất kết nối: {e} — retry sau {reconnect_delay}s...")
-            await asyncio.sleep(reconnect_delay)
-            reconnect_delay = min(reconnect_delay * 2, 60)
         except asyncio.CancelledError:
-            logger.info("[MQTT] Consumer dừng.")
-            break
-        except Exception as e:
-            logger.error(f"[MQTT] Lỗi không mong đợi: {e} — retry sau {reconnect_delay}s...")
-            await asyncio.sleep(reconnect_delay)
+            logger.info('[MQTT] Consumer stopped.')
+            raise
+        except Exception as exc:
+            logger.warning(f'[MQTT] Connection failed: {type(exc).__name__}; retry in {reconnect_delay}s')
+        finally:
+            _connection_state['connected'] = False
+        await asyncio.sleep(reconnect_delay)
+        reconnect_delay = min(reconnect_delay * 2, 30)

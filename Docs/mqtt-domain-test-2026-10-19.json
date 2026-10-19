@@ -1,0 +1,90 @@
+{
+  "checked_at_utc": "2026-10-19T16:27:21.692983+00:00",
+  "results": [
+    {
+      "host": "mqtt.p-tech.xyz",
+      "port": 8883,
+      "transport": "tcp",
+      "path": null,
+      "tls_verify": true,
+      "custom_ca": false,
+      "steps": [
+        {
+          "step": "TLS public trust + hostname verification",
+          "status": "PASS"
+        },
+        {
+          "step": "MQTT CONNECT",
+          "status": "PASS"
+        },
+        {
+          "step": "Subscribe sensors/#",
+          "status": "PASS"
+        },
+        {
+          "step": "QoS1 publish/subscribe echo (non-retained)",
+          "status": "PASS"
+        }
+      ],
+      "certificate": {
+        "subject": [
+          [
+            [
+              "commonName",
+              "mqtt.p-tech.xyz"
+            ]
+          ]
+        ],
+        "issuer": [
+          [
+            [
+              "countryName",
+              "US"
+            ]
+          ],
+          [
+            [
+              "organizationName",
+              "Let's Encrypt"
+            ]
+          ],
+          [
+            [
+              "commonName",
+              "YE1"
+            ]
+          ]
+        ],
+        "expires": "Jan 17 15:15:53 2027 GMT",
+        "san": [
+          [
+            "DNS",
+            "mqtt.p-tech.xyz"
+          ]
+        ]
+      }
+    },
+    {
+      "host": "mqtt.p-tech.xyz",
+      "port": 8084,
+      "transport": "websockets",
+      "path": "/mqtt",
+      "tls_verify": true,
+      "custom_ca": false,
+      "steps": [
+        {
+          "step": "Connection/test",
+          "status": "FAIL",
+          "error": "TimeoutError: "
+        }
+      ]
+    }
+  ],
+  "websocket_followup": [
+    {
+      "address": "14.224.143.43",
+      "port": 8084,
+      "tcp": "TimeoutError: timed out"
+    }
+  ]
+}
