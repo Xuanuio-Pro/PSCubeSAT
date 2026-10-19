@@ -1,0 +1,39 @@
+.cube-ide { display: flex; flex-direction: column; height: 100%; min-height: 480px; min-width: 0; overflow: hidden; border: 1px solid #cedde9; border-radius: 14px; background: #fff; color: #23425c; }
+.cube-ide-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; background: #fff; }
+.cube-ide-tabs { display: flex; padding: 3px; gap: 3px; border-radius: 9px; background: #edf3f8; }
+.cube-ide-tabs button, .cube-expand, .blockly-toolbar button, .blockly-toolbar select, .blockly-notice button, .cube-source-state button { border: 1px solid transparent; border-radius: 6px; padding: 7px 10px; font: 600 12px/1.4 var(--font-body, system-ui); cursor: pointer; background: transparent; color: #315771; }
+.cube-ide-tabs button[aria-selected="true"] { background: #277dac; color: #fff; box-shadow: 0 2px 5px #174b6c22; }
+.cube-ide button:focus-visible, .cube-ide select:focus-visible { outline: 2px solid #1672aa; outline-offset: 2px; }
+.cube-source-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 14px; border-block: 1px solid #e1eaf1; background: #f7fafc; font-size: 11px; color: #587185; }
+.cube-source-state button { padding: 2px 6px; text-decoration: underline; }
+.cube-ide-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.cube-ide-body[hidden] { display: none; }
+.blockly-editor { display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%; }
+.blockly-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; padding: 7px 10px; border-bottom: 1px solid #dce7ef; background: #fff; font-size: 12px; }
+.blockly-toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.blockly-toolbar button, .blockly-toolbar select { padding: 5px 7px; border-color: #d5e1eb; background: #fff; font-size: 11px; }
+.cube-ide button:hover:not(:disabled):not([aria-selected="true"]) { background: #e8f2f8; }
+.cube-ide button:disabled { opacity: .45; cursor: default; }
+.blockly-guide { margin: 0; padding: 7px 12px; color: #627c90; background: #f7fafc; font-size: 11px; line-height: 1.5; }
+.blockly-canvas { position: relative; flex: 1; min-height: 260px; width: 100%; }
+.blockly-canvas .blocklySvg { border: 0; outline: none; }
+.blockly-canvas .blocklyToolbox { padding: 6px 0; border-right: 1px solid #d6e2ec; }
+.blockly-canvas .blocklyTreeRow { min-height: 29px; height: auto; padding: 4px 9px 4px 5px; margin-bottom: 2px; border-radius: 0 5px 5px 0; }
+.blockly-canvas .blocklyTreeLabel { font: 500 12px/1.5 system-ui, sans-serif; }
+.blockly-status { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; border-top: 1px solid #dce7ef; background: #f0f7f4; color: #35634f; font-size: 11px; }
+.blockly-status.has-errors { background: #fff6e9; color: #875e22; }
+.blockly-issues { max-height: 110px; overflow: auto; background: #fff9f0; padding: 5px 10px; }
+.blockly-issues button { display: block; width: 100%; padding: 4px 2px; border: 0; background: none; text-align: left; color: #8b482b; font-size: 12px; cursor: pointer; }
+.blockly-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: #fff5de; color: #745323; font-size: 12px; }
+.blockly-notice span { flex: 1 1 200px; }
+.cube-monaco { flex: 1; min-height: 250px; }
+.cube-ide--expanded { position: fixed; inset: 16px; z-index: 2000; height: auto; min-height: 0; box-shadow: 0 0 0 100vmax #10283b99, 0 12px 60px #10283b44; }
+@media (max-width: 640px) {
+  .cube-ide-header { padding: 7px; }
+  .cube-ide-tabs button { padding: 7px 9px; }
+  .blockly-toolbar { padding: 6px; }
+  .blockly-guide { font-size: 10px; }
+  .blockly-canvas .blocklyTreeLabel { font-size: 11px; }
+  .blockly-canvas .blocklyTreeRow { padding-right: 5px; }
+  .cube-ide--expanded { inset: 4px; }
+}

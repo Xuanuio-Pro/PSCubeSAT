@@ -19,7 +19,10 @@
     "test:telemetry": "node --test tests/telemetry.test.js",
     "telemetry:schema": "C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe scripts/export-telemetry-schema.py",
     "telemetry:schema:check": "npm run telemetry:schema -- --check",
-    "check": "npm run lint && npm run typecheck && npm run telemetry:schema:check && npm run test:flash && npm run test:telemetry && npm run test:be",
+    "check": "npm run lint && npm run typecheck && npm run telemetry:schema:check && npm run test:blockly && npm run test:flash && npm run test:telemetry && npm run test:be",
+    "test:blockly": "node --test tests/blockly.test.js",
+    "test:blockly:runtime": "node scripts/blockly-runtime-test.mjs",
+    "test:blockly:compile": "node scripts/blockly-smoke.mjs && C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe scripts/blockly-compile-matrix.py",
     "preview": "vite preview",
     "dev:services": "cd fastapi-backend && C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe local_services.py",
     "test:flash": "node --test tests/flash-artifact.test.js"
