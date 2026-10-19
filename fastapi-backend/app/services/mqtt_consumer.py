@@ -1,24 +1,19 @@
 import asyncio
 import json
-import ssl
 import time
 import re
 from typing import Optional
 
 import aiomqtt
-from pathlib import Path
 from loguru import logger
 from pydantic import ValidationError
 
 from app.core.config import get_settings
+from app.core.mqtt_transport import mqtt_tls_context
 from app.db.database import get_session_maker
 from app.models.telemetry import TelemetryPayload
 from app.repository.device import DeviceRepository
 from app.websocket.ws_manager import ws_manager
-
-# Xác định đường dẫn tuyệt đối tới file ca.crt
-BASE_DIR = Path(__file__).resolve().parent.parent  # Thư mục app/
-CA_CERT_PATH = BASE_DIR / "certs" / "ca.crt"
 
 # In-memory latest telemetry per device
 _latest_state: dict = {}
@@ -30,29 +25,6 @@ _MIN_POSITION_WRITE_INTERVAL_S = 3.0
 _last_position_write: dict[str, float] = {}
 _TELEMETRY_TOPIC = re.compile(r'^sensors/([A-Za-z0-9_-]{1,64})/telemetry$')
 _MAX_PAYLOAD_BYTES = 65536
-
-def create_mqtt_ssl_context(ca_path: Path, is_ip_address: bool = True) -> ssl.SSLContext:
-    """
-    Tạo SSLContext xác thực Server qua file ca.crt gốc.
-    """
-    if not ca_path.exists():
-        raise FileNotFoundError(f"Không tìm thấy file CA Certificate tại: {ca_path}")
-
-    # 1. Khởi tạo SSLContext và nạp file ca.crt trực tiếp
-    tls_context = ssl.create_default_context(cafile=str(ca_path))
-
-    # 2. Bắt buộc kiểm tra tính hợp lệ của Server Certificate dựa trên CA
-    tls_context.verify_mode = ssl.CERT_REQUIRED
-
-    # 3. Xử lý Hostname Verification:
-    # - Nếu kết nối qua IP (ví dụ: 14.224.143.43), gán False để tránh lỗi "Certificate hostname mismatch".
-    # - Nếu kết nối qua Domain (ví dụ: mqtt.domain.com), gán True.
-    if is_ip_address:
-        tls_context.check_hostname = False
-    else:
-        tls_context.check_hostname = True
-
-    return tls_context
 
 def get_latest_state(device_id: str) -> Optional[dict]:
     return _latest_state.get(device_id)
@@ -121,14 +93,9 @@ async def start() -> None:
     while True:
         try:
             logger.info(f"[MQTT] Kết nối → {settings.mqtt_host}:{settings.mqtt_port} | topic={settings.mqtt_topic}")
-            tls_context: Optional[ssl.SSLContext] = None
-            if settings.mqtt_port == 8883:
-                logger.info("[MQTT] Sử dụng TLS/SSL (Port 8883)")
-                logger.debug(f"[MQTT] CA Certificate path: {CA_CERT_PATH}")
-                tls_context = create_mqtt_ssl_context(
-                    ca_path=CA_CERT_PATH,
-                    is_ip_address=True  # Đặt là False nếu kết nối bằng Tên miền (Domain)
-                )
+            tls_context = mqtt_tls_context(settings)
+            if settings.mqtt_tls and not settings.mqtt_tls_verify:
+                logger.warning('[MQTT] TLS certificate verification disabled by MQTT_TLS_VERIFY=false')
 
             async with aiomqtt.Client(
                 hostname=settings.mqtt_host,

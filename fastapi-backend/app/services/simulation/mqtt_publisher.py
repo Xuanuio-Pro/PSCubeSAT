@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import ssl
 from typing import Any, Optional
 
 import aiomqtt
 from loguru import logger
 
 from app.core.config import get_settings
-from app.services.mqtt_consumer import CA_CERT_PATH, create_mqtt_ssl_context
+from app.core.mqtt_transport import mqtt_tls_context
 
 
 class SimulationMqttPublisher:
@@ -81,12 +80,7 @@ class SimulationMqttPublisher:
 
         while not self._stopping.is_set():
             try:
-                tls_context: Optional[ssl.SSLContext] = None
-                if self._settings.mqtt_port == 8883:
-                    tls_context = create_mqtt_ssl_context(
-                        ca_path=CA_CERT_PATH,
-                        is_ip_address=True,
-                    )
+                tls_context = mqtt_tls_context(self._settings)
 
                 logger.info(
                     f"[SIM MQTT] Kết nối → "

@@ -1,0 +1,88 @@
+{
+  "host": "14.224.143.43",
+  "port": 8883,
+  "username": "backend-service",
+  "tls": true,
+  "broker": "unknown",
+  "version": "unknown",
+  "dynsec": "unknown",
+  "phase1_ready": false,
+  "tls_verified": false,
+  "steps": [
+    {
+      "name": "DNS",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "Server topology",
+      "status": "PASS",
+      "detail": "Non-loopback address."
+    },
+    {
+      "name": "TCP port 1883",
+      "status": "UNAVAILABLE",
+      "detail": "TimeoutError: "
+    },
+    {
+      "name": "TCP port 8883",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "TCP port 8083",
+      "status": "UNAVAILABLE",
+      "detail": "TimeoutError: "
+    },
+    {
+      "name": "TCP port 8084",
+      "status": "UNAVAILABLE",
+      "detail": "TimeoutError: "
+    },
+    {
+      "name": "TCP configured",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "TLS handshake (verification disabled)",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "MQTT CONNECT",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "Subscribe sensors/#",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "Test loopback",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "Broker version",
+      "status": "UNKNOWN",
+      "detail": "PermissionError: SUBACK rejected: Unspecified error"
+    },
+    {
+      "name": "Service disconnect",
+      "status": "PASS",
+      "detail": "OK"
+    },
+    {
+      "name": "Dynamic security",
+      "status": "UNKNOWN",
+      "detail": "MQTT_ADMIN_USERNAME/PASSWORD not configured; no admin request sent."
+    },
+    {
+      "name": "Gate",
+      "status": "STOP",
+      "detail": "Phase 1 blocked: require server endpoint, telemetry subscription and verified admin provisioning API."
+    }
+  ]
+}

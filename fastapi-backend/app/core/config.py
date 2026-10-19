@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
 from pathlib import Path
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -19,8 +20,13 @@ class Settings(BaseSettings):
     mqtt_host: str = "localhost"
     mqtt_port: int = 1883
     mqtt_username: str = "backend-service"
-    mqtt_password: str = ""
+    mqtt_password: str = Field(default="", repr=False)
     mqtt_topic: str = "sensors/#"
+    mqtt_tls: bool = False
+    mqtt_tls_verify: bool = True
+    mqtt_ca_file: str = ""
+    mqtt_admin_username: str = ""
+    mqtt_admin_password: str = Field(default="", repr=False)
 
     # Redis
     redis_url: str = "redis://localhost:6379"
