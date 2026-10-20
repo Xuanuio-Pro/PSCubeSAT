@@ -1,10 +1,10 @@
 import { createContext, useContext } from 'react';
+import { getAuthToken } from './auth-storage';
 
 export const AuthContext = createContext(null);
-export const TOKEN_KEY = 'access_token';
 
 export async function request(path, options = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getAuthToken();
   const res = await fetch(path, {
     ...options,
     headers: {
@@ -18,7 +18,7 @@ export async function request(path, options = {}) {
     const detail = Array.isArray(data.detail)
       ? data.detail.map((item) => item.msg).join(' ')
       : data.detail;
-    throw new Error(data.message || detail || 'Đã có lỗi xảy ra, vui lòng thử lại.');
+    throw Object.assign(new Error(data.message || detail || 'Đã có lỗi xảy ra, vui lòng thử lại.'), { status: res.status });
   }
   return data;
 }

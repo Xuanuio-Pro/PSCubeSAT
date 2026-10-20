@@ -28,6 +28,11 @@
 .blockly-notice span { flex: 1 1 200px; }
 .cube-monaco { flex: 1; min-height: 250px; }
 .cube-ide--expanded { position: fixed; inset: 16px; z-index: 2000; height: auto; min-height: 0; box-shadow: 0 0 0 100vmax #10283b99, 0 12px 60px #10283b44; }
+/* The completed entrance animation retains a transform, which would anchor a
+   fixed editor to the lesson instead of the viewport. Sticky columns also
+   need to rise above the header while their editor is expanded. */
+.animate-fadeInUp:has(.cube-ide--expanded) { animation: none; transform: none; }
+.lab-practice-editor:has(.cube-ide--expanded) { z-index: 2000; }
 @media (max-width: 640px) {
   .cube-ide-header { padding: 7px; }
   .cube-ide-tabs button { padding: 7px 9px; }

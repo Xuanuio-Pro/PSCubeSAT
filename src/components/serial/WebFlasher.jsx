@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSerial } from '../../contexts/serial-api';
-import { TOKEN_KEY } from '../../contexts/auth-api';
+import { getAuthToken } from '../../contexts/auth-storage';
 import { downloadFlashFiles, writeArtifact } from './flash-artifact';
 
 export default function WebFlasher({ code = '', labId = undefined, inline = false, showIcon = true, buttonClassName = '', label = 'Nạp Code' }) {
@@ -19,7 +19,7 @@ export default function WebFlasher({ code = '', labId = undefined, inline = fals
     try {
       await withFlashPort(async port => {
         print('Đang kiểm tra và tải bộ firmware...', 'system');
-        const files = await downloadFlashFiles(build.artifact, code, localStorage.getItem(TOKEN_KEY));
+        const files = await downloadFlashFiles(build.artifact, code, getAuthToken());
         const { ESPLoader, Transport } = await import('esptool-js');
         const transport = new Transport(port);
         const loader = new ESPLoader({ transport, baudrate: 115200,

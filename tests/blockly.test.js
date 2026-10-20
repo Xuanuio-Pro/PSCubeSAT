@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
 import { registerCustomBlocks, allowedBlockTypes } from '../src/components/editor/blockly-toolbox.js';
 import { generateArduino, arduinoGenerator, cppString } from '../src/components/editor/arduino-generator.js';
-import { starterWorkspace, encodeProject, decodeProject } from '../src/components/editor/blockly-project.js';
+import { emptyWorkspace, defaultWorkspace, DEFAULT_ARDUINO_CODE, starterWorkspace, encodeProject, decodeProject } from '../src/components/editor/blockly-project.js';
+import { cppToWorkspace } from '../src/components/editor/cpp-to-blockly.js';
 import { adaptSerialLine } from '../src/telemetry/adapters.js';
 
 registerCustomBlocks();
@@ -25,6 +26,160 @@ function generated(ws, lab = 8) {
   assert.deepEqual(result.issues, []);
   return result.code;
 }
+
+test('explicitly empty projects require valid connected blocks before generating C++ in every lab', ctx => {
+  for (let lab = 1; lab <= 8; lab++) {
+    const ws = new Blockly.Workspace();
+    ctx.after(() => ws.dispose());
+    Blockly.serialization.workspaces.load(emptyWorkspace(), ws);
+    assert.equal(ws.getAllBlocks(false).length, 0);
+    assert.equal(generateArduino(ws, lab).code, '');
+    Blockly.serialization.workspaces.load(decodeProject(encodeProject(ws, lab), lab), ws);
+    assert.equal(ws.getAllBlocks(false).length, 0);
+    const legacyEmpty = JSON.stringify({ format: 'ptit-blockly', version: 1, labId: lab, workspace: {} });
+    Blockly.serialization.workspaces.load(decodeProject(legacyEmpty, lab), ws);
+    assert.equal(generateArduino(ws, lab).code, '');
+    ws.newBlock('arduino_setup');
+    const loop = ws.newBlock('arduino_loop');
+    const printer = ws.newBlock('serial_print');
+    loop.getInput('DO').connection.connect(printer.previousConnection);
+    assert.equal(generateArduino(ws, lab).code, '');
+    const message = ws.newBlock('text');
+    message.setFieldValue(`Sinh viên tự tạo Lab ${lab}`, 'TEXT');
+    printer.getInput('VALUE').connection.connect(message.outputConnection);
+    const code = generated(ws, lab);
+    assert.ok(code.includes(`Sinh viên tự tạo Lab ${lab}`));
+    assert.doesNotMatch(code, /PTITCube|sensor\.|eps\.|lora\./);
+    message.unplug();
+    assert.equal(generateArduino(ws, lab).code, '');
+  }
+});
+
+test('new student project has exactly two roots and the requested C++ template', ctx => {
+  for (let lab = 1; lab <= 8; lab++) {
+    const ws = workspace(ctx);
+    Blockly.serialization.workspaces.load(defaultWorkspace(), ws);
+    assert.equal(ws.getAllBlocks(false).length, 2);
+    assert.equal(generated(ws, lab), DEFAULT_ARDUINO_CODE);
+    Blockly.serialization.workspaces.load(cppToWorkspace(DEFAULT_ARDUINO_CODE, lab), ws);
+    assert.equal(ws.getAllBlocks(false).length, 2);
+    assert.equal(generated(ws, lab), DEFAULT_ARDUINO_CODE);
+  }
+});
+
+test('editing C++ changes actual Blockly fields and editing them changes C++ back', ctx => {
+  const ws = workspace(ctx);
+  const source = DEFAULT_ARDUINO_CODE.replace('115200', '9600').replace('delay(1000);', 'digitalWrite(2, HIGH);\n  Serial.println("Xin chào");\n  delay(250);');
+  Blockly.serialization.workspaces.load(cppToWorkspace(source, 1), ws);
+  assert.equal(ws.getBlocksByType('serial_begin')[0].getFieldValue('BAUD'), 9600);
+  const delay = ws.getBlocksByType('delay_ms')[0];
+  assert.equal(delay.getFieldValue('MS'), 250);
+  assert.equal(ws.getBlocksByType('digital_write')[0].getFieldValue('STATE'), 'HIGH');
+  assert.equal(ws.getBlocksByType('text')[0].getFieldValue('TEXT'), 'Xin chào');
+  delay.setFieldValue(750, 'MS');
+  const code = generated(ws, 1);
+  assert.match(code, /delay\(750\);/);
+  assert.doesNotMatch(code, /delay\(250\)|delay\(1\)|Serial.begin\(115200\)/);
+});
+
+test('C++ nested conditions and unmapped functions/loops survive block conversion', ctx => {
+  const ws = workspace(ctx);
+  const code = '#include <Arduino.h>\nint count = 0;\nvoid helper() { Serial.println("{;}"); }\nvoid setup() { Serial.begin(9600); }\nvoid loop() { if (count < 3) { helper(); count++; } else if (1) { for (int i=0; i<2; i++) { count += i; } } delay(010); Serial.println(1.0); }';
+  Blockly.serialization.workspaces.load(cppToWorkspace(code, 8), ws);
+  assert.equal(ws.getBlocksByType('controls_if').length, 2);
+  assert.ok(ws.getBlocksByType('cpp_globals').some(b => b.getFieldValue('CODE').includes('void helper()')));
+  const regenerated = generated(ws);
+  assert.match(regenerated, /for \(int i=0; i<2; i\+\+\) \{ count \+= i; \}/);
+  assert.match(regenerated, /delay\(010\)/);
+  assert.match(regenerated, /Serial.println\(\(1.0\)\)/);
+  assert.doesNotMatch(regenerated, /delay\(1\);/);
+  const copy = workspace(ctx);
+  Blockly.serialization.workspaces.load(decodeProject(encodeProject(ws, 8), 8), copy);
+  assert.equal(generated(copy), regenerated);
+});
+
+test('C++ conversion rejects incomplete text without modifying the student workspace', ctx => {
+  const ws = workspace(ctx);
+  const before = encodeProject(ws, 8);
+  for (const code of ['', 'void setup() {', 'void setup() {}', 'void setup() {} void setup() {} void loop() {}', 'void setup() {} void loop() { delay(1000) }', 'void setup() {} void loop() { Serial.println("unfinished); }']) {
+    assert.throws(() => cppToWorkspace(code, 8));
+    assert.equal(encodeProject(ws, 8), before);
+  }
+});
+
+test('C++ preserves conditional/repeated init, integer division, bitwise priority and String joins', ctx => {
+  const ws = workspace(ctx);
+  const cpp = '#include "PTITCube.h"\nPTIT_EPS eps;\nvoid setup() { eps.init(); eps.init(); if (true) { eps.init(); } }\nvoid loop() { eps.init(); Serial.println(1 / 2); Serial.println(1 & 2 == 0); Serial.println(String("a") + String("b")); Serial.println(/* note */ (5)); }';
+  Blockly.serialization.workspaces.load(cppToWorkspace(cpp, 8), ws);
+  const code = generated(ws);
+  assert.equal(code.split('eps.init();').length, 5);
+  assert.equal((code.match(/PTIT_EPS eps;/g) || []).length, 1);
+  assert.match(code, /\(1 \/ 2\)/);
+  assert.match(code, /\(1 & 2 == 0\)/);
+  assert.match(code, /String\("a"\) \+ String\("b"\)/);
+  assert.match(code, /Serial.println\(5\)/);
+});
+
+test('new Blockly variables do not collide with variables kept from C++', ctx => {
+  const ws = workspace(ctx);
+  Blockly.serialization.workspaces.load(cppToWorkspace('double cube_var_0 = 7; void setup() {} void loop() { Serial.println(cube_var_0); }', 8), ws);
+  const setter = ws.newBlock('variables_set');
+  const value = ws.newBlock('math_number');
+  setter.getInput('VALUE').connection.connect(value.outputConnection);
+  ws.getBlocksByType('serial_print')[0].nextConnection.connect(setter.previousConnection);
+  const code = generated(ws);
+  assert.equal((code.match(/double cube_var_0/g) || []).length, 1);
+  assert.match(code, /double cube_var_1 = 0;/);
+});
+
+test('C++ import preserves mixed integer operators, literal types and Serial overloads', ctx => {
+  const ws = workspace(ctx);
+  const source = `const char* pointer = nullptr;
+void setup() {}
+void loop() {
+  Serial.println(8 * 3 / 2);
+  Serial.println(8 * 3 % 5);
+  Serial.println(10 % 6 * 3);
+  Serial.println(pointer == "hello");
+  Serial.println(String("hello") == "hello");
+  Serial.println(1.2345, 2);
+  Serial.println(42, HEX);
+  Serial.println(readValue(1, 2));
+}`;
+  Blockly.serialization.workspaces.load(cppToWorkspace(source, 1), ws);
+  const code = generated(ws, 1);
+  assert.match(code, /Serial.println\(\(8 \* 3 \/ 2\)\)/);
+  assert.match(code, /Serial.println\(\(8 \* 3 % 5\)\)/);
+  assert.match(code, /\(\(10 % 6\) \* 3\)/);
+  assert.match(code, /\(\(pointer\) == \("hello"\)\)/);
+  assert.match(code, /\(String\("hello"\) == \("hello"\)\)/);
+  assert.match(code, /Serial.println\(1.2345, 2\);/);
+  assert.match(code, /Serial.println\(42, HEX\);/);
+  assert.match(code, /Serial.println\(\(readValue\(1, 2\)\)\)/);
+  assert.equal(ws.getBlocksByType('cpp_statement').length, 2);
+});
+
+test('long flat C++ expressions remain editable without recursive block expansion', ctx => {
+  const ws = workspace(ctx);
+  const formula = Array(2000).fill('1').join(' + ');
+  Blockly.serialization.workspaces.load(cppToWorkspace(`void setup() {} void loop() { Serial.println(${formula}); }`, 1), ws);
+  assert.equal(ws.getAllBlocks(false).length, 4);
+  assert.ok(generated(ws, 1).includes(formula));
+});
+
+test('all lab fixture C++ can return to Blockly without introducing init/update calls', ctx => {
+  for (let lab = 1; lab <= 8; lab++) {
+    const ws = workspace(ctx);
+    Blockly.serialization.workspaces.load(starterWorkspace(lab), ws);
+    const original = generated(ws, lab);
+    Blockly.serialization.workspaces.load(cppToWorkspace(original, lab), ws);
+    const returned = generated(ws, lab);
+    for (const name of ['sensor.init', 'eps.init', 'lora.init', 'sensor.update', 'eps.update']) {
+      assert.equal(returned.split(name).length, original.split(name).length, `${name} in Lab ${lab}`);
+    }
+    assert.match(returned, new RegExp(`cubesat-lab${lab}`));
+  }
+});
 
 test('all eight lab starters generate separate setup/loop and round-trip exactly', ctx => {
   for (let lab = 1; lab <= 8; lab++) {
@@ -212,6 +367,7 @@ test('every lab toolbox survives connection, export/import and repeated generati
         statement = ws.newBlock('serial_print');
         statement.getInput('VALUE').connection.connect(block.outputConnection);
       }
+      if (type === 'cpp_globals') continue;
       if (type.endsWith('_init')) { setup.connect(statement.previousConnection); setup = statement.nextConnection; }
       else { loop.connect(statement.previousConnection); loop = statement.nextConnection; }
     }

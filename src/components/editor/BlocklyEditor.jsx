@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import * as Blockly from 'blockly';
 import { getToolboxForLab, registerCustomBlocks } from './blockly-toolbox.js';
 import { generateArduino } from './arduino-generator.js';
-import { projectKey, starterWorkspace, encodeProject, decodeProject, downloadFile } from './blockly-project.js';
+import { projectKey, defaultWorkspace, encodeProject, decodeProject, downloadFile } from './blockly-project.js';
 import './blockly-editor.css';
 
 registerCustomBlocks();
@@ -12,14 +12,15 @@ const theme = Blockly.Theme.defineTheme('ptit', {
   fontStyle: { family: 'system-ui, sans-serif', weight: '500', size: 12 },
 });
 
-export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }) {
+export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallback = false, onCodeChange, active = true, workspaceUpdate = null }) {
   const containerRef = useRef(null), workspaceRef = useRef(null), callbackRef = useRef(onCodeChange), inputRef = useRef(null);
   const [report, setReport] = useState({ issues: [], blockCount: 0 });
   const [saveState, setSaveState] = useState('Đang mở bài…');
   const [notice, setNotice] = useState('');
   const [canUndo, setCanUndo] = useState(false), [canRedo, setCanRedo] = useState(false);
-  const [replacement, setReplacement] = useState('');
+  const [replacement, setReplacement] = useState(false);
   const refreshRef = useRef(null);
+  const fileStem = exerciseId || `cubesat-lab${labId}`;
   useEffect(() => { callbackRef.current = onCodeChange; }, [onCodeChange]);
 
   useEffect(() => {
@@ -33,12 +34,17 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
     workspaceRef.current = workspace;
     let saveAllowed = true;
     let previousWarnings = new Map();
-    const refresh = (persist = true) => {
+    const persistWorkspace = () => {
+      if (!saveAllowed) return;
+      try { localStorage.setItem(projectKey(labId, exerciseId), encodeProject(workspace, labId)); setSaveState('Đã lưu trên máy'); }
+      catch { setSaveState('Chưa lưu được · hãy xuất bài'); }
+    };
+    const refresh = (persist = true, reason = 'blocks') => {
       const result = generateArduino(workspace, labId);
       setReport(result);
       setCanUndo(workspace.getUndoStack().length > 0);
       setCanRedo(workspace.getRedoStack().length > 0);
-      callbackRef.current?.(result);
+      callbackRef.current?.(result, reason);
       const warnings = new Map();
       for (const issue of result.issues) {
         if (!issue.blockId) continue;
@@ -53,27 +59,32 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
       }
       // Key by block instance: imports can replace blocks while retaining their IDs.
       previousWarnings = nextWarnings;
-      if (persist && saveAllowed) {
-        try { localStorage.setItem(projectKey(labId), encodeProject(workspace, labId)); setSaveState('Đã lưu trên máy'); }
-        catch { setSaveState('Chưa lưu được · hãy xuất bài'); }
-      }
+      if (persist) persistWorkspace();
     };
-    refreshRef.current = () => { saveAllowed = true; refresh(); };
+    refreshRef.current = reason => { saveAllowed = true; refresh(true, reason); };
     Blockly.Events.disable();
     try {
-      const saved = localStorage.getItem(projectKey(labId));
-      Blockly.serialization.workspaces.load(saved ? decodeProject(saved, labId) : starterWorkspace(labId), workspace);
-      setNotice('');
+      const saved = localStorage.getItem(projectKey(labId, exerciseId)) || (legacyFallback ? localStorage.getItem(projectKey(labId)) : null);
+      Blockly.serialization.workspaces.load(saved ? decodeProject(saved, labId) : defaultWorkspace(), workspace);
+      setNotice(saved ? 'Đã mở bài lưu trên máy. Chọn Bài mới nếu muốn tự kéo thả lại từ đầu.' : '');
     } catch {
       saveAllowed = false;
-      Blockly.serialization.workspaces.load(starterWorkspace(labId, true), workspace);
+      Blockly.serialization.workspaces.load(defaultWorkspace(), workspace);
       setNotice('Không đọc được bài đã lưu. Bản lưu cũ được giữ lại. Có thể xuất bài đang sửa rồi nhập lại để tiếp tục lưu.');
       setSaveState('Chưa lưu · lỗi đọc bản cũ');
     } finally { Blockly.Events.enable(); }
     workspace.clearUndo();
-    refresh();
+    refresh(true, 'load');
     const listener = event => {
       if (event.isUiEvent || event.type === Blockly.Events.FINISHED_LOADING) return;
+      if (event.type === Blockly.Events.BLOCK_MOVE && event.oldParentId === event.newParentId && event.oldInputName === event.newInputName) {
+        // Moving a stack without changing connections changes only its layout.
+        // Save coordinates and history without validating/generating all blocks.
+        setCanUndo(workspace.getUndoStack().length > 0);
+        setCanRedo(workspace.getRedoStack().length > 0);
+        persistWorkspace();
+        return;
+      }
       refresh();
     };
     workspace.addChangeListener(listener);
@@ -88,7 +99,7 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
       workspaceRef.current = null;
       refreshRef.current = null;
     };
-  }, [labId]);
+  }, [labId, exerciseId, legacyFallback]);
 
   useEffect(() => {
     if (!active) return;
@@ -96,11 +107,16 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
     return () => cancelAnimationFrame(frame);
   }, [active]);
 
-  const replace = state => {
+  useEffect(() => {
+    if (workspaceUpdate) replace(workspaceUpdate.state, 'cpp');
+    // Each update is an immutable, already validated C++ conversion.
+  }, [workspaceUpdate]);
+
+  const replace = (state, reason = 'blocks') => {
     const workspace = workspaceRef.current;
     const backup = Blockly.serialization.workspaces.save(workspace);
     Blockly.Events.disable();
-    try { Blockly.serialization.workspaces.load(state, workspace); workspace.clearUndo(); workspace.scrollCenter(); refreshRef.current(); }
+    try { Blockly.serialization.workspaces.load(state, workspace); workspace.clearUndo(); workspace.scrollCenter(); refreshRef.current(reason); }
     catch (error) { Blockly.serialization.workspaces.load(backup, workspace); throw error; }
     finally { Blockly.Events.enable(); }
   };
@@ -115,7 +131,7 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
       // The reader can finish after navigation has disposed or replaced this workspace.
       if (workspaceRef.current !== workspace) return;
       const state = decodeProject(contents, labId);
-      downloadFile(`lab${labId}-truoc-khi-nhap.json`, encodeProject(workspace, labId));
+      downloadFile(`${fileStem}-truoc-khi-nhap.json`, encodeProject(workspace, labId));
       replace(state);
       setNotice(`Đã nhập ${file.name}. Bài trước đó đã được tải về máy.`);
     } catch (error) {
@@ -131,19 +147,19 @@ export default function BlocklyEditor({ labId = 1, onCodeChange, active = true }
         <button type="button" onClick={() => { workspaceRef.current.cleanUp(); workspaceRef.current.zoomToFit(); }}>Sắp xếp</button>
       </div>
       <div className="blockly-toolbar-group">
-        <select aria-label="Tạo bài Blockly" value="" onChange={e => setReplacement(e.target.value)}><option value="" disabled>Tạo bài…</option><option value="starter">Mẫu Lab {labId}</option><option value="empty">Bài trống</option></select>
+        <button type="button" onClick={() => setReplacement(true)}>Bài mới</button>
         <button type="button" onClick={() => inputRef.current.click()}>Nhập</button>
-        <button type="button" onClick={() => downloadFile(`cubesat-lab${labId}.json`, encodeProject(workspaceRef.current, labId))}>Xuất bài</button>
+        <button type="button" onClick={() => downloadFile(`${fileStem}.json`, encodeProject(workspaceRef.current, labId))}>Xuất bài</button>
         <input ref={inputRef} type="file" accept=".json,application/json" hidden onChange={importFile} aria-label="File bài Blockly" />
       </div>
     </div>
     {replacement && <div className="blockly-notice" role="alert">
-      <span>Thay bài hiện tại bằng {replacement === 'starter' ? 'bài mẫu' : 'bài trống'}? Bản hiện tại sẽ được tải về để giữ lại.</span>
-      <button onClick={() => { downloadFile(`lab${labId}-ban-sao.json`, encodeProject(workspaceRef.current, labId)); replace(starterWorkspace(labId, replacement === 'empty')); setReplacement(''); setNotice(''); }}>Thay bài</button>
-      <button onClick={() => setReplacement('')}>Hủy</button>
+      <span>Tạo bài mới với hai khối Khởi tạo và Lặp liên tục? Bài hiện tại sẽ được tải về để giữ lại.</span>
+      <button onClick={() => { downloadFile(`${fileStem}-ban-sao.json`, encodeProject(workspaceRef.current, labId)); replace(defaultWorkspace()); setReplacement(false); setNotice(''); }}>Tạo bài mới</button>
+      <button onClick={() => setReplacement(false)}>Hủy</button>
     </div>}
     {notice && <div className="blockly-notice" role="status"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo">Đóng</button></div>}
-    <div className="blockly-guide">Chọn nhóm bên trái → kéo block vào <strong>Khởi tạo</strong> hoặc <strong>Lặp liên tục</strong>.</div>
+    <div className="blockly-guide">Tự nối lệnh vào <strong>Khởi tạo</strong> hoặc <strong>Lặp liên tục</strong>. C++ và Blockly đồng bộ hai chiều. Hai khối rỗng dùng Serial 115200 và chu kỳ chờ 1000 ms mặc định.</div>
     <div ref={containerRef} className="blockly-canvas" aria-label={`Vùng kéo thả Blockly Lab ${labId}`} />
     <div className={`blockly-status ${report.issues.length ? 'has-errors' : ''}`} role="status">
       <span>{report.issues.length ? `${report.issues.length} lỗi cần sửa` : 'Sẵn sàng sinh C++'} · {report.blockCount} block</span><span>{saveState}</span>

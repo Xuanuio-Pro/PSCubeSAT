@@ -33,7 +33,7 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(email.trim().toLowerCase(), password, remember);
       navigate('/');
     } catch (err) {
       setErrors({ password: err.message });
@@ -47,7 +47,7 @@ export default function LoginPage() {
       <h1 className="auth-title">Chào mừng trở lại</h1>
       <p className="auth-subtitle">Vui lòng đăng nhập để truy cập Dashboard</p>
 
-      <GoogleSignIn />
+      <GoogleSignIn remember={remember} />
 
       <div className="auth-divider">Hoặc</div>
 
@@ -58,6 +58,7 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
+              autoComplete="username"
               placeholder="yourname@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -72,6 +73,7 @@ export default function LoginPage() {
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

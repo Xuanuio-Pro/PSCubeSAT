@@ -19,6 +19,10 @@ export function registerCustomBlocks() {
     { type: 'arduino_setup', message0: 'Khởi tạo · chạy một lần %1 %2', args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'DO' }], colour: '#376b9c' },
     { type: 'arduino_loop', message0: 'Lặp liên tục %1 %2', args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'DO' }], colour: '#267e77' },
     { type: 'serial_print', message0: 'Serial · in dòng %1', args0: [valueInput('VALUE')], ...statement, colour: '#267e77' },
+    { type: 'serial_begin', message0: 'Serial · tốc độ %1 baud', args0: [numberField('BAUD', 115200, 4000000)], ...statement, colour: '#267e77' },
+    { type: 'cpp_statement', message0: 'C++ · lệnh %1', args0: [{ type: 'field_input', name: 'CODE', text: 'Serial.println("Hello");' }], ...statement, colour: '#64748b', tooltip: 'Lệnh C++ được giữ nguyên khi chuyển đổi. Trình biên dịch kiểm tra cú pháp C++.' },
+    { type: 'cpp_expression', message0: 'C++ · biểu thức %1', args0: [{ type: 'field_input', name: 'CODE', text: '0' }], output: null, colour: '#64748b' },
+    { type: 'cpp_globals', message0: 'C++ · khai báo / hàm %1', args0: [{ type: 'field_input', name: 'CODE', text: '// Khai báo toàn cục' }], colour: '#64748b', tooltip: 'Mã C++ ngoài setup/loop; đặt ở ngoài cùng.' },
     { type: 'pin_mode', message0: 'Đặt chân %1 chế độ %2', args0: [numberField('PIN', 2), dropdown('MODE', [['Đầu ra', 'OUTPUT'], ['Đầu vào', 'INPUT'], ['Kéo lên', 'INPUT_PULLUP']])], ...statement, colour: '#267e77' },
     { type: 'digital_write', message0: 'Ghi chân %1 mức %2', args0: [numberField('PIN', 2), dropdown('STATE', [['Bật / HIGH', 'HIGH'], ['Tắt / LOW', 'LOW']])], ...statement, colour: '#267e77' },
     { type: 'digital_read', message0: 'Đọc digital chân %1', args0: [numberField('PIN', 4)], output: 'Number', colour: '#267e77' },
@@ -71,7 +75,8 @@ export function getToolboxForLab(labId) {
   /** @type {Blockly.utils.toolbox.ToolboxItemInfo[]} */
   const categories = [
     category('Chương trình', '#376b9c', ['arduino_setup', 'arduino_loop']),
-    category('Arduino', '#267e77', ['pin_mode', 'digital_write', 'digital_read', 'analog_read', 'delay_ms', 'millis_value', { ...block('serial_print'), inputs: { VALUE: text('Hello CubeSat') } }]),
+    category('C++ tùy chỉnh', '#64748b', ['cpp_statement', 'cpp_expression', 'cpp_globals']),
+    category('Arduino', '#267e77', ['pin_mode', 'digital_write', 'digital_read', 'analog_read', 'delay_ms', 'millis_value', 'serial_begin', { ...block('serial_print'), inputs: { VALUE: text('Hello CubeSat') } }]),
   ];
   if (labId >= 2) categories.push(category('Nguồn EPS', '#71813e', ['eps_init', 'eps_update', 'eps_read_voltage', 'eps_read_percent']));
   if (labId >= 3) categories.push(category('Lưu trữ SD', '#8867a5', ['storage_init', { ...block('storage_log'), inputs: { VALUE: text('Dữ liệu') } }]));

@@ -17,8 +17,10 @@ from app.services.compiler_sandbox import run
 async def main():
     folder = ROOT / 'scratch/blockly-smoke'
     results = []
+    names = ['default', 'all-blocks', 'all-blocks-roundtrip'] if '--bidir' in sys.argv else [*[f'lab{i}' for i in range(1, 9)], 'all-blocks', 'all-blocks-roundtrip', 'default']
+    result_file = folder / ('bidir-results.json' if '--bidir' in sys.argv else 'matrix-results.json')
     for chip in ('esp32', 'esp32s3'):
-        for name in [*[f'lab{i}' for i in range(1, 9)], 'all-blocks']:
+        for name in names:
             source = (folder / f'{name}.cpp').read_text(encoding='utf-8')
             target = folder / f'{name}-{chip}'
             print(f'BUILD {name} {chip}', flush=True)
@@ -26,7 +28,7 @@ async def main():
             (folder / f'{name}-{chip}.log').write_text(log, encoding='utf-8')
             results.append({'fixture': name, 'chip': chip, 'status': status,
                             'source_sha256': sha256(source.encode()).hexdigest()})
-            (folder / 'matrix-results.json').write_text(json.dumps(results, indent=2), encoding='utf-8')
+            result_file.write_text(json.dumps(results, indent=2), encoding='utf-8')
             print(f'{"PASS" if status == 0 else "FAIL"} {name} {chip}', flush=True)
     return int(any(row['status'] != 0 for row in results))
 

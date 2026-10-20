@@ -3,8 +3,9 @@
 import * as Blockly from 'blockly';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { registerCustomBlocks, allowedBlockTypes } from '../src/components/editor/blockly-toolbox.js';
-import { starterWorkspace } from '../src/components/editor/blockly-project.js';
+import { starterWorkspace, defaultWorkspace } from '../src/components/editor/blockly-project.js';
 import { generateArduino } from '../src/components/editor/arduino-generator.js';
+import { cppToWorkspace } from '../src/components/editor/cpp-to-blockly.js';
 
 registerCustomBlocks();
 mkdirSync('scratch/blockly-smoke', { recursive: true });
@@ -37,9 +38,15 @@ for (const type of allowedBlockTypes(8)) {
     statement = workspace.newBlock('serial_print');
     statement.getInput('VALUE').connection.connect(block.outputConnection);
   }
+  if (type === 'cpp_globals') continue;
   if (type.endsWith('_init')) { setupConnection.connect(statement.previousConnection); setupConnection = statement.nextConnection; }
   else { loopConnection.connect(statement.previousConnection); loopConnection = statement.nextConnection; }
 }
 save(workspace, 'all-blocks', 8);
+const roundtrip = cppToWorkspace(generateArduino(workspace, 8).code, 8);
+Blockly.serialization.workspaces.load(roundtrip, workspace);
+save(workspace, 'all-blocks-roundtrip', 8);
+Blockly.serialization.workspaces.load(defaultWorkspace(), workspace);
+save(workspace, 'default', 8);
 workspace.dispose();
-console.log('Exported 8 lab starters and all-blocks.cpp to scratch/blockly-smoke.');
+console.log('Exported 8 lab starters, all-blocks, reverse conversion and default to scratch/blockly-smoke.');

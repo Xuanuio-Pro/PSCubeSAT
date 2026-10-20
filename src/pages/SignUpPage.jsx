@@ -61,6 +61,8 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.fullName ? 'has-error' : ''}`}>
             <input
               id="fullName"
+              autoComplete="name"
+              maxLength={200}
               type="text"
               placeholder="Nguyễn Văn A"
               value={fullName}
@@ -75,6 +77,7 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.email ? 'has-error' : ''}`}>
             <input
               id="email"
+              autoComplete="username"
               type="email"
               placeholder="email@vi-du.com"
               value={email}
@@ -89,6 +92,7 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.password ? 'has-error' : ''}`}>
             <input
               id="password"
+              autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="********"
               value={password}
@@ -111,6 +115,7 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.confirmPassword ? 'has-error' : ''}`}>
             <input
               id="confirmPassword"
+              autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="********"
               value={confirmPassword}

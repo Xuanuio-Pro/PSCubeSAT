@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LABS } from '../../data/labs';
+import { getLessonsForLab, lessonUrl } from '../../data/curriculum';
 import logoSvg from '../../assets/logo.svg';
 import { HomeIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from '../common/HeaderIcons';
-
-const LAB_MINUTES = [26, 28, 30, 25, 32, 30, 24, 35, 40];
 
 export default function CourseSidebar({ currentLabId, activeLesson, onSelectLesson }) {
   const navigate = useNavigate();
@@ -31,12 +30,6 @@ export default function CourseSidebar({ currentLabId, activeLesson, onSelectLess
       navigate(`/${slug}`);
     }
   };
-
-  const getLessonsForLab = (labId) => [
-    { id: 0, title: 'Tổng quan bài học', icon: '01' },
-    { id: 1, title: 'Tài liệu hướng dẫn', icon: '02' },
-    { id: 2, title: labId === 0 ? 'Thành phần' : 'Thực hành', icon: '03' },
-  ];
 
   return (
     <aside className={`player-sidebar ${collapsed ? 'is-collapsed' : ''}`}>
@@ -76,20 +69,21 @@ export default function CourseSidebar({ currentLabId, activeLesson, onSelectLess
           {LABS.map((lab) => {
             const isCurrentLab = lab.id === currentLabId;
             const isExpanded = expandedLab === lab.id;
+            const lessons = getLessonsForLab(lab.id);
 
             return (
               <div key={lab.id} className={`accordion-section ${isCurrentLab ? 'current' : ''}`}>
                 <button type="button" className={`accordion-header ${isCurrentLab ? 'current' : ''}`} onClick={() => toggleLab(lab.id, lab.slug)} aria-expanded={isExpanded} aria-controls={isExpanded ? `lab-${lab.id}-lessons` : undefined}>
                   <span className="accordion-label">
                     <span className="accordion-title">Lab {lab.id}: {lab.title.split('(')[0].trim()}</span>
-                    <span className="accordion-meta"><span>0 / 3</span><span>•</span><span>{LAB_MINUTES[lab.id]} phút</span></span>
+                    <span className="accordion-meta"><span>{lessons.length} phần</span><span>•</span><span>{lessons.filter(lesson => lesson.type === 'practice' || lesson.type === 'components').length} bài thực hành</span></span>
                   </span>
                   <ChevronDownIcon size={14} className={`accordion-chevron ${isExpanded ? 'expanded' : ''}`} />
                 </button>
 
                 {isExpanded && (
                   <div className="accordion-content" id={`lab-${lab.id}-lessons`}>
-                    {getLessonsForLab(lab.id).map((lesson) => {
+                    {lessons.map((lesson, index) => {
                       const isLessonActive = isCurrentLab && activeLesson === lesson.id;
                       return (
                         <button
@@ -99,15 +93,14 @@ export default function CourseSidebar({ currentLabId, activeLesson, onSelectLess
                           aria-current={isLessonActive ? 'step' : undefined}
                           onClick={() => {
                             if (!isCurrentLab) {
-                              navigate(`/${lab.slug}`);
-                              setTimeout(() => onSelectLesson(lesson.id), 100);
+                              navigate(lessonUrl(lab.slug, lesson.id));
                             } else {
                               onSelectLesson(lesson.id);
                             }
                           }}
                         >
-                          <span className="sub-lesson-icon">{lesson.icon}</span>
-                          <span>{lesson.title}</span>
+                          <span className="sub-lesson-icon">{String(index + 1).padStart(2, '0')}</span>
+                          <span className="sub-lesson-copy"><small>{lesson.label}</small><span>{lesson.title}</span>{lesson.exerciseCode && <code>{lesson.exerciseCode}</code>}</span>
                         </button>
                       );
                     })}

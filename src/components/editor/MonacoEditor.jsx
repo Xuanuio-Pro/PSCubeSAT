@@ -1,25 +1,5 @@
 import Editor from '@monaco-editor/react';
-
-const DEFAULT_CODE = `#include <Arduino.h>
-#include "PTITCube.h"
-
-// === Khai báo đối tượng ===
-PTIT_Sensor sensor;
-PTIT_GPS gps;
-PTIT_COM lora;
-PTIT_EPS eps;
-PTIT_Storage storage;
-
-void setup() {
-    Serial.begin(115200);
-    // Khởi tạo các phân hệ tại đây
-}
-
-void loop() {
-    // Viết logic chính tại đây
-    delay(1000);
-}
-`;
+import { DEFAULT_ARDUINO_CODE } from './blockly-project.js';
 
 export default function MonacoEditor({ code, onChange, readOnly = false, height = '400px' }) {
   return (
@@ -27,7 +7,7 @@ export default function MonacoEditor({ code, onChange, readOnly = false, height 
       height={height}
       defaultLanguage="cpp"
       theme="vs-dark"
-      value={code ?? DEFAULT_CODE}
+      value={code ?? DEFAULT_ARDUINO_CODE}
       onChange={onChange}
       options={{
         readOnly,

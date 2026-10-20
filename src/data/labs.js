@@ -1,3 +1,5 @@
+import { CURRICULUM } from './curriculum.js';
+
 export const LABS = [
   {
     id: 0,
@@ -116,7 +118,7 @@ export const LABS = [
     videoUrl: '',
     docPath: 'lab8-capstone',
   },
-];
+].map(lab => ({ ...lab, description: CURRICULUM[lab.id]?.objective || lab.description }));
 
 export function getLabBySlug(slug) {
   return LABS.find(l => l.slug === slug);

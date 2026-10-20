@@ -22,7 +22,7 @@ function loadGoogle() {
   return scriptPromise;
 }
 
-export default function GoogleSignIn({ signup = false }) {
+export default function GoogleSignIn({ signup = false, remember = false }) {
   const container = useRef(null);
   const { loginGoogle } = useAuth();
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export default function GoogleSignIn({ signup = false }) {
           setError('');
           setStatus('Đang xác thực Google...');
           try {
-            await loginGoogle(credential);
+            await loginGoogle(credential, remember);
             if (active) navigate('/');
           } catch (err) {
             if (active) setError(err.message);
@@ -56,6 +56,7 @@ export default function GoogleSignIn({ signup = false }) {
           }
         },
       });
+      container.current.replaceChildren();
       window.google.accounts.id.renderButton(container.current, {
         type: 'standard', theme: 'outline', size: 'large',
         text: signup ? 'signup_with' : 'signin_with', locale: 'vi',
@@ -71,7 +72,7 @@ export default function GoogleSignIn({ signup = false }) {
     return () => {
       active = false;
     };
-  }, [loginGoogle, navigate, signup]);
+  }, [loginGoogle, navigate, signup, remember]);
 
   return (
     <div>

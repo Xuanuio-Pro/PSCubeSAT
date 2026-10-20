@@ -22,6 +22,9 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
   variables = new Map();
   explicitInit = new Set();
   counter = 0;
+  globals = '';
+  hasTelemetry = false;
+  hasSerialBegin = false;
   constructor() {
     super('Arduino');
     this.INDENT = '  ';
@@ -32,19 +35,29 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     this.explicitInit.clear();
     this.variables.clear();
     this.counter = 0;
+    this.globals = workspace.getBlocksByType('cpp_globals', false).filter(active).map(b => b.getFieldValue('CODE')).join('\n');
+    this.hasTelemetry = workspace.getBlocksByType('telemetry_send', false).some(active);
+    this.hasSerialBegin = workspace.getBlocksByType('serial_begin', false).filter(active).some(b => b.getRootBlock().type === 'arduino_setup');
+    const reservedNames = new Set(this.globals.match(/\bcube_var_\d+\b/g) || []);
+    let variableIndex = 0;
     for (const block of workspace.getAllBlocks(false).filter(active)) {
       const resource = resourceFor(block.type);
       if (resource) this.used.add(resource);
       if (block.type.endsWith('_init')) this.explicitInit.add(resource);
       const field = block.getField('VAR');
-      if (field && !this.variables.has(field.getValue())) this.variables.set(field.getValue(), `cube_var_${this.variables.size}`);
+      if (field && !this.variables.has(field.getValue())) {
+        while (reservedNames.has(`cube_var_${variableIndex}`)) variableIndex++;
+        this.variables.set(field.getValue(), `cube_var_${variableIndex++}`);
+      }
     }
   }
   finish(code) {
     this.isInitialized = false;
-    const declarations = [...this.used].map(key => `${resources[key][0]} ${resources[key][1]};`).join('\n');
+    const declarations = [...this.used].filter(key => !new RegExp(`\\b${resources[key][0]}\\s+${resources[key][1]}\\s*[;({]`).test(this.globals)).map(key => `${resources[key][0]} ${resources[key][1]};`).join('\n');
     const vars = [...this.variables.values()].map(name => `double ${name} = 0;`).join('\n');
-    return `// PTIT CubeSat · sinh từ Blockly\n#include <Arduino.h>\n#include <math.h>\n${this.used.size ? '#include "PTITCube.h"\n' : ''}${this.used.has('camera') ? '#include <SD.h>\n' : ''}\n${declarations}\n${vars}\n${this.telemetryHelper()}\n${code}`;
+    const helpers = this.hasTelemetry && !/\bvoid\s+cube_json_number\s*\(/.test(this.globals) ? this.telemetryHelper() : '';
+    const extra = [declarations, vars, helpers].filter(Boolean).join('\n');
+    return `#include <Arduino.h>\n#include <math.h>\n${this.used.size && !/#include\s*["<]PTITCube.h[">]/.test(this.globals) ? '#include "PTITCube.h"\n' : ''}${this.used.has('camera') && !/#include\s*[<"]SD.h[>"]/.test(this.globals) ? '#include <SD.h>\n' : ''}\n${extra ? extra + '\n\n' : ''}${code.trimEnd()}\n`;
   }
   scrub_(block, code, thisOnly = false) {
     return code + (thisOnly ? '' : this.blockToCode(block.getNextBlock()));
@@ -71,8 +84,15 @@ export const arduinoGenerator = new ArduinoGenerator();
 /** @returns {[string, number]} */
 const expression = code => [code, 0];
 const gen = arduinoGenerator.forBlock;
-gen.arduino_setup = (b, g) => `void setup() {\n  Serial.begin(115200);\n${g.autoInit()}${g.statementToCode(b, 'DO')}}\n\n`;
-gen.arduino_loop = (b, g) => `void loop() {\n${g.updates()}${g.statementToCode(b, 'DO')}  delay(1); // Nhường CPU cho hệ thống ESP32\n}\n`;
+gen.arduino_setup = (b, g) => `void setup() {\n${b.data === 'cpp-sync' ? '' : (g.hasSerialBegin ? '' : '  Serial.begin(115200);\n') + g.autoInit()}${g.statementToCode(b, 'DO')}}\n`;
+gen.arduino_loop = (b, g) => {
+  const body = g.statementToCode(b, 'DO');
+  return `void loop() {\n${b.data === 'cpp-sync' ? '' : g.updates()}${body || (b.data === 'cpp-sync' ? '' : '  delay(1000);\n')}}\n`;
+};
+gen.serial_begin = b => `Serial.begin(${b.getFieldValue('BAUD')});\n`;
+gen.cpp_statement = b => `${b.getFieldValue('CODE')}\n`;
+gen.cpp_expression = b => expression(`(${b.getFieldValue('CODE')})`);
+gen.cpp_globals = b => `${b.getFieldValue('CODE')}\n\n`;
 gen.math_number = b => expression(String(Number(b.getFieldValue('NUM'))));
 gen.text = b => expression(`String(${cppString(b.getFieldValue('TEXT'))})`);
 gen.logic_boolean = b => expression(b.getFieldValue('BOOL') === 'TRUE' ? 'true' : 'false');
@@ -175,7 +195,8 @@ export function generateArduino(workspace, labId = 8) {
   }
   for (const b of blocks) {
     if (!allowed.has(b.type) || !gen[b.type]) { add(b, `Block ${b.type} chưa được hỗ trợ trong Lab ${labId}.`); continue; }
-    if (!roots.has(b.type) && !b.getParent()) add(b, 'Block rời chưa được nối vào chương trình.');
+    if (!roots.has(b.type) && b.type !== 'cpp_globals' && !b.getParent()) add(b, 'Block rời chưa được nối vào chương trình.');
+    if (b.type === 'cpp_globals' && b.getParent()) add(b, 'Khai báo C++ phải nằm ở ngoài cùng.');
     if (roots.has(b.type) && b.getParent()) add(b, 'Block chương trình phải nằm ở ngoài cùng.');
     if (b.type.endsWith('_init') && b.getSurroundParent()?.type !== 'arduino_setup') add(b, 'Đặt block khởi tạo phân hệ trực tiếp trong vùng Khởi tạo.');
     if (b.type.endsWith('_init') && counts.get(b.type) > 1) add(b, 'Mỗi phân hệ chỉ cần một block khởi tạo.');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSerial } from '../../contexts/serial-api';
-import { TOKEN_KEY } from '../../contexts/auth-api';
+import { getAuthToken } from '../../contexts/auth-storage';
 
 export default function CloudCompiler({ code, labId, onBinaryReady = undefined, inline = false, showIcon = true, buttonClassName = '' }) {
   const [status, setStatus] = useState('idle');
@@ -26,7 +26,7 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
     appendLog('🔨 Bắt đầu biên dịch trên Cloud...', 'system');
 
     try {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = getAuthToken();
       const res = await fetch('/api/compile', {
         method: 'POST',
         headers: {

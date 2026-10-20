@@ -648,6 +648,26 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   border-color: var(--cubesat-navy);
   background: rgba(10, 65, 116, 0.08);
 }
+.sub-lesson-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; line-height: 1.45; }
+.sub-lesson-copy small { font-size: 10px; opacity: .72; }
+.sub-lesson-copy code { font-size: 9px; overflow-wrap: anywhere; opacity: .75; }
+.lesson-exercise-code { color: #526b80; font-size: 12px; overflow-wrap: anywhere; }
+.lesson-reading-card, .lesson-practice-brief { padding: 22px 26px; margin: 24px 0; border: 1px solid #d7e5ee; border-radius: 16px; background: #fff; color: #31536d; line-height: 1.75; }
+.lesson-reading-card h2, .lesson-practice-brief h2 { margin: 0 0 10px; font-size: 17px; color: var(--cubesat-ink); }
+.lesson-reading-card p, .lesson-practice-brief p { margin: 8px 0; }
+.lesson-practice-brief { display: flex; gap: 24px; align-items: start; justify-content: space-between; font-size: 13px; }
+.lesson-practice-brief a { flex: 0 0 auto; font-weight: 600; }
+.lesson-summary-list { padding-left: 20px; }
+.lesson-summary-list li { margin: 10px 0; }
+.lesson-summary-list button { display: flex; flex-direction: column; gap: 4px; border: 0; background: #f3f8fc; padding: 12px; border-radius: 8px; text-align: left; color: #245b81; cursor: pointer; max-width: 100%; }
+.lesson-summary-list code { overflow-wrap: anywhere; }
+.lesson-source { font-size: 12px; line-height: 1.6; color: #62778a; margin-top: 28px; }
+.lesson-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 18px; border-top: 1px solid #d7e5ee; font-size: 12px; color: #526b80; }
+.lesson-pagination button { border: 1px solid #c9dce9; background: #fff; color: #245b81; border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.lesson-pagination button:disabled { opacity: .4; cursor: default; }
+@media (max-width: 1100px) {
+  .lesson-practice-brief { flex-direction: column; gap: 10px; }
+}
 .course-menu-footer { height: 16px; }
 
 /* ===== Buttons & Components ===== */
@@ -944,6 +964,9 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   }
   .lab-mobile-lessons button span { margin-right: 5px; font-size: 0.62rem; font-weight: 800; opacity: 0.7; }
   .lab-mobile-lessons button.active { border-color: rgba(10, 65, 116, 0.14); background: #fff; color: var(--cubesat-navy); box-shadow: 0 3px 10px rgba(10, 65, 116, 0.08); }
+  .lab-mobile-lessons--curriculum { display: flex; flex-direction: column; gap: 5px; }
+  .lab-mobile-lessons--curriculum label { font-size: 11px; font-weight: 600; color: #526b80; }
+  .lab-mobile-lessons--curriculum select { min-width: 0; width: 100%; padding: 10px; border: 1px solid #c9dce9; border-radius: 8px; background: #fff; color: #23425c; font: inherit; font-size: 12px; }
   .lab-course-view { padding: 28px 22px 64px; }
   .lab-workspace { min-height: 410px; padding: 26px; }
   .lab-video-workspace { min-height: 0; }

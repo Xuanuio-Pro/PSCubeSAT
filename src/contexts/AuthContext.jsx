@@ -1,27 +1,31 @@
 import { useEffect, useState, useCallback } from 'react';
-import { AuthContext, TOKEN_KEY, request } from './auth-api';
+import { AuthContext, request } from './auth-api';
+import { getAuthToken, saveAuthToken, clearAuthToken } from './auth-storage';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!localStorage.getItem(TOKEN_KEY)) {
+    const token = getAuthToken();
+    if (!token) {
       setLoading(false);
       return;
     }
+    let active = true;
     request('/api/auth/me')
-      .then(setUser)
-      .catch(() => localStorage.removeItem(TOKEN_KEY))
-      .finally(() => setLoading(false));
+      .then(currentUser => { if (active && getAuthToken() === token) setUser(currentUser); })
+      .catch(error => { if (active && getAuthToken() === token && error.status === 401) clearAuthToken(); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, remember = false) => {
     const data = await request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    localStorage.setItem(TOKEN_KEY, data.access_token);
+    saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;
   }, []);
@@ -31,17 +35,17 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name: fullName || undefined }),
     });
-    localStorage.setItem(TOKEN_KEY, data.access_token);
+    saveAuthToken(data.access_token);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const loginGoogle = useCallback(async (credential) => {
+  const loginGoogle = useCallback(async (credential, remember = false) => {
     const data = await request('/api/auth/google', {
       method: 'POST',
       body: JSON.stringify({ credential }),
     });
-    localStorage.setItem(TOKEN_KEY, data.access_token);
+    saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;
   }, []);
@@ -52,7 +56,7 @@ export function AuthProvider({ children }) {
     } catch {
       // Lỗi thu hồi token phía server không quan trọng bằng việc xoá phiên cục bộ
     } finally {
-      localStorage.removeItem(TOKEN_KEY);
+      clearAuthToken();
       setUser(null);
     }
   }, []);

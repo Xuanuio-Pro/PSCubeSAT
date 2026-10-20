@@ -52,6 +52,7 @@ fastapi-backend/build_cache/
 mosquitto/data/*
 mosquitto/config/passwd
 logs/
+broker_chain.txt
 !mosquitto/data/.gitkeep
 mosquitto/log/*
 !mosquitto/log/.gitkeep

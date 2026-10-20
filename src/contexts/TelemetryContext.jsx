@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useAuth, TOKEN_KEY, request } from './auth-api';
+import { useAuth, request } from './auth-api';
+import { getAuthToken } from './auth-storage';
 import { useSerial } from './serial-api';
 import { TelemetryContext } from './telemetry-api';
 import { adaptWebSocketMessage, demoFrame } from '../telemetry/adapters';
@@ -100,7 +101,7 @@ export function TelemetryProvider({ children }) {
   useEffect(() => {
     if (!['hardware', 'simulator'].includes(state.mode)) return;
     const generation = state.generation;
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = getAuthToken();
     if (!user || !token || !state.deviceId) {
       store.setLink('offline', user ? 'Chọn thiết bị để nhận telemetry.' : 'Đăng nhập để nhận telemetry qua WebSocket.', generation);
       return;

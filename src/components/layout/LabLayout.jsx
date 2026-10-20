@@ -1,205 +1,101 @@
-import { useState, useEffect, useRef } from 'react';
+import { cloneElement, isValidElement, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import CourseSidebar from './CourseSidebar';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
 import { useAuth } from '../../contexts/auth-api';
 import TelemetryControls from '../groundstation/TelemetryControls';
+import { getLessonsForLab, getLessonForLab, LESSON_TYPE_LABELS } from '../../data/curriculum';
+import { lessonReadingContent } from '../../data/lesson-reading';
 
-function LabStateTitle({ step, section, children, description = '', compact = false }) {
-  return (
-    <header className={`lab-state-title${compact ? ' lab-state-title--compact' : ''}`}>
-      <div className="lab-state-meta">
-        <span className="lab-state-number">Lab {step}</span>
-        <span className="lab-state-section">{section}</span>
-      </div>
-      <h1 className="lab-state-copy">{children}</h1>
-      {description && <p className="lab-state-description">{description}</p>}
-    </header>
-  );
+function LabStateTitle({ lab, lesson, position }) {
+  return <header className="lab-state-title lab-state-title--compact">
+    <div className="lab-state-meta"><span className="lab-state-number">Lab {lab.id} · Phần {position}</span><span className="lab-state-section">{lesson.label}</span></div>
+    <h1 className="lab-state-copy">{lab.id === 0 && lesson.type === 'video' ? lab.title : lesson.title}</h1>
+    {lesson.exerciseCode && <code className="lesson-exercise-code">{lesson.exerciseCode}</code>}
+  </header>;
 }
 
 export default function LabLayout({ lab, editorPanel, visualizationPanel, practiceActions = null, practiceVariant = 'split' }) {
   const mainRef = useRef(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, markVideoWatched, markDocViewed } = useAuth();
+  const lessons = getLessonsForLab(lab?.id ?? 0);
+  const lesson = getLessonForLab(lab?.id ?? 0, searchParams.get('lesson'));
+  const lessonIndex = lessons.indexOf(lesson);
+  const firstPractice = lessons.find(item => item.type === 'practice');
+  const videoUrl = lab?.id === 0 ? lab.videoUrl : lesson.videoUrl;
+  const selectLesson = id => setSearchParams(current => { const next = new URLSearchParams(current); next.set('lesson', id); return next; });
 
-  // 0: Tổng quan (Video), 1: Tài liệu, 2: Thực hành
-  const [activeLesson, setActiveLesson] = useState(0);
-
-  useEffect(() => {
-    if (mainRef.current) {
-      mainRef.current.scrollTop = 0;
-    }
-    // Khi đổi lab, reset về bài học đầu tiên (Tổng quan)
-    setActiveLesson(0);
-  }, [lab?.id]);
-
+  useEffect(() => { if (mainRef.current) mainRef.current.scrollTop = 0; }, [lab?.id, lesson.id]);
   useEffect(() => {
     if (!isAuthenticated || !lab) return;
-    if (activeLesson === 0) markVideoWatched(lab.id).catch(() => {});
-    if (activeLesson === 1) markDocViewed(lab.id).catch(() => {});
-  }, [isAuthenticated, lab, activeLesson, markVideoWatched, markDocViewed]);
+    // The server currently stores lab-level flags, not lesson completion.
+    if (lesson.type === 'video' && videoUrl) markVideoWatched(lab.id).catch(() => {});
+    if (lesson.type === 'document') markDocViewed(lab.id).catch(() => {});
+  }, [isAuthenticated, lab, lesson.type, videoUrl, markVideoWatched, markDocViewed]);
 
   if (!lab) return <div>Lab không tồn tại</div>;
+  const scopedEditor = isValidElement(editorPanel) ? cloneElement(editorPanel, {
+    key: lesson.id, exerciseId: lesson.type === 'practice' ? lesson.id : '', legacyFallback: lesson.id === firstPractice?.id,
+  }) : editorPanel;
 
-  const isLabZero = lab.id === 0;
-  const usesFigmaLearningShell = lab.id >= 0 && lab.id <= 8;
-  const usesFigmaPracticeShell = lab.id >= 1 && lab.id <= 8;
-  const lessonLabels = ['Tổng quan', 'Tài liệu', isLabZero ? 'Thành phần' : 'Thực hành'];
+  return <div className="player-layout">
+    <CourseSidebar currentLabId={lab.id} activeLesson={lesson.id} onSelectLesson={selectLesson} />
+    <div className="player-main" ref={mainRef}>
+      <TelemetryControls />
+      {lab.id === 0 ? <nav className="lab-mobile-lessons" aria-label="Nội dung Lab 0">
+        {lessons.map(item => <button key={item.id} type="button" className={lesson.id === item.id ? 'active' : ''} aria-current={lesson.id === item.id ? 'page' : undefined} onClick={() => selectLesson(item.id)}>{item.title}</button>)}
+      </nav> : <div className="lab-mobile-lessons lab-mobile-lessons--curriculum">
+        <label htmlFor={`lab-${lab.id}-lesson`}>Nội dung Lab {lab.id} · {lessons.length} phần</label>
+        <select id={`lab-${lab.id}-lesson`} value={lesson.id} onChange={event => selectLesson(event.target.value)}>
+          {lessons.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.label} · {item.exerciseCode || item.title}</option>)}
+        </select>
+      </div>}
 
-  return (
-    <div className="player-layout">
-      
-      {/* Left Sidebar Curriculum */}
-      <CourseSidebar 
-        currentLabId={lab.id} 
-        activeLesson={activeLesson}
-        onSelectLesson={setActiveLesson} 
-      />
-
-      {/* Main Content Area */}
-      <div className="player-main" ref={mainRef}>
-        <TelemetryControls />
-        <nav className="lab-mobile-lessons" aria-label={`Nội dung Lab ${lab.id}`}>
-          {lessonLabels.map((label, lessonId) => (
-            <button
-              type="button"
-              key={label}
-              className={activeLesson === lessonId ? 'active' : ''}
-              onClick={() => setActiveLesson(lessonId)}
-              aria-current={activeLesson === lessonId ? 'page' : undefined}
-            >
-              <span>{String(lessonId + 1).padStart(2, '0')}</span>
-              {label}
-            </button>
-          ))}
+      <div className="lab-course-view animate-fadeInUp" key={`${lab.id}:${lesson.id}`}>
+        <LabStateTitle lab={lab} lesson={lesson} position={lessonIndex + 1} />
+        {lesson.type === 'video' && <>
+          <section className="lab-workspace lab-video-workspace" aria-label={`${lesson.label}: ${lesson.title}`}>
+            <span className="lab-workspace-badge lab-play-badge" aria-hidden="true">▶</span>
+            <div className="lab-video-surface"><VideoPlayer url={videoUrl} /></div>
+          </section>
+          <section className="lesson-reading-card"><h2>Mục tiêu Lab {lab.id}</h2><p>{lab.description}</p><p>Nội dung phần này: {lesson.title}.</p></section>
+        </>}
+        {lesson.type === 'document' && <section className="lab-workspace lab-doc-workspace" aria-label={`${lesson.label}: ${lesson.title}`}>
+          <span className="lab-workspace-badge" aria-hidden="true">▤</span>
+          <div className="lab-doc-surface"><DocViewer key={lesson.id} docPath={lab.id === 0 ? lab.docPath : undefined} content={lab.id === 0 ? '' : lessonReadingContent(lab, lesson)} /></div>
+        </section>}
+        {lesson.type === 'components' && <section className="lab-workspace lab-components-workspace" aria-label="Khám phá các phân hệ CubeSat">{visualizationPanel}</section>}
+        {lesson.type === 'practice' && <>
+          <section className="lesson-practice-brief" aria-label="Yêu cầu bài thực hành">
+            <div><h2>Yêu cầu thực hành</h2><p>{lesson.title}.</p><p>Tự viết C++ hoặc kéo thả Blockly, biên dịch đúng board và đối chiếu kết quả qua Serial/bảng dữ liệu. Mỗi bài có bản lưu riêng trên trình duyệt.</p></div>
+            <a href={lesson.repositoryUrl} target="_blank" rel="noreferrer">Hướng dẫn trên PTITCube ↗</a>
+          </section>
+          <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${practiceVariant}`} aria-label={`Không gian thực hành ${lesson.exerciseCode}`}>
+            <div className={`lab-practice-panels lab-practice-panels--${practiceVariant}`}>
+              <div className="lab-practice-editor">
+                <div className="lab-practice-editor-frame">{scopedEditor}</div>
+                {practiceVariant !== 'split' && <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
+              </div>
+              <div className="lab-practice-visualization">{visualizationPanel}</div>
+            </div>
+            {practiceVariant === 'split' && <div className="lab-practice-actions" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
+          </section>
+        </>}
+        {lesson.type === 'summary' && <section className="lesson-reading-card">
+          <h2>Kết quả cần đạt</h2><p>{lesson.description}</p>
+          <h2>Đối chiếu các bài thực hành</h2><p>Kiểm tra mã biên dịch, lưu lại kết quả quan sát và giải thích cách chương trình đáp ứng yêu cầu của từng bài.</p>
+          <ul className="lesson-summary-list">{lessons.filter(item => item.type === 'practice').map(item => <li key={item.id}><button type="button" onClick={() => selectLesson(item.id)}><code>{item.exerciseCode}</code><span>{item.title}</span></button></li>)}</ul>
+          <p>Lưu mã .ino, file Blockly và kết quả kiểm thử để đưa vào báo cáo Lab {lab.id}.</p>
+        </section>}
+        {lab.id > 0 && <p className="lesson-source">Lộ trình và bài thực hành: <a href="https://github.com/PTITCube" target="_blank" rel="noreferrer">PTITCube</a>. Video được hiển thị khi có đường dẫn bài giảng.</p>}
+        <nav className="lesson-pagination" aria-label="Chuyển phần học">
+          <button type="button" disabled={lessonIndex === 0} onClick={() => selectLesson(lessons[lessonIndex - 1].id)}>← Phần trước</button>
+          <span>{lessonIndex + 1} / {lessons.length} · {LESSON_TYPE_LABELS[lesson.type]}</span>
+          <button type="button" disabled={lessonIndex === lessons.length - 1} onClick={() => selectLesson(lessons[lessonIndex + 1].id)}>Phần tiếp theo →</button>
         </nav>
-        
-        {activeLesson === 0 && usesFigmaLearningShell && (
-          <div className="lab-course-view animate-fadeInUp">
-            <LabStateTitle step={`${lab.id}.1`} section="Tổng quan bài học" description={lab.description}>{lab.title}</LabStateTitle>
-
-            <section className="lab-workspace lab-video-workspace" aria-label={`Video Lab ${lab.id}`}>
-              <span className="lab-workspace-badge lab-play-badge" aria-hidden="true">▶</span>
-              <div className="lab-video-surface">
-                <VideoPlayer url={lab.videoUrl} />
-              </div>
-            </section>
-
-            <section className="lab-objectives">
-              <div className="lab-objectives-title"><span aria-hidden="true">◎</span>Mục tiêu bài học</div>
-              <div className="lab-objectives-body">
-                <p>Nội dung đang được cập nhật...</p>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {activeLesson === 0 && !usesFigmaLearningShell && (
-          <div className="animate-fadeInUp" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div className="video-section">
-              <div className="video-wrapper">
-                <VideoPlayer url={lab.videoUrl} />
-              </div>
-            </div>
-            
-            <div className="player-content" style={{ marginTop: '32px', marginBottom: '64px' }}>
-              <div style={{ maxWidth: '800px' }}>
-                <h2 style={{ fontSize: '2.5rem', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-                  Lab {lab.id}: {lab.title}
-                </h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem', lineHeight: 1.7, marginBottom: '40px' }}>
-                  {lab.description}
-                </p>
-                
-                <div className="card">
-                  <div className="card-header" style={{ fontSize: '1.125rem' }}>🎯 Mục tiêu bài học</div>
-                  <div className="card-body">
-                    <ul style={{ paddingLeft: '24px', lineHeight: 2, fontSize: '1.05rem', color: 'var(--text-body)' }}>
-                      <li>Nắm vững kiến trúc phần cứng của phân hệ tương ứng trong vệ tinh.</li>
-                      <li>Thực hành cấu hình, lập trình kéo thả và phân tích mã nguồn C++ tương ứng.</li>
-                      <li>Kiểm thử trực quan và thu thập dữ liệu qua hệ thống trạm mặt đất mô phỏng.</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeLesson === 1 && usesFigmaLearningShell && (
-          <div className="lab-course-view animate-fadeInUp">
-            <LabStateTitle step={`${lab.id}.2`} section="Tài liệu hướng dẫn">{lab.title}</LabStateTitle>
-
-            <section className="lab-workspace lab-doc-workspace" aria-label={`Tài liệu hướng dẫn Lab ${lab.id}`}>
-              <span className="lab-workspace-badge" aria-hidden="true">▤</span>
-              <div className="lab-doc-surface">
-                <DocViewer docPath={lab.docPath} />
-              </div>
-            </section>
-          </div>
-        )}
-
-        {activeLesson === 1 && !usesFigmaLearningShell && (
-          <div className="player-content animate-fadeInUp" style={{ padding: '40px max(32px, calc((100vw - 1280px - var(--sidebar-width)) / 2))' }}>
-            <div className="doc-content">
-              <DocViewer docPath={lab.docPath} />
-            </div>
-          </div>
-        )}
-
-        {activeLesson === 2 && isLabZero && (
-          <div className="lab-course-view animate-fadeInUp">
-            <LabStateTitle step="0.3" section="Thành phần" compact>Khám phá PTIT STEM CubeSAT</LabStateTitle>
-
-            <section className="lab-workspace lab-components-workspace" aria-label="Khám phá các phân hệ CubeSat">
-              {visualizationPanel}
-            </section>
-          </div>
-        )}
-
-        {activeLesson === 2 && usesFigmaPracticeShell && (
-          <div className="lab-course-view animate-fadeInUp">
-            <LabStateTitle step={`${lab.id}.3`} section="Thực hành" compact>{lab.title}</LabStateTitle>
-
-            <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${practiceVariant}`} aria-label={`Không gian thực hành Lab ${lab.id}`}>
-              <div className={`lab-practice-panels lab-practice-panels--${practiceVariant}`}>
-                <div className="lab-practice-editor">
-                  <div className="lab-practice-editor-frame">{editorPanel}</div>
-                  {practiceVariant !== 'split' && (
-                    <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành">{practiceActions}</div>
-                  )}
-                </div>
-                <div className="lab-practice-visualization">{visualizationPanel}</div>
-              </div>
-              {practiceVariant === 'split' && (
-                <div className="lab-practice-actions" aria-label="Thao tác thực hành">{practiceActions}</div>
-              )}
-            </section>
-          </div>
-        )}
-
-        {activeLesson === 2 && !usesFigmaLearningShell && (
-          <div className="player-content animate-fadeInUp" style={{ padding: 0, flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
-
-            {/* Editor Panel (primary — nơi người dùng code trước) */}
-            {editorPanel && (
-              <div style={{ flex: '1 1 60%', minWidth: 0, padding: '24px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)' }}>
-                {editorPanel}
-              </div>
-            )}
-
-            {/* Visual Panel (kết quả — Serial Monitor / trực quan) */}
-            <div style={{ flex: editorPanel ? '1 1 40%' : 1, minWidth: 0, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', background: editorPanel ? 'var(--bg-app)' : 'transparent' }}>
-              {lab.id !== 0 && (
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-heading)' }}>Kết quả / Bảng điều khiển</h3>
-              )}
-              {visualizationPanel}
-            </div>
-
-          </div>
-        )}
-
       </div>
     </div>
-  );
+  </div>;
 }
