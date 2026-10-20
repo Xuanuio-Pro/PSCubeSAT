@@ -1,10 +1,10 @@
 """Expose trusted tool files to the unprivileged worker without copying up unchanged files."""
-import os
-from pathlib import Path
-import stat
 
-for root in (Path('/opt/platformio'), Path('/opt/projects')):
-    for path in [root, *root.rglob('*')]:
+import stat
+from pathlib import Path
+
+for root in (Path("/opt/platformio"), Path("/opt/projects")):
+    for path in [root, *root.rglob("*")]:
         if path.is_symlink():
             continue
         mode = stat.S_IMODE(path.stat().st_mode)

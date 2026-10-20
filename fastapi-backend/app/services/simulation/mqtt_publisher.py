@@ -87,8 +87,7 @@ class SimulationMqttPublisher:
                 tls_context = mqtt_tls_context(self._settings)
 
                 logger.info(
-                    f"[SIM MQTT] Kết nối → "
-                    f"{self._settings.mqtt_host}:{self._settings.mqtt_port}"
+                    f"[SIM MQTT] Kết nối → {self._settings.mqtt_host}:{self._settings.mqtt_port}"
                 )
 
                 async with aiomqtt.Client(
@@ -107,12 +106,14 @@ class SimulationMqttPublisher:
                     # even without subscriptions. Waiting only on stop hid outages.
                     async for _ in client.messages:
                         pass
-                    raise aiomqtt.MqttError('MQTT stream ended')
+                    raise aiomqtt.MqttError("MQTT stream ended")
 
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                logger.warning(f'[SIM MQTT] Connection failed: {type(exc).__name__}; retry in {reconnect_delay}s')
+                logger.warning(
+                    f"[SIM MQTT] Connection failed: {type(exc).__name__}; retry in {reconnect_delay}s"
+                )
             finally:
                 self._connected.clear()
                 self._client = None

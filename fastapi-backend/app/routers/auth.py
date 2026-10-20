@@ -7,30 +7,36 @@ Authentication API Endpoints:
   GET  /api/auth/me       — Lấy thông tin user hiện tại qua JWT Header
   POST /api/auth/logout   — Đăng xuất (thu hồi token vào PostgreSQL, cache trên Redis)
 """
-from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
-from app.models.db_models import User
-from app.schemas.auth import AuthTokenResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UserResponse
-from app.services.auth import AuthService, get_required_user
-from app.core.google_auth import verify_google_credential
 from app.core.config import get_settings
-from app.schemas.auth import GoogleLoginRequest
+from app.core.google_auth import verify_google_credential
+from app.db import get_db
+from app.models.tables import User
+from app.schemas.auth import (
+    AuthTokenResponse,
+    ChangePasswordRequest,
+    GoogleLoginRequest,
+    LoginRequest,
+    RegisterRequest,
+    UserResponse,
+)
+from app.services.auth import AuthService, get_required_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
-@router.get('/google/config')
+@router.get("/google/config")
 async def google_config():
-    return {'client_id': get_settings().google_client_id}
+    return {"client_id": get_settings().google_client_id}
 
 
-@router.post('/google', response_model=AuthTokenResponse)
+@router.post("/google", response_model=AuthTokenResponse)
 async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
     claims = await verify_google_credential(req.credential)
     try:

@@ -1,71 +1,60 @@
-# Chạy đăng ký / đăng nhập với PostgreSQL và Google
+# Tài khoản và đăng nhập Google
 
-## PostgreSQL và cấu hình backend
+## Lưu tài khoản
 
-Backend đã có đăng ký / đăng nhập bằng email và mật khẩu. Các API:
+Máy này dùng PostgreSQL local đã cấu hình trong `fastapi-backend/.env`. Xem [cách chạy và sao lưu database](LOCAL_DATABASE_SETUP.md). Trên máy khác cần cài dependencies, cấu hình `DATABASE_URL`, `JWT_SECRET` ngẫu nhiên và chạy `npm run db:migrate`; `.env` không đưa vào Git. Backend đọc `.env` cố định trong `fastapi-backend` và kiểm tra migration trước khi nhận API. FE ở cổng 5175, BE ở 8005. Redis/MQTT không bắt buộc để đăng ký/đăng nhập; logout vẫn lưu thu hồi token trong PostgreSQL khi Redis tắt.
 
-- `POST /api/auth/register`: `{ "email": "...", "password": "...", "full_name": "..." }`.
-- `POST /api/auth/login`: `{ "email": "...", "password": "..." }`.
-- `GET /api/auth/me`: header `Authorization: Bearer <access_token>`.
-- `PATCH /api/auth/password`: mật khẩu hiện tại và mật khẩu mới.
-- `POST /api/auth/logout`: lưu thu hồi token hiện tại vào PostgreSQL, cache thêm trên Redis nếu khả dụng.
-- `GET /api/auth/google/config`: lấy Client ID công khai cho nút Google.
-- `POST /api/auth/google`: `{ "credential": "<Google ID token>" }`.
+`POST /api/auth/register` thực sự ghi vào PostgreSQL, commit trước khi trả JWT. Bảng `users` lưu ID, email chuẩn hóa chữ thường, họ tên, role `user`, thời gian tạo và bcrypt hash trong `password_hash`. Không lưu mật khẩu gốc, không trả hash ra API. Login chỉ đọc tài khoản còn hoạt động và kiểm tra bcrypt.
 
-Máy hiện tại đã được cấu hình PostgreSQL local trong `fastapi-backend/.env`, giữ JWT secret ngẫu nhiên và Google Client ID đã điền. Database đã tạo và kiểm tra thực tế; xem `Docs/LOCAL_DATABASE_SETUP.md` để biết cách chạy lại và vị trí lưu tài khoản. Trên máy khác, sao chép `fastapi-backend/.env.example` thành `fastapi-backend/.env`, rồi thay:
+Migration `0004_auth_email` chuẩn hóa email cũ và thêm unique index `lower(email)`, tránh trùng cả khi đăng ký đồng thời. Migration dừng nếu phát hiện các tài khoản cũ trùng email sau chuẩn hóa, để người quản trị xác minh chủ sở hữu trước khi xử lý; không tự gộp hay xóa tài khoản.
 
-```dotenv
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
-JWT_SECRET=CHUOI_NGAU_NHIEN_DU_DAI
-GOOGLE_CLIENT_ID=
-```
+Google tạo/liên kết tài khoản trong `users` và lưu Google `sub` trong `google_identities`. Backend kiểm tra chữ ký, audience bằng Client ID của máy chủ, expiry, issuer và email đã xác minh. Không dùng email hay token do frontend tự giải mã làm bằng chứng xác thực. Tự liên kết tài khoản theo email chỉ áp dụng Gmail hoặc Google Workspace có `hd`; email ngoài Google đã tồn tại phải đăng nhập mật khẩu. Lần đăng nhập tiếp theo tra `sub` ổn định. Google user được tạo với hash của mật khẩu ngẫu nhiên không cung cấp cho người dùng; họ đăng nhập bằng Google.
 
-Backend luôn đọc `.env` trong thư mục `fastapi-backend`, dù được chạy từ thư mục khác. `.env` được Git bỏ qua. Mật khẩu database có ký tự đặc biệt cần URL-encode. Chưa có Google Client ID thì để trống; đăng nhập bằng email/mật khẩu vẫn hoạt động khi PostgreSQL đã được cấu hình.
+Ô **Lưu thiết bị này** chọn `localStorage`; không chọn dùng `sessionStorage` (vẫn giữ khi tải lại tab, hết khi phiên trình duyệt kết thúc). JWT vẫn hết hạn theo `JWT_EXPIRE_MINUTES`; đây không phải cơ chế kéo dài token. Khi đăng xuất, token được thu hồi trong PostgreSQL và xóa cả hai vùng lưu. Compiler, flasher và WebSocket dùng cùng bộ đọc token.
 
-Nếu có PostgreSQL sẵn, dùng URL của database đó. Để chạy một database local mới bằng Docker (cần Docker Desktop đang chạy):
+## Cấu hình Google Cloud
 
-```powershell
-docker run --name cubesat-postgres -e POSTGRES_USER=cubesat -e POSTGRES_PASSWORD=YOUR_LOCAL_PASSWORD -e POSTGRES_DB=cubesat -p 127.0.0.1:5432:5432 -v cubesat_pgdata:/var/lib/postgresql/data -d postgres:16
-```
+1. Mở [Google Auth Platform](https://console.cloud.google.com/auth/overview), chọn hoặc tạo project. Khai báo Branding và Audience. Nếu ứng dụng đang ở Testing, thêm tài khoản sẽ dùng thử vào danh sách Test users khi giao diện Google yêu cầu.
+2. Vào **Clients → Create client → Web application**. Trong **Authorized JavaScript origins**, thêm origin đúng cổng đang mở, ví dụ `http://localhost:5175` và `http://localhost:5173`. Không thêm `/login` hay `/api/auth/google` vào origin. Khi triển khai, thêm origin HTTPS của website thực tế. Chỉ dùng các phạm vi đăng nhập email/profile/openid, không cần quyền Gmail/Drive.
+3. Điền Client ID dạng `123...-abc....apps.googleusercontent.com` vào `fastapi-backend/.env`:
 
-Sau đó dùng `DATABASE_URL=postgresql://cubesat:YOUR_LOCAL_PASSWORD@localhost:5432/cubesat` và chạy `npm run db:migrate`. Alembic tạo/nâng cấp schema; startup backend chỉ kiểm tra revision đã ở head. Tài khoản database chạy migration cần quyền tạo bảng và extension `pgcrypto`. Không còn seed admin với mật khẩu cố định; admin local hiện tại được giữ nguyên. Xem `Docs/PLATFORM_STABILIZATION.md` để biết quy trình migration.
+   ```dotenv
+   GOOGLE_CLIENT_ID=CLIENT_ID_WEB_CUA_BAN.apps.googleusercontent.com
+   ALLOWED_ORIGINS=http://localhost:5175,http://localhost:5173,http://localhost:4173
+   ```
 
-Từ thư mục dự án:
+   Luồng hiện tại dùng GIS popup và JavaScript callback gửi ID token bằng JSON tới backend. Không cần Client Secret và không cần cấu hình redirect URI cho callback này. Client ID được frontend lấy từ `/api/auth/google/config`, không phải sửa mã JSX.
+4. Khởi động lại FastAPI để đọc `.env` mới (chỉ lưu file `.env` không bảo đảm server reload). Chạy `npm run dev:be` trong terminal; dừng phiên server cũ trước khi khởi động nếu cổng 8005 đang được sử dụng. Chạy frontend `npm run dev:fe -- --port 5175`, vào `/login` hoặc `/signup` rồi bấm nút Google.
+5. Chọn tài khoản và đồng ý với Google. Frontend gửi `{ "credential": "<ID token>" }` tới `POST /api/auth/google`. Thành công trả JWT nội bộ và user, chuyển về trang chủ; không trả Google token cho các API khác.
 
-```powershell
-C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe -m pip install -r fastapi-backend/requirements.txt
-npm run dev
-```
+Tham khảo chính thức: [thiết lập Client ID và origins](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid), [xác minh ID token trên server](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
 
-Frontend: `http://localhost:5175`. Backend: `http://localhost:8005/docs`. Khi chạy container backend, HOST database phải là địa chỉ truy cập được từ container, chẳng hạn `host.docker.internal` cho PostgreSQL trên máy Windows.
+## Kiểm tra lỗi Google
 
-## Bật Google khi đã có Client ID
+- **Chưa được bật**: `GOOGLE_CLIENT_ID` trống; cấu hình rồi restart backend.
+- **Origin is not allowed**: URL, giao thức hoặc port đang mở chưa khớp Authorized JavaScript origins của đúng Web Client ID.
+- **Access blocked/Testing**: kiểm tra Audience, Test users và chính sách tổ chức của tài khoản Google.
+- API **401**: token không hợp lệ/hết hạn/sai audience, email chưa xác minh, tài khoản bị xóa hoặc không thể tự liên kết email ngoài Google.
+- API **503**: chưa có Client ID hoặc không tải được khóa xác minh Google; kiểm tra cấu hình và mạng của backend.
 
-1. Trong Google Cloud, cấu hình màn hình đồng ý OAuth và tạo OAuth Client ID loại **Web application**.
-2. Thêm **Authorized JavaScript origins**: `http://localhost:5175` và origin của website thật, ví dụ `https://cubesat.p-tech.xyz`. Nếu dùng frontend Docker local, thêm `http://localhost:5173`. Origin không có đường dẫn.
-3. Điền `GOOGLE_CLIENT_ID=...apps.googleusercontent.com` vào `fastapi-backend/.env`.
-4. Khởi động lại backend, tải lại frontend. Không cần Client Secret hoặc redirect URI cho luồng nút Google dùng popup này.
+## Kiểm chứng ngày 19/10/2026
 
-Hai trang đăng nhập và đăng ký dùng nút Google Identity Services. Backend dùng `google-auth` kiểm tra chữ ký, audience, issuer, hạn token và email đã xác minh trước khi phát JWT của ứng dụng. Lần đầu tạo user mới; những lần sau tra theo Google `sub`, không theo email có thể thay đổi.
+Đã chạy auth HTTP handlers với DB PostgreSQL đang cấu hình, đọc user từ kết nối DB mới và xác minh email chuẩn hóa, tên tiếng Việt, role, bcrypt hash; thử đăng ký trùng, sai mật khẩu, login, `/me`, logout và dùng lại token bị thu hồi. PASS. Tài khoản thử có email UUID riêng và đã được xóa; số tài khoản đang có vẫn là 3. DB được nâng lên `0004_auth_email`.
 
-Với tài khoản email/mật khẩu có sẵn, chỉ tự liên kết khi Google có thẩm quyền đối với email đó (`@gmail.com` hoặc tài khoản Workspace có `hd`). Email bên thứ ba đã có tài khoản phải đăng nhập bằng mật khẩu; chưa có luồng liên kết thủ công. Tài khoản chỉ dùng Google được lưu mật khẩu ngẫu nhiên không cung cấp cho người dùng; mục đổi mật khẩu hiện yêu cầu biết mật khẩu cũ.
+Test tự động bao gồm SQLite API, xác minh Google token (mock chữ ký/claims), liên kết Google theo `sub`, phục hồi tài khoản cũ, migration DB mới/cũ trên PostgreSQL thật, đăng ký đồng thời và bộ lưu phiên frontend. Không coi test mock Google là bằng chứng đã chọn tài khoản thật trong popup.
 
-Tài liệu xác thực chính thức: [Verify the Google ID token on your server side](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
-
-## Log Windows và MQTT
-
-Lỗi `UnicodeEncodeError ... cp1252` đã được sửa bằng cấu hình stdout/stderr UTF-8 và log file UTF-8.
-
-`WinError 10061` tại `localhost:1883` cho biết MQTT broker chưa nhận kết nối ở địa chỉ này. Khởi động broker hoặc điền đúng `MQTT_HOST`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD` trong `.env`. Đây là dịch vụ telemetry riêng; đăng ký / đăng nhập cần PostgreSQL, không cần MQTT. Token bị thu hồi được lưu trong PostgreSQL nên logout vẫn có hiệu lực khi Redis không khả dụng.
-
-## Kiểm thử
+Lệnh tái lập:
 
 ```powershell
-cd fastapi-backend
-C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe -m pip install -r requirements-dev.txt
-C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe -m unittest app.tests.test_auth
-cd ..
-npm run build
+npm run db:migrate
+npm run test:auth
+& C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe scripts/check-auth-db.py
+# Nếu FE :5175 và BE :8005 đang chạy, thử xuyên proxy qua HTTP thật
+& C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe scripts/check-auth-db.py --live
+# PostgreSQL integration: tạo và dọn các database test riêng, không reset DB cubesat
+$env:PSCUBESAT_TEST_POSTGRES='1'
+Set-Location fastapi-backend
+& C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe -m unittest app.tests.test_migrations
 ```
 
-Các bài kiểm thử API dùng database SQLite trong bộ nhớ, không ghi vào PostgreSQL thật. Xác thực Google được mô phỏng trong kiểm thử; kiểm tra đăng nhập với tài khoản Google thật cần Client ID hợp lệ và origin đã được cho phép.
+Đã mở `http://localhost:5175/login` trên trình duyệt: nút Google hiển thị, nhưng Google trả lỗi console **`[GSI_LOGGER]: The given origin is not allowed for the given client ID.`** Vì vậy cần mở đúng Web Client có Client ID đang nằm trong `.env` và bổ sung `http://localhost:5175` vào Authorized JavaScript origins, lưu lại rồi tải lại trang. Không cần đổi code hoặc tạo client khác nếu đang sở hữu client này. Chưa xác minh đăng nhập Google thật vì cấu hình origin hiện bị Google từ chối.

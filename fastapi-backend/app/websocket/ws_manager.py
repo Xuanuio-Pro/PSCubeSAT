@@ -7,6 +7,7 @@ from loguru import logger
 
 SEND_TIMEOUT_SECONDS = 2.0
 
+
 class ConnectionManager:
     def __init__(self) -> None:
         # Lưu tập hợp socket theo từng thiết bị: {"cube_01": {ws1, ws2}, "cube_02": {ws3}}
@@ -63,11 +64,13 @@ class ConnectionManager:
 
     async def close_device(self, device_uid: str) -> None:
         sockets = self._connections.pop(device_uid, set())
+
         async def close(ws):
             try:
                 await asyncio.wait_for(ws.close(code=1008), timeout=2)
             except Exception:
                 pass
+
         await asyncio.gather(*(close(ws) for ws in sockets))
 
     @property

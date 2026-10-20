@@ -3,17 +3,18 @@
 # ───────────────
 # Dùng PostgreSQL để xử lý.
 # """
-import uuid
 import secrets
+import uuid
+
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.security import hash_password
-from app.schemas.device import CreateDeviceRequest
-from app.models.tables import Device, MQTTCredential, MQTTACL
+from app.models.tables import MQTTACL, Device, MQTTCredential
 from app.repository.device import DeviceRepository
-from app.repository.MQTTACL import TelemetryRepository
-from app.repository.MQTTCredential import MQTTCredentialRepository
+from app.repository.mqtt import MQTTACLRepository, MQTTCredentialRepository
+from app.schemas.device import CreateDeviceRequest
 
 
 class DeviceService:
@@ -21,7 +22,7 @@ class DeviceService:
         self.db = db
         self.device_repo = DeviceRepository(db)
         self.mqtt_credential_repo = MQTTCredentialRepository(db)
-        self.mqtt_acl_repo = TelemetryRepository(db)
+        self.mqtt_acl_repo = MQTTACLRepository(db)
 
     async def register_new_device(self, user_id: int, request: CreateDeviceRequest) -> dict:
         """Đăng ký một thiết bị mới cho người dùng."""
@@ -32,7 +33,7 @@ class DeviceService:
                 break
 
         raw_secret = secrets.token_urlsafe(32)
-        hashed_secret = hash_password(raw_secret)
+        hashed_secret = await run_in_threadpool(hash_password, raw_secret)
 
         try:
             new_device = Device(
@@ -47,7 +48,7 @@ class DeviceService:
 
             mqtt_cred = MQTTCredential(
                 device_id=created_device.id,
-                username=f'dev_{generated_uid}',
+                username=f"dev_{generated_uid}",
                 password_hash=hashed_secret,
             )
             await self.mqtt_credential_repo.create(mqtt_cred)
@@ -58,26 +59,36 @@ class DeviceService:
                     device_id=created_device.id,
                     permission="allow",
                     action="publish",
-                    topic=f"sensors/{generated_uid}/telemetry"
+                    topic=f"sensors/{generated_uid}/telemetry",
                 ),
                 # Cho phép lắng nghe lệnh từ server
                 MQTTACL(
                     device_id=created_device.id,
                     permission="allow",
                     action="subscribe",
-                    topic=f"cmd/{generated_uid}/#"
+                    topic=f"cmd/{generated_uid}/#",
                 ),
-                MQTTACL(device_id=created_device.id, permission='allow', action='publish',
-                        topic=f'sensors/{generated_uid}/status'),
-                MQTTACL(device_id=created_device.id, permission='allow', action='publish',
-                        topic=f'sensors/{generated_uid}/ack'),
+                MQTTACL(
+                    device_id=created_device.id,
+                    permission="allow",
+                    action="publish",
+                    topic=f"sensors/{generated_uid}/status",
+                ),
+                MQTTACL(
+                    device_id=created_device.id,
+                    permission="allow",
+                    action="publish",
+                    topic=f"sensors/{generated_uid}/ack",
+                ),
             ]
             await self.mqtt_acl_repo.create(default_acls)
-            
+
             await self.db.commit()
             await self.db.refresh(created_device)
 
-            logger.info(f"New device registered: {created_device.device_uid} for user_id: {user_id}")
+            logger.info(
+                f"New device registered: {created_device.device_uid} for user_id: {user_id}"
+            )
             return {
                 "device_uid": created_device.device_uid,
                 "device_name": created_device.device_name,
@@ -90,7 +101,7 @@ class DeviceService:
             await self.db.rollback()
             logger.error(f"Error registering new device: {type(e).__name__}")
             raise e
-        
+
     async def get_device_by_uid(self, device_uid: str) -> Device | None:
         """Lấy thông tin thiết bị theo device_uid."""
         device = await self.device_repo.get_by_uid(device_uid)
@@ -98,7 +109,7 @@ class DeviceService:
             logger.warning(f"Device not found: {device_uid}")
             return None
         return device
-    
+
     async def get_device_by_id(self, device_id: int) -> Device | None:
         """Lấy thông tin thiết bị theo device_id."""
         device = await self.device_repo.get_by_id(device_id)
@@ -106,7 +117,7 @@ class DeviceService:
             logger.warning(f"Device not found: {device_id}")
             return None
         return device
-    
+
     async def get_device_details(self, user_id: int) -> list[dict]:
         """Lấy chi tiết thiết bị theo user_id."""
         devices = await self.device_repo.get_by_user_id(user_id)
@@ -139,7 +150,9 @@ class DeviceService:
             for d in devices
         ]
 
-    async def update_position(self, device_uid: str, lat: float, lon: float, alt: float | None = None) -> Device | None:
+    async def update_position(
+        self, device_uid: str, lat: float, lon: float, alt: float | None = None
+    ) -> Device | None:
         """Cập nhật vị trí cuối (dùng cho ground station tự báo GPS trình duyệt)."""
         device = await self.device_repo.update_position(device_uid, lat, lon, alt)
         if device:
@@ -155,17 +168,17 @@ class DeviceService:
         await self.device_repo.delete(device)
         await self.db.commit()
         # Database revocation remains authoritative even if a runtime is restarted.
-        from app.services.simulation.manager import simulation_manager
         from app.services import mqtt_consumer
+        from app.services.simulation.manager import simulation_manager
         from app.websocket.ws_manager import ws_manager
+
         for session in list(simulation_manager.list_for_user(device.user_id)):
             if session.device_uid == device_uid:
                 try:
                     await simulation_manager.delete(session.session_id)
                 except KeyError:
                     pass  # Another delete request already cleaned up this session.
-        mqtt_consumer._latest_state.pop(device_uid, None)
-        mqtt_consumer._last_position_write.pop(device_uid, None)
+        mqtt_consumer.clear_device_state(device_uid)
         await ws_manager.close_device(device_uid)
         logger.info(f"Device deleted: {device_uid}")
         return True

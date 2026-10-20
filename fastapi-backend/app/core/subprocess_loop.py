@@ -1,14 +1,17 @@
 """Run subprocess jobs on a Proactor loop under Windows reload workers."""
+
 import asyncio
+import sys
 from concurrent.futures import Future
 from threading import Thread
-import sys
 
 
 async def run_with_subprocesses(operation, *args):
     # Uvicorn's Windows reload worker uses SelectorEventLoop (no subprocesses).
     # Keep Linux and normal Windows Proactor execution on the caller's loop.
-    if sys.platform != 'win32' or not isinstance(asyncio.get_running_loop(), asyncio.SelectorEventLoop):
+    if sys.platform != "win32" or not isinstance(
+        asyncio.get_running_loop(), asyncio.SelectorEventLoop
+    ):
         return await operation(*args)
 
     loop = asyncio.ProactorEventLoop()
@@ -30,7 +33,7 @@ async def run_with_subprocesses(operation, *args):
         else:
             completed.set_exception(error)
 
-    Thread(target=worker, name='compiler-subprocess', daemon=True).start()
+    Thread(target=worker, name="compiler-subprocess", daemon=True).start()
     done = asyncio.wrap_future(completed)
     try:
         return await asyncio.shield(done)

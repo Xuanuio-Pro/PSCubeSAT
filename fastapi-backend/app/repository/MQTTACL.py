@@ -1,12 +1,5 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+"""Compatibility alias for the previous, misleading repository name."""
 
-from app.models.tables import MQTTACL
-class TelemetryRepository:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+from app.repository.mqtt import MQTTACLRepository as TelemetryRepository
 
-    async def create(self, acls: list[MQTTACL]) -> list[MQTTACL]:
-        """Tạo một danh sách ACL mới trong cơ sở dữ liệu."""
-        self.db.add_all(acls)
-        await self.db.flush()
-        return acls
+__all__ = ["TelemetryRepository"]

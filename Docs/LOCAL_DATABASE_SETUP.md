@@ -81,4 +81,4 @@ Chạy từ thư mục dự án, nhập mật khẩu user `cubesat` đã lưu kh
 
 File backup được lưu ở `fastapi-backend/data/cubesat.backup`. Khi chuyển sang máy khác, dùng backup thay vì sao chép cluster đang hoạt động.
 
-Schema hiện do Alembic quản lý ở revision `0003_constraints`; chi tiết thay đổi và kiểm thử xem `Docs/PLATFORM_STABILIZATION.md`.
+Schema hiện do Alembic quản lý ở revision `0004_auth_email`; revision này bổ sung unique email không phân biệt hoa/thường. Chi tiết xác thực và Google xem `Docs/Auth_Setup.md`; các thay đổi nền tảng trước đó xem `Docs/PLATFORM_STABILIZATION.md`.

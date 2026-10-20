@@ -1,6 +1,7 @@
 """Shared MQTT TLS policy for the API, simulator and diagnostic probe."""
-from pathlib import Path
+
 import ssl
+from pathlib import Path
 
 from app.core.config import Settings
 

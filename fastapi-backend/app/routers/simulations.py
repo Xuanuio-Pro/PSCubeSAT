@@ -2,13 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.models.tables import User
 from app.repository.device import DeviceRepository
-
-from app.models.db_models import User
 from app.schemas.simulation import CreateSimulationRequest, SimulationResponse
 from app.services.auth import get_required_user
 from app.services.simulation.manager import SimulationSession, simulation_manager
-
 
 router = APIRouter(prefix="/api/simulations", tags=["simulations"])
 
@@ -49,9 +47,9 @@ async def create_simulation(
         )
 
     active_sessions = [
-        item for item in simulation_manager.list_for_user(current_user.id)
-        if item.device_uid == device.device_uid
-        and item.status in {"starting", "running", "paused"}
+        item
+        for item in simulation_manager.list_for_user(current_user.id)
+        if item.device_uid == device.device_uid and item.status in {"starting", "running", "paused"}
     ]
     if active_sessions:
         raise HTTPException(
@@ -90,8 +88,10 @@ async def start_simulation(
     db: AsyncSession = Depends(get_db),
 ):
     session = _get_owned_session(simulation_id, current_user)
-    if not await DeviceRepository(db).check_user_owns_device(current_user.id, session.device_uid, enabled_only=True):
-        raise HTTPException(404, 'Thiết bị không còn hoạt động.')
+    if not await DeviceRepository(db).check_user_owns_device(
+        current_user.id, session.device_uid, enabled_only=True
+    ):
+        raise HTTPException(404, "Thiết bị không còn hoạt động.")
     return _response(await simulation_manager.start(simulation_id))
 
 
@@ -111,8 +111,10 @@ async def resume_simulation(
     db: AsyncSession = Depends(get_db),
 ):
     session = _get_owned_session(simulation_id, current_user)
-    if not await DeviceRepository(db).check_user_owns_device(current_user.id, session.device_uid, enabled_only=True):
-        raise HTTPException(404, 'Thiết bị không còn hoạt động.')
+    if not await DeviceRepository(db).check_user_owns_device(
+        current_user.id, session.device_uid, enabled_only=True
+    ):
+        raise HTTPException(404, "Thiết bị không còn hoạt động.")
     return _response(await simulation_manager.resume(simulation_id))
 
 

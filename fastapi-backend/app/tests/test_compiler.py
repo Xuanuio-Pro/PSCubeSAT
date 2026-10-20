@@ -33,9 +33,18 @@ def fake_build(directory: Path, board: str, data: bytes = b"application"):
         path = directory / name
         path.write_bytes(contents)
         files.append({"path": str(path), "offset": offset})
-    (directory / "flash-manifest.json").write_text(json.dumps({
-        "chip": board, "mode": "dio", "frequency": "80m", "size": "4MB", "files": files,
-    }), encoding="utf-8")
+    (directory / "flash-manifest.json").write_text(
+        json.dumps(
+            {
+                "chip": board,
+                "mode": "dio",
+                "frequency": "80m",
+                "size": "4MB",
+                "files": files,
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 class ArtifactTests(unittest.TestCase):
@@ -50,8 +59,9 @@ class ArtifactTests(unittest.TestCase):
         fake_build(self.build, "esp32")
 
     def create(self, owner=1):
-        return artifacts.create_artifact("esp32", "source\n", self.build, owner_id=owner,
-                                         lab_id=1, config_sha256="config")
+        return artifacts.create_artifact(
+            "esp32", "source\n", self.build, owner_id=owner, lab_id=1, config_sha256="config"
+        )
 
     def test_snapshot_download_does_not_change_when_next_build_overwrites_cache(self):
         manifest = self.create()
@@ -60,7 +70,9 @@ class ArtifactTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(), b"application")
         self.assertEqual(entry["sha256"], sha256(path.read_bytes()).hexdigest())
         self.assertEqual(manifest["source_sha256"], sha256(b"source\n").hexdigest())
-        self.assertEqual([f["offset"] for f in manifest["flash"]["files"]], [4096, 32768, 57344, 65536])
+        self.assertEqual(
+            [f["offset"] for f in manifest["flash"]["files"]], [4096, 32768, 57344, 65536]
+        )
         self.assertNotIn("_owner_id", manifest)
 
     def test_other_owner_anonymous_and_traversal_cannot_read_private_artifact(self):
@@ -107,7 +119,9 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         self.root = Path(self.temp.name)
         self.patches = [
             patch.object(artifacts, "ARTIFACT_DIR", self.root / "artifacts"),
-            patch.object(compiler_svc, "_BOARD_DIRS", {b: self.root / b for b in ["esp32", "esp32s3"]}),
+            patch.object(
+                compiler_svc, "_BOARD_DIRS", {b: self.root / b for b in ["esp32", "esp32s3"]}
+            ),
             patch.object(compiler_svc, "_find_pio", AsyncMock(return_value=["sandbox"])),
         ]
         for item in self.patches:
@@ -138,7 +152,7 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         cache = Path(args[args.index("-d") + 1])
         code = (cache / "src" / "main.cpp").read_bytes()
         fake_build(cache / ".pio" / "build" / board, board, data=code)
-        await asyncio.sleep(.01)
+        await asyncio.sleep(0.01)
         return 0, "build succeeded"
 
     async def test_compile_to_manifest_to_binary_and_owner_isolation(self):
@@ -166,7 +180,8 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(compiler_svc, "_run_build", side_effect=self.build):
             a, b = await asyncio.gather(
                 compiler_svc.compile_code("code A", "esp32", include_binary=False),
-                compiler_svc.compile_code("code B", "esp32", include_binary=False))
+                compiler_svc.compile_code("code B", "esp32", include_binary=False),
+            )
         self.assertNotIn("binBase64", a)
         self.assertNotEqual(a["artifact"]["id"], b["artifact"]["id"])
         for result, code in [(a, "code A"), (b, "code B")]:
@@ -188,28 +203,45 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), get_template(board))
             self.assertNotIn("PTITCube.h", response.json()["code"])
-        for payload in [{"code": " "}, {"code": "x", "board": "other"},
-                        {"code": "x", "lab_id": 9}, {"code": "é" * 140000}]:
-            self.assertEqual((await self.client.post("/api/compile", json=payload)).status_code, 422)
-        with patch.object(compiler_svc, "_run_build", side_effect=self.build), patch.object(
-                compiler.ProgressService, "mark_compiled", AsyncMock(side_effect=RuntimeError("database offline"))):
-            response = await self.client.post("/api/compile", json={"code": "valid", "lab_id": 1, "include_binary": False})
+        for payload in [
+            {"code": " "},
+            {"code": "x", "board": "other"},
+            {"code": "x", "lab_id": 9},
+            {"code": "é" * 140000},
+        ]:
+            self.assertEqual(
+                (await self.client.post("/api/compile", json=payload)).status_code, 422
+            )
+        with (
+            patch.object(compiler_svc, "_run_build", side_effect=self.build),
+            patch.object(
+                compiler.ProgressService,
+                "mark_compiled",
+                AsyncMock(side_effect=RuntimeError("database offline")),
+            ),
+        ):
+            response = await self.client.post(
+                "/api/compile", json={"code": "valid", "lab_id": 1, "include_binary": False}
+            )
         self.assertTrue(response.json()["success"])
         self.assertFalse(response.json()["progress_saved"])
         self.assertIn("artifact", response.json())
 
     async def test_host_compiler_execution_is_disabled(self):
         with self.assertRaises(OSError):
-            await compiler_svc._run_build([sys.executable, '-m', 'platformio'])
+            await compiler_svc._run_build([sys.executable, "-m", "platformio"])
 
     async def test_anonymous_compile_and_expired_download_status(self):
         self.user = None
-        invalid = await self.client.post("/api/compile", json={"code": "x"},
-                                         headers={"Authorization": "Bearer invalid"})
+        invalid = await self.client.post(
+            "/api/compile", json={"code": "x"}, headers={"Authorization": "Bearer invalid"}
+        )
         self.assertEqual(invalid.status_code, 401)
         self.assertEqual(invalid.headers["www-authenticate"], "Bearer")
         with patch.object(compiler_svc, "_run_build", side_effect=self.build):
-            response = await self.client.post("/api/compile", json={"code": "x", "include_binary": False})
+            response = await self.client.post(
+                "/api/compile", json={"code": "x", "include_binary": False}
+            )
         artifact = response.json()["artifact"]
         self.assertEqual((await self.client.get(artifact["manifest_url"])).status_code, 200)
         info_path = artifacts.ARTIFACT_DIR / artifact["id"] / "manifest.json"
@@ -222,7 +254,11 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         cache = compiler_svc._BOARD_DIRS["esp32"]
         cache.mkdir(parents=True)
         from filelock import FileLock
-        with FileLock(cache / ".compile.lock"), patch.object(compiler_svc, "QUEUE_TIMEOUT_SECONDS", 0):
+
+        with (
+            FileLock(cache / ".compile.lock"),
+            patch.object(compiler_svc, "QUEUE_TIMEOUT_SECONDS", 0),
+        ):
             result = await compiler_svc.compile_code("x", "esp32")
         self.assertEqual(result["error_code"], "COMPILER_BUSY")
         with patch.object(compiler_svc, "_find_pio", AsyncMock(return_value=None)):
@@ -231,13 +267,14 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_admission_queue_is_bounded_across_boards(self):
         from filelock import FileLock
-        locks = [FileLock(self.root / f'.compiler-slot-{index}') for index in range(4)]
+
+        locks = [FileLock(self.root / f".compiler-slot-{index}") for index in range(4)]
         try:
             for lock in locks:
                 lock.acquire(timeout=0)
-            with patch.object(compiler_svc, '_run_build', AsyncMock()) as build:
-                result = await compiler_svc.compile_code('code', 'esp32')
-                self.assertEqual(result['error_code'], 'COMPILER_BUSY')
+            with patch.object(compiler_svc, "_run_build", AsyncMock()) as build:
+                result = await compiler_svc.compile_code("code", "esp32")
+                self.assertEqual(result["error_code"], "COMPILER_BUSY")
                 build.assert_not_awaited()
         finally:
             for lock in locks:

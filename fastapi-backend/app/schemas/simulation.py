@@ -2,7 +2,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 ComponentType = Literal[
     "esp32-devkit",
     "mpu6500",
@@ -37,7 +36,9 @@ class SimulationConfig(BaseModel):
 
     @field_validator("components")
     @classmethod
-    def validate_components(cls, components: list[SimulationComponent]) -> list[SimulationComponent]:
+    def validate_components(
+        cls, components: list[SimulationComponent]
+    ) -> list[SimulationComponent]:
         ids = [component.id for component in components]
         if len(ids) != len(set(ids)):
             raise ValueError("ID linh kiện không được trùng nhau")

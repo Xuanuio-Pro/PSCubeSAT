@@ -1,9 +1,4 @@
-"""In-process simulation lifecycle manager for the MVP.
-
-Step 1 deliberately keeps the manager independent from MQTT and HTTP routers.
-It owns session lifecycle and produces deterministic-enough telemetry frames.
-The next step can inject an MQTT publisher through ``publisher``.
-"""
+"""Manage simulator sessions and publish generated frames through an injected callback."""
 
 from __future__ import annotations
 
@@ -15,7 +10,6 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
 from loguru import logger
-
 
 TelemetryPublisher = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -52,12 +46,7 @@ class SimulationSession:
 
 
 class SimulationManager:
-    """Owns simulator sessions and their asyncio tasks.
-
-    This first step does not publish to MQTT yet. A publisher callback can be
-    passed to the constructor; otherwise frames are only logged. Keeping that
-    boundary here lets the lifecycle be tested before broker integration.
-    """
+    """Own simulator tasks while keeping transport and HTTP dependencies outside the manager."""
 
     def __init__(
         self,
@@ -183,11 +172,7 @@ class SimulationManager:
         return session
 
     def list_for_user(self, user_id: int) -> list[SimulationSession]:
-        return [
-            session
-            for session in self._sessions.values()
-            if session.user_id == user_id
-        ]
+        return [session for session in self._sessions.values() if session.user_id == user_id]
 
     async def shutdown(self) -> None:
         """Stop all tasks during FastAPI shutdown."""

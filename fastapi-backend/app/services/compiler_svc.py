@@ -5,17 +5,18 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 
-from filelock import FileLock, Timeout as FileLockTimeout
+from filelock import FileLock
+from filelock import Timeout as FileLockTimeout
 from loguru import logger
 
 from app.services import artifacts, compiler_sandbox
-from app.services.lab1 import BOARD_PROFILES
 from app.services.build_config import _PIO_INI
+from app.services.lab1 import BOARD_PROFILES
 
 _BASE_DIR = Path(__file__).resolve().parent.parent.parent / "build_cache"
 _BOARD_DIRS: dict[str, Path] = {
     "esp32s3": _BASE_DIR / "esp32s3",
-    "esp32":   _BASE_DIR / "esp32",
+    "esp32": _BASE_DIR / "esp32",
 }
 
 
@@ -38,7 +39,7 @@ def _err(message: str, installed: bool = True, **extra) -> dict:
 async def _find_pio() -> list[str] | None:
     # Never fall back to host PlatformIO, even if it is installed.
     try:
-        return ['sandbox'] if await compiler_sandbox.image_id() else None
+        return ["sandbox"] if await compiler_sandbox.image_id() else None
     except OSError:
         return None
 
@@ -63,18 +64,26 @@ QUEUE_TIMEOUT_SECONDS = 60
 
 
 async def _run_build(command: list[str]) -> tuple[int, str]:
-    if command[0] != 'sandbox':
-        raise OSError('Host compiler execution is disabled')
-    board = command[command.index('-e') + 1]
-    directory = Path(command[command.index('-d') + 1])
+    if command[0] != "sandbox":
+        raise OSError("Host compiler execution is disabled")
+    board = command[command.index("-e") + 1]
+    directory = Path(command[command.index("-d") + 1])
     return await compiler_sandbox.run(
-        (directory / 'src/main.cpp').read_bytes().decode('utf-8'), board,
-        directory / '.pio/build' / board, BUILD_TIMEOUT_SECONDS)
+        (directory / "src/main.cpp").read_bytes().decode("utf-8"),
+        board,
+        directory / ".pio/build" / board,
+        BUILD_TIMEOUT_SECONDS,
+    )
 
 
-async def compile_code(code: str, board: Literal["esp32s3", "esp32"], *,
-                       owner_id: int | None = None, lab_id: int | None = None,
-                       include_binary: bool = True) -> dict:
+async def compile_code(
+    code: str,
+    board: Literal["esp32s3", "esp32"],
+    *,
+    owner_id: int | None = None,
+    lab_id: int | None = None,
+    include_binary: bool = True,
+) -> dict:
     if board not in _BOARD_DIRS:
         return _err(f"Board không hợp lệ: {board}")
 
@@ -98,7 +107,7 @@ async def compile_code(code: str, board: Literal["esp32s3", "esp32"], *,
     try:
         # Bound queued + running requests across API processes on this cache volume.
         for index in range(4):
-            candidate = FileLock(board_dir.parent / f'.compiler-slot-{index}', thread_local=False)
+            candidate = FileLock(board_dir.parent / f".compiler-slot-{index}", thread_local=False)
             try:
                 candidate.acquire(timeout=0)
                 admission = candidate
@@ -106,7 +115,7 @@ async def compile_code(code: str, board: Literal["esp32s3", "esp32"], *,
             except FileLockTimeout:
                 continue
         if admission is None:
-            return _err('Hàng đợi compiler đã đầy. Vui lòng thử lại.', error_code='COMPILER_BUSY')
+            return _err("Hàng đợi compiler đã đầy. Vui lòng thử lại.", error_code="COMPILER_BUSY")
         while not acquired:
             try:
                 lock.acquire(timeout=0)
@@ -120,26 +129,50 @@ async def compile_code(code: str, board: Literal["esp32s3", "esp32"], *,
         # Preserve exactly the bytes the frontend hashed, including LF on Windows.
         src_file.write_bytes(code.encode("utf-8"))
         try:
-            returncode, full_logs = await _run_build([*pio_cmd, "run", "-e", board, "-d", str(board_dir)])
+            returncode, full_logs = await _run_build(
+                [*pio_cmd, "run", "-e", board, "-d", str(board_dir)]
+            )
         except asyncio.TimeoutError:
-            return _err(f"Build timeout ({BUILD_TIMEOUT_SECONDS}s).", error_code="BUILD_TIMEOUT",
-                        duration_ms=int((time.monotonic() - t0) * 1000))
+            return _err(
+                f"Build timeout ({BUILD_TIMEOUT_SECONDS}s).",
+                error_code="BUILD_TIMEOUT",
+                duration_ms=int((time.monotonic() - t0) * 1000),
+            )
         except (OSError, ValueError, KeyError, TypeError) as exc:
             logger.error(f"[Compiler] Không thể khởi chạy PlatformIO: {type(exc).__name__}")
-            return _err("Compiler sandbox chưa sẵn sàng hoặc trả dữ liệu không hợp lệ.",
-                        installed=False, error_code="COMPILER_UNAVAILABLE")
+            return _err(
+                "Compiler sandbox chưa sẵn sàng hoặc trả dữ liệu không hợp lệ.",
+                installed=False,
+                error_code="COMPILER_UNAVAILABLE",
+            )
         duration_ms = int((time.monotonic() - t0) * 1000)
         if returncode != 0:
-            return _err("Lỗi biên dịch C++! Vui lòng kiểm tra mã nguồn.", error_code="BUILD_FAILED",
-                        logs=full_logs, duration_ms=duration_ms)
+            return _err(
+                "Lỗi biên dịch C++! Vui lòng kiểm tra mã nguồn.",
+                error_code="BUILD_FAILED",
+                logs=full_logs,
+                duration_ms=duration_ms,
+            )
         build_dir = board_dir / ".pio" / "build" / board
         try:
-            config_hash = sha256((_PIO_INI[board] + (board_dir / "export_flash_manifest.py").read_text(
-                encoding="utf-8")).encode()).hexdigest()
+            config_hash = sha256(
+                (
+                    _PIO_INI[board]
+                    + (board_dir / "export_flash_manifest.py").read_text(encoding="utf-8")
+                ).encode()
+            ).hexdigest()
             # Snapshot every file while holding the lock; later builds cannot mutate this artifact.
-            snapshot_task = asyncio.create_task(asyncio.to_thread(
-                artifacts.create_artifact, board, code, build_dir,
-                owner_id=owner_id, lab_id=lab_id, config_sha256=config_hash))
+            snapshot_task = asyncio.create_task(
+                asyncio.to_thread(
+                    artifacts.create_artifact,
+                    board,
+                    code,
+                    build_dir,
+                    owner_id=owner_id,
+                    lab_id=lab_id,
+                    config_sha256=config_hash,
+                )
+            )
             try:
                 artifact = await asyncio.shield(snapshot_task)
             except asyncio.CancelledError:
@@ -150,15 +183,29 @@ async def compile_code(code: str, board: Literal["esp32s3", "esp32"], *,
             await asyncio.to_thread(artifacts.cleanup_expired)
         except (OSError, ValueError, KeyError) as exc:
             logger.error(f"[Compiler] Không thể đóng gói flash artifact: {type(exc).__name__}")
-            return _err("Không thể tạo bộ firmware đầy đủ để nạp.", error_code="ARTIFACT_FAILED",
-                        logs=full_logs, duration_ms=duration_ms)
-        response = _ok(artifact=artifact, board=board, chip=BOARD_PROFILES[board]["chip"],
-                       source_sha256=artifact["source_sha256"], binSize=len(bin_bytes),
-                       bin_size=len(bin_bytes), fileName="firmware.bin", file_name="firmware.bin",
-                       logs=full_logs, duration_ms=duration_ms)
+            return _err(
+                "Không thể tạo bộ firmware đầy đủ để nạp.",
+                error_code="ARTIFACT_FAILED",
+                logs=full_logs,
+                duration_ms=duration_ms,
+            )
+        response = _ok(
+            artifact=artifact,
+            board=board,
+            chip=BOARD_PROFILES[board]["chip"],
+            source_sha256=artifact["source_sha256"],
+            binSize=len(bin_bytes),
+            bin_size=len(bin_bytes),
+            fileName="firmware.bin",
+            file_name="firmware.bin",
+            logs=full_logs,
+            duration_ms=duration_ms,
+        )
         if include_binary:
             response["binBase64"] = response["bin_base64"] = base64.b64encode(bin_bytes).decode()
-        logger.success(f"[Compiler] Build OK board={board} artifact={artifact['id']} ({duration_ms}ms)")
+        logger.success(
+            f"[Compiler] Build OK board={board} artifact={artifact['id']} ({duration_ms}ms)"
+        )
         return response
     finally:
         if acquired:

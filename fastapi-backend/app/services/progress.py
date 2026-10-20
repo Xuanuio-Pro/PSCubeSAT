@@ -53,7 +53,9 @@ class ProgressService:
             progress.compiled_at = now
         self._recompute_completion(progress)
         await self.db.commit()
-        logger.info(f"[Progress] user_id={user_id} lab_id={lab_id} compiled_at={progress.compiled_at}")
+        logger.info(
+            f"[Progress] user_id={user_id} lab_id={lab_id} compiled_at={progress.compiled_at}"
+        )
 
     def _recompute_completion(self, progress) -> None:
         if progress.completed_at:

@@ -31,4 +31,8 @@ lib_deps =
 }
 
 # Bump when compiler-side library fixes change, rejecting stale compiler images.
-_PIO_INI = {board: ini + '\n; PTITCube sensor readiness + MPU6500 + GPS aliases + UART2 mutex + camera validation/shared UART patch v6\n' for board, ini in _PIO_INI.items()}
+_PIO_INI = {
+    board: ini
+    + "\n; PTITCube sensor readiness + MPU6500 + GPS aliases + UART2 mutex + camera validation/shared UART patch v6\n"
+    for board, ini in _PIO_INI.items()
+}

@@ -1,19 +1,18 @@
 import asyncio
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.db_models import User
-from app.services import compiler_svc
+from app.models.tables import User
+from app.services import artifacts, compiler_svc
 from app.services.auth import get_current_user
-from app.services.progress import ProgressService
-from app.services import artifacts
 from app.services.lab1 import BOARD_PROFILES, get_template
+from app.services.progress import ProgressService
 
 router = APIRouter(prefix="/api", tags=["compiler"])
 
@@ -34,8 +33,12 @@ class CompileRequest(BaseModel):
 
 @router.get("/boards")
 async def list_boards():
-    return {"boards": [{"board": key, **profile, "monitor_baud_rate": 115200}
-                       for key, profile in BOARD_PROFILES.items()]}
+    return {
+        "boards": [
+            {"board": key, **profile, "monitor_baud_rate": 115200}
+            for key, profile in BOARD_PROFILES.items()
+        ]
+    }
 
 
 @router.get("/labs/1/template")
@@ -52,15 +55,21 @@ async def compile_code(
 ):
     """Build unchanged source and snapshot all images required for a first flash."""
     if request.headers.get("Authorization") and current_user is None:
-        raise HTTPException(status_code=401, detail="Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
-                            headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401,
+            detail="Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     owner_id = current_user.id if current_user else None
     if owner_id is not None:
         # End the auth read transaction rather than retaining a DB connection for a long build.
         await db.rollback()
     result = await compiler_svc.compile_code(
-        req.code, req.board, owner_id=owner_id,
-        lab_id=req.lab_id, include_binary=req.include_binary,
+        req.code,
+        req.board,
+        owner_id=owner_id,
+        lab_id=req.lab_id,
+        include_binary=req.include_binary,
     )
 
     if result.get("success") and owner_id is not None and req.lab_id is not None:
@@ -87,21 +96,31 @@ def _artifact_error(exc: Exception) -> HTTPException:
 
 
 @router.get("/artifacts/{artifact_id}")
-async def artifact_manifest(artifact_id: str, current_user: Optional[User] = Depends(get_current_user)):
+async def artifact_manifest(
+    artifact_id: str, current_user: Optional[User] = Depends(get_current_user)
+):
     try:
-        info = await asyncio.to_thread(artifacts.get_artifact, artifact_id, current_user.id if current_user else None)
+        info = await asyncio.to_thread(
+            artifacts.get_artifact, artifact_id, current_user.id if current_user else None
+        )
     except (artifacts.ArtifactNotFound, artifacts.ArtifactExpired) as exc:
         raise _artifact_error(exc) from exc
     return JSONResponse(info, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/artifacts/{artifact_id}/files/{filename}")
-async def artifact_file(artifact_id: str, filename: str,
-                        current_user: Optional[User] = Depends(get_current_user)):
+async def artifact_file(
+    artifact_id: str, filename: str, current_user: Optional[User] = Depends(get_current_user)
+):
     try:
-        path, entry = await asyncio.to_thread(artifacts.get_file, artifact_id, filename,
-                                            current_user.id if current_user else None)
+        path, entry = await asyncio.to_thread(
+            artifacts.get_file, artifact_id, filename, current_user.id if current_user else None
+        )
     except (artifacts.ArtifactNotFound, artifacts.ArtifactExpired) as exc:
         raise _artifact_error(exc) from exc
-    return FileResponse(path, media_type="application/octet-stream", filename=entry["name"],
-                        headers={"Cache-Control": "no-store", "X-Content-SHA256": entry["sha256"]})
+    return FileResponse(
+        path,
+        media_type="application/octet-stream",
+        filename=entry["name"],
+        headers={"Cache-Control": "no-store", "X-Content-SHA256": entry["sha256"]},
+    )

@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
-from typing import Optional
 import secrets
+from datetime import datetime, timezone
 from hashlib import sha256
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from loguru import logger
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.redis import get_redis
 from app.core.security import (
@@ -18,9 +19,15 @@ from app.core.security import (
     verify_password,
 )
 from app.db import get_db
-from app.models.db_models import User, GoogleIdentity, RevokedToken
+from app.models.tables import GoogleIdentity, RevokedToken, User
 from app.repository.user import UserRepository
-from app.schemas.auth import AuthTokenResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UserResponse
+from app.schemas.auth import (
+    AuthTokenResponse,
+    ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    UserResponse,
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -28,6 +35,7 @@ _BLACKLIST_PREFIX = "auth:blacklist:"
 
 
 # ── FastAPI Dependencies ────────────────────────────────────────────────────────
+
 
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
@@ -44,7 +52,7 @@ async def get_current_user(
             if await redis.exists(f"{_BLACKLIST_PREFIX}{token}"):
                 return None
         except Exception:
-            logger.warning('[Auth] Redis unavailable; checking PostgreSQL revocations.')
+            logger.warning("[Auth] Redis unavailable; checking PostgreSQL revocations.")
 
     payload = decode_access_token(token)
     if not payload or "sub" not in payload:
@@ -54,9 +62,7 @@ async def get_current_user(
         if await db.get(RevokedToken, sha256(token.encode()).hexdigest()):
             return None
         user_id = int(payload["sub"])
-        result = await db.execute(
-            select(User).where(User.id == user_id, User.deleted_at.is_(None))
-        )
+        result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
         return result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"[Auth] get_current_user error: {e}")
@@ -78,6 +84,7 @@ async def get_required_user(
 
 # ── AuthService ─────────────────────────────────────────────────────────────────
 
+
 class AuthService:
     """Service xử lý toàn bộ nghiệp vụ xác thực (đăng ký, đăng nhập, đăng xuất, lấy thông tin)."""
 
@@ -90,7 +97,9 @@ class AuthService:
         email_clean = request.email.strip().lower()
 
         if await self.user_repo.check_email_exists(email_clean):
-            logger.warning(f"[AuthService] ❌ Attempt to register with existing email: {email_clean}")
+            logger.warning(
+                f"[AuthService] ❌ Attempt to register with existing email: {email_clean}"
+            )
             raise ValueError("Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.")
 
         full_name_val = (
@@ -101,7 +110,7 @@ class AuthService:
 
         new_user = User(
             email=email_clean,
-            password_hash=hash_password(request.password),
+            password_hash=await run_in_threadpool(hash_password, request.password),
             full_name=full_name_val,
             role="user",
         )
@@ -114,13 +123,17 @@ class AuthService:
             raise ValueError("Email này đã được sử dụng. Vui lòng dùng email khác.") from exc
         await self.db_session.refresh(created_user)
 
-        logger.success(f"[AuthService] ✅ New user registered: {created_user.email} (ID: {created_user.id})")
+        logger.success(
+            f"[AuthService] ✅ New user registered: {created_user.email} (ID: {created_user.id})"
+        )
 
-        token = create_access_token({
-            "sub": str(created_user.id),
-            "email": created_user.email,
-            "role": created_user.role,
-        })
+        token = create_access_token(
+            {
+                "sub": str(created_user.id),
+                "email": created_user.email,
+                "role": created_user.role,
+            }
+        )
 
         return AuthTokenResponse(
             access_token=token,
@@ -139,16 +152,20 @@ class AuthService:
         email_clean = request.email.strip().lower()
 
         user = await self.user_repo.get_by_email(email_clean)
-        if not user or not verify_password(request.password, user.password_hash):
+        if not user or not await run_in_threadpool(
+            verify_password, request.password, user.password_hash
+        ):
             raise ValueError("Email hoặc mật khẩu không chính xác.")
 
         logger.info(f"[AuthService] 🔑 User logged in: {user.email}")
 
-        token = create_access_token({
-            "sub": str(user.id),
-            "email": user.email,
-            "role": user.role,
-        })
+        token = create_access_token(
+            {
+                "sub": str(user.id),
+                "email": user.email,
+                "role": user.role,
+            }
+        )
 
         return AuthTokenResponse(
             access_token=token,
@@ -164,33 +181,41 @@ class AuthService:
 
     async def login_google(self, claims: dict) -> AuthTokenResponse:
         # Google sub is stable, unlike the email address.
-        identity = await self.db_session.get(GoogleIdentity, claims['sub'])
+        identity = await self.db_session.get(GoogleIdentity, claims["sub"])
         if identity:
             user = await self.db_session.get(User, identity.user_id)
             if not user or user.deleted_at is not None:
-                raise ValueError('Tài khoản này không còn hoạt động.')
+                raise ValueError("Tài khoản này không còn hoạt động.")
         else:
-            email = claims['email'].strip().lower()
+            email = claims["email"].strip().lower()
             user = await self.user_repo.get_by_email(email)
             # Only link by email when Google is authoritative for that address.
-            if user and not (email.endswith('@gmail.com') or claims.get('hd')):
-                raise ValueError('Email đã có tài khoản. Vui lòng đăng nhập bằng mật khẩu.')
+            if user and not (email.endswith("@gmail.com") or claims.get("hd")):
+                raise ValueError("Email đã có tài khoản. Vui lòng đăng nhập bằng mật khẩu.")
             try:
                 if not user:
-                    user = await self.user_repo.create(User(
-                        email=email,
-                        password_hash=hash_password(secrets.token_urlsafe(32)),
-                        full_name=claims.get('name') or email.split('@')[0],
-                        role='user',
-                    ))
-                self.db_session.add(GoogleIdentity(subject=claims['sub'], user_id=user.id))
+                    user = await self.user_repo.create(
+                        User(
+                            email=email,
+                            password_hash=await run_in_threadpool(
+                                hash_password, secrets.token_urlsafe(32)
+                            ),
+                            full_name=claims.get("name") or email.split("@")[0],
+                            role="user",
+                        )
+                    )
+                self.db_session.add(GoogleIdentity(subject=claims["sub"], user_id=user.id))
                 await self.db_session.commit()
                 await self.db_session.refresh(user)
             except IntegrityError as exc:
                 await self.db_session.rollback()
-                raise ValueError('Tài khoản đã tồn tại hoặc vừa được tạo. Vui lòng thử đăng nhập lại.') from exc
+                raise ValueError(
+                    "Tài khoản đã tồn tại hoặc vừa được tạo. Vui lòng thử đăng nhập lại."
+                ) from exc
         return AuthTokenResponse(
-            access_token=create_access_token({'sub': str(user.id), 'email': user.email, 'role': user.role}),
+            access_token=create_access_token(
+                {"sub": str(user.id), "email": user.email, "role": user.role}
+            ),
             user=await self.get_me(user),
         )
 
@@ -209,14 +234,16 @@ class AuthService:
 
         # PostgreSQL persists revocations even when Redis is offline or restarted.
         token_hash = sha256(token.encode()).hexdigest()
-        await self.db_session.execute(delete(RevokedToken).where(
-            RevokedToken.expires_at <= datetime.now(timezone.utc)
-        ))
+        await self.db_session.execute(
+            delete(RevokedToken).where(RevokedToken.expires_at <= datetime.now(timezone.utc))
+        )
         if not await self.db_session.get(RevokedToken, token_hash):
-            self.db_session.add(RevokedToken(
-                token_hash=token_hash,
-                expires_at=datetime.fromtimestamp(exp, timezone.utc),
-            ))
+            self.db_session.add(
+                RevokedToken(
+                    token_hash=token_hash,
+                    expires_at=datetime.fromtimestamp(exp, timezone.utc),
+                )
+            )
         try:
             await self.db_session.commit()
         except IntegrityError:
@@ -229,15 +256,17 @@ class AuthService:
             try:
                 await redis.setex(f"{_BLACKLIST_PREFIX}{token}", ttl, "revoked")
             except Exception:
-                logger.warning('[AuthService] Redis unavailable; token revoked in PostgreSQL.')
+                logger.warning("[AuthService] Redis unavailable; token revoked in PostgreSQL.")
         logger.info(f"[AuthService] Token revoked (TTL={ttl}s)")
 
     async def change_password(self, current_user: User, request: ChangePasswordRequest) -> None:
         """Đổi mật khẩu, yêu cầu xác nhận đúng mật khẩu hiện tại."""
-        if not verify_password(request.current_password, current_user.password_hash):
+        if not await run_in_threadpool(
+            verify_password, request.current_password, current_user.password_hash
+        ):
             raise ValueError("Mật khẩu hiện tại không chính xác.")
 
-        current_user.password_hash = hash_password(request.new_password)
+        current_user.password_hash = await run_in_threadpool(hash_password, request.new_password)
         await self.db_session.commit()
         logger.info(f"[AuthService] 🔒 Password changed: user_id={current_user.id}")
 

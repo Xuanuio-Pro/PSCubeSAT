@@ -1,11 +1,11 @@
 from functools import lru_cache
 from typing import AsyncGenerator
 
+from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-from loguru import logger
-from fastapi import HTTPException
 
 from app.core.config import get_settings
 
@@ -54,7 +54,7 @@ def get_session_maker() -> async_sessionmaker[AsyncSession]:
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     if not get_settings().database_url:
-        raise HTTPException(503, 'Chưa cấu hình DATABASE_URL cho PostgreSQL trên máy chủ.')
+        raise HTTPException(503, "Chưa cấu hình DATABASE_URL cho PostgreSQL trên máy chủ.")
     session_maker = get_session_maker()
     async with session_maker() as session:
         try:
@@ -71,14 +71,19 @@ async def init_db() -> None:
     """Check connectivity and migration head; startup never mutates the schema."""
     from alembic.migration import MigrationContext
     from alembic.script import ScriptDirectory
+
     from app.db.migrations import migration_config
 
     if not get_settings().database_url:
-        raise RuntimeError('DATABASE_URL must be configured before startup.')
+        raise RuntimeError("DATABASE_URL must be configured before startup.")
     async with get_engine().connect() as conn:
-        heads = await conn.run_sync(lambda sync: MigrationContext.configure(sync).get_current_heads())
+        heads = await conn.run_sync(
+            lambda sync: MigrationContext.configure(sync).get_current_heads()
+        )
         expected = ScriptDirectory.from_config(migration_config()).get_heads()
         if set(heads) != set(expected):
-            raise RuntimeError('Database migrations are pending. Run python -m alembic upgrade head.')
-        await conn.execute(text('SELECT 1'))
-    logger.success('[DB] Database connected; migrations are current.')
+            raise RuntimeError(
+                "Database migrations are pending. Run python -m alembic upgrade head."
+            )
+        await conn.execute(text("SELECT 1"))
+    logger.success("[DB] Database connected; migrations are current.")

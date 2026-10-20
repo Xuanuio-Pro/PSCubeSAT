@@ -6,12 +6,14 @@ Tiến độ học tập:
   POST /api/progress/{lab_id}/video-watched    — Đánh dấu đã xem hết video
   POST /api/progress/{lab_id}/doc-viewed       — Đánh dấu đã mở tài liệu
 """
-from fastapi import APIRouter, Depends, Path
+
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.db_models import User
+from app.models.tables import User
 from app.schemas.progress import LabProgressResponse
 from app.services.auth import get_required_user
 from app.services.progress import ProgressService

@@ -1,20 +1,24 @@
-from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class CreateDeviceRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     device_name: str = Field(..., min_length=1, max_length=128, description="Tên thiết bị")
     description: str | None = Field(None, max_length=2000, description="Mô tả thiết bị")
     model: str | None = Field(None, max_length=128, description="Mẫu thiết bị")
-    device_type: Literal['hardware', 'simulator', 'ground_station'] = 'hardware'
+    device_type: Literal["hardware", "simulator", "ground_station"] = "hardware"
+
 
 class CreateDeviceResponse(BaseModel):
     device_uid: str = Field(..., description="UID của thiết bị đã tạo")
     device_name: str = Field(..., description="Tên thiết bị đã tạo")
     device_secret: str = Field(..., description="Secret của thiết bị đã tạo")
     mqtt_username: str
-    credential_backend: Literal['postgresql'] = 'postgresql'
+    credential_backend: Literal["postgresql"] = "postgresql"
     message: str = Field(..., description="Thông báo về việc tạo thiết bị thành công")
+
 
 class DeviceDetailsResponse(BaseModel):
     id: int = Field(..., description="ID số của thiết bị")

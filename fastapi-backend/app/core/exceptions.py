@@ -2,6 +2,7 @@
 
 Thiết kế theo Docs/Global_Exception_Handling_Guide.md.
 """
+
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request, status
@@ -34,10 +35,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             # Omit input/ctx: they may contain secrets, exceptions, bytes or NaN.
-            content=_envelope("VALIDATION_ERROR", "Dữ liệu gửi lên không hợp lệ.", [
-                {'type': error['type'], 'loc': list(error['loc']), 'msg': error['msg']}
-                for error in exc.errors()
-            ]),
+            content=_envelope(
+                "VALIDATION_ERROR",
+                "Dữ liệu gửi lên không hợp lệ.",
+                [
+                    {"type": error["type"], "loc": list(error["loc"]), "msg": error["msg"]}
+                    for error in exc.errors()
+                ],
+            ),
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -58,5 +63,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.error(f"[GLOBAL ERROR] Unhandled Exception at {request.url.path}: {exc}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=_envelope("INTERNAL_SERVER_ERROR", "Đã xảy ra lỗi máy chủ nội bộ. Vui lòng thử lại sau."),
+            content=_envelope(
+                "INTERNAL_SERVER_ERROR", "Đã xảy ra lỗi máy chủ nội bộ. Vui lòng thử lại sau."
+            ),
         )

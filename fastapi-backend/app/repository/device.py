@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import Device, MQTTCredential, MQTTACL
+from app.models.tables import MQTTACL, Device, MQTTCredential
+
 
 class DeviceRepository:
     def __init__(self, db: AsyncSession):
@@ -12,7 +13,7 @@ class DeviceRepository:
     async def get_by_uid(self, device_uid: str) -> Device | None:
         """Kiểm tra xem device có tồn tại trong cơ sở dữ liệu hay không."""
         stmt = select(Device).where(Device.device_uid == device_uid, Device.deleted_at.is_(None))
-    
+
         result = await self.db.execute(stmt)
 
         return result.scalar_one_or_none()
@@ -26,7 +27,7 @@ class DeviceRepository:
     async def get_by_user_id(self, user_id: int) -> list[Device]:
         """Lấy danh sách thiết bị theo user_id."""
         stmt = select(Device).where(Device.user_id == user_id, Device.deleted_at.is_(None))
-    
+
         result = await self.db.execute(stmt)
 
         return result.scalars().all()
@@ -42,17 +43,22 @@ class DeviceRepository:
         now = datetime.now(timezone.utc)
         device.deleted_at = now
         device.enabled = False
-        device.status = 'offline'
-        await self.db.execute(update(MQTTCredential).where(
-            MQTTCredential.device_id == device.id
-        ).values(enabled=False, deleted_at=now, revoked_at=now))
+        device.status = "offline"
+        await self.db.execute(
+            update(MQTTCredential)
+            .where(MQTTCredential.device_id == device.id)
+            .values(enabled=False, deleted_at=now, revoked_at=now)
+        )
         await self.db.execute(delete(MQTTACL).where(MQTTACL.device_id == device.id))
         await self.db.flush()
 
-    async def check_user_owns_device(self, user_id: int, device_uid: str, enabled_only: bool = False) -> bool:
+    async def check_user_owns_device(
+        self, user_id: int, device_uid: str, enabled_only: bool = False
+    ) -> bool:
         """Kiểm tra xem user có sở hữu thiết bị hay không."""
         stmt = select(Device).where(
-            Device.device_uid == device_uid, Device.user_id == user_id,
+            Device.device_uid == device_uid,
+            Device.user_id == user_id,
             Device.deleted_at.is_(None),
         )
         if enabled_only:

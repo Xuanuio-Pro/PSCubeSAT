@@ -3,7 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, BigInteger, DateTime, Enum as SAEnum, ForeignKey, Index, Text, text, func, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,7 +66,7 @@ class User(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    __table_args__ = (Index('uq_users_email_normalized', func.lower(email), unique=True),)
+    __table_args__ = (Index("uq_users_email_normalized", func.lower(email), unique=True),)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[UserRole] = mapped_column(
@@ -79,7 +90,9 @@ class Device(Base, TimestampMixin):
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
     device_uid: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    device_type: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'hardware'"))
+    device_type: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'hardware'")
+    )
     device_name: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     model: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -93,7 +106,9 @@ class Device(Base, TimestampMixin):
     last_lat: Mapped[float | None] = mapped_column(nullable=True)
     last_lon: Mapped[float | None] = mapped_column(nullable=True)
     last_alt: Mapped[float | None] = mapped_column(nullable=True)
-    last_position_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_position_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user: Mapped[User | None] = relationship(back_populates="devices")
     mqtt_credentials: Mapped[MQTTCredential | None] = relationship(back_populates="device")
@@ -203,12 +218,16 @@ class Command(Base, TimestampMixin):
 
 
 class GoogleIdentity(Base):
-    __tablename__ = 'google_identities'
+    __tablename__ = "google_identities"
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
 
 
 class RevokedToken(Base):
-    __tablename__ = 'auth_revoked_tokens'
+    __tablename__ = "auth_revoked_tokens"
     token_hash: Mapped[str] = mapped_column(Text, primary_key=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )

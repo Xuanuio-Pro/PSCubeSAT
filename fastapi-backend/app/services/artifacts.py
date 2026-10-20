@@ -1,4 +1,5 @@
 """Immutable build snapshots. No download ever reads a mutable board cache."""
+
 import json
 import re
 import shutil
@@ -39,8 +40,15 @@ def cleanup_expired() -> None:
             continue
 
 
-def create_artifact(board: str, code: str, build_dir: Path, *, owner_id: int | None,
-                    lab_id: int | None, config_sha256: str) -> dict:
+def create_artifact(
+    board: str,
+    code: str,
+    build_dir: Path,
+    *,
+    owner_id: int | None,
+    lab_id: int | None,
+    config_sha256: str,
+) -> dict:
     raw = json.loads((build_dir / "flash-manifest.json").read_text(encoding="utf-8"))
     if raw["chip"] != BOARD_PROFILES[board]["chip"]:
         raise ValueError("Flash manifest không khớp board đã chọn.")
@@ -59,26 +67,47 @@ def create_artifact(board: str, code: str, build_dir: Path, *, owner_id: int | N
             name = source.name
             data = source.read_bytes()
             offset = item["offset"]
-            if not isinstance(offset, int) or offset < end or not data or len(data) > MAX_IMAGE_BYTES:
+            if (
+                not isinstance(offset, int)
+                or offset < end
+                or not data
+                or len(data) > MAX_IMAGE_BYTES
+            ):
                 raise ValueError("Flash image có kích thước hoặc offset không hợp lệ.")
             if any(existing["name"] == name for existing in files):
                 raise ValueError("Flash image có tên trùng nhau.")
             end = offset + len(data)
             (directory / name).write_bytes(data)
-            files.append({"name": name, "offset": offset, "size": len(data),
-                          "sha256": sha256(data).hexdigest(),
-                          "download_url": f"/api/artifacts/{identifier}/files/{name}"})
+            files.append(
+                {
+                    "name": name,
+                    "offset": offset,
+                    "size": len(data),
+                    "sha256": sha256(data).hexdigest(),
+                    "download_url": f"/api/artifacts/{identifier}/files/{name}",
+                }
+            )
         now = datetime.now(timezone.utc)
         profile = BOARD_PROFILES[board]
         info = {
-            "schema_version": 1, "id": identifier, "board": board,
-            "board_id": profile["board_id"], "chip": profile["chip"], "lab_id": lab_id,
+            "schema_version": 1,
+            "id": identifier,
+            "board": board,
+            "board_id": profile["board_id"],
+            "chip": profile["chip"],
+            "lab_id": lab_id,
             "source_sha256": sha256(code.encode("utf-8")).hexdigest(),
             "build_config_sha256": config_sha256,
-            "created_at": now.isoformat(), "expires_at": (now + timedelta(seconds=TTL_SECONDS)).isoformat(),
+            "created_at": now.isoformat(),
+            "expires_at": (now + timedelta(seconds=TTL_SECONDS)).isoformat(),
             "serial": {"baud_rate": 115200, "transport": profile["serial_transport"]},
-            "flash": {"mode": raw["mode"], "frequency": raw["frequency"],
-                      "size": raw["size"], "erase_all": False, "files": files},
+            "flash": {
+                "mode": raw["mode"],
+                "frequency": raw["frequency"],
+                "size": raw["size"],
+                "erase_all": False,
+                "files": files,
+            },
             "manifest_url": f"/api/artifacts/{identifier}",
             "_owner_id": owner_id,
         }
