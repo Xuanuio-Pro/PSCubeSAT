@@ -65,6 +65,7 @@ export default function DeviceManager() {
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>✅ Đã tạo thiết bị "{newSecret.device_name}"</div>
             <div style={{ fontSize: '0.875rem', fontFamily: 'var(--font-mono)', lineHeight: 1.8 }}>
               UID: {newSecret.device_uid}<br />
+              MQTT username: {newSecret.mqtt_username}<br />
               Secret: {newSecret.device_secret}
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>

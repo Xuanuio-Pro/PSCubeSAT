@@ -79,7 +79,8 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(logged_in.user.id, user.user.id)
             device = await DeviceService(db).register_new_device(user.user.id, CreateDeviceRequest(device_name='Fresh device'))
             credential = (await db.execute(select(MQTTCredential))).scalar_one()
-            self.assertEqual(credential.username, device['device_uid'])
+            self.assertEqual(credential.username, device['mqtt_username'])
+            self.assertEqual(credential.username, 'dev_' + device['device_uid'])
             self.assertIsNone(credential.deleted_at)
             # Current telemetry must land in the default partition and respect FK.
             await db.execute(text("INSERT INTO telemetry (device_id, payload) SELECT id, '{}'::jsonb FROM devices"))

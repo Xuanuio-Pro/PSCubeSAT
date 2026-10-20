@@ -55,6 +55,7 @@ class User(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    __table_args__ = (Index('uq_users_email_normalized', func.lower(email), unique=True),)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[UserRole] = mapped_column(
@@ -113,6 +114,8 @@ class MQTTCredential(Base, TimestampMixin):
     username: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("TRUE"))
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     device: Mapped[Device | None] = relationship(back_populates="mqtt_credentials")
 

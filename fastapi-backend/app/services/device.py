@@ -31,7 +31,7 @@ class DeviceService:
             if not existing_device:
                 break
 
-        raw_secret = secrets.token_urlsafe(16)
+        raw_secret = secrets.token_urlsafe(32)
         hashed_secret = hash_password(raw_secret)
 
         try:
@@ -47,7 +47,7 @@ class DeviceService:
 
             mqtt_cred = MQTTCredential(
                 device_id=created_device.id,
-                username=generated_uid,
+                username=f'dev_{generated_uid}',
                 password_hash=hashed_secret,
             )
             await self.mqtt_credential_repo.create(mqtt_cred)
@@ -65,8 +65,12 @@ class DeviceService:
                     device_id=created_device.id,
                     permission="allow",
                     action="subscribe",
-                    topic=f"cmd/{generated_uid}"
-                )
+                    topic=f"cmd/{generated_uid}/#"
+                ),
+                MQTTACL(device_id=created_device.id, permission='allow', action='publish',
+                        topic=f'sensors/{generated_uid}/status'),
+                MQTTACL(device_id=created_device.id, permission='allow', action='publish',
+                        topic=f'sensors/{generated_uid}/ack'),
             ]
             await self.mqtt_acl_repo.create(default_acls)
             
@@ -78,11 +82,13 @@ class DeviceService:
                 "device_uid": created_device.device_uid,
                 "device_name": created_device.device_name,
                 "device_secret": raw_secret,
+                "mqtt_username": mqtt_cred.username,
+                "credential_backend": "postgresql",
                 "message": "Đăng ký thiết bị thành công",
             }
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"Error registering new device: {e}")
+            logger.error(f"Error registering new device: {type(e).__name__}")
             raise e
         
     async def get_device_by_uid(self, device_uid: str) -> Device | None:

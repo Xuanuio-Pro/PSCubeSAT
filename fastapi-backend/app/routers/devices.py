@@ -7,7 +7,8 @@ Device Registry API:
   GET    /api/devices/{id}       — Chi tiết + firmware template
   DELETE /api/devices/{id}       — Xoá thiết bị (chỉ chủ sở hữu)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+import json
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +23,8 @@ from app.schemas.device import (
 )
 from app.services.auth import get_required_user
 from app.services.device import DeviceService
+from app.services import device_mqtt
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
@@ -29,10 +32,12 @@ router = APIRouter(prefix="/api/devices", tags=["devices"])
 @router.post("/register", response_model=CreateDeviceResponse, status_code=201)
 async def register_device(
     req: CreateDeviceRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_required_user),
 ):
     """Đăng ký thiết bị mới cho tài khoản đang đăng nhập."""
+    response.headers['Cache-Control'] = 'no-store'
     return await DeviceService(db).register_new_device(current_user.id, req)
 
 
@@ -94,7 +99,8 @@ async def get_device(
     if device.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập thiết bị này.")
 
-    snippet = _make_firmware_snippet(device.device_uid, "<saved-on-register-only>")
+    _, credential = await device_mqtt.owned_credential(db, device_uid, current_user.id)
+    snippet = _make_firmware_snippet(device.device_uid, "<saved-on-register-or-rotate-only>", credential.username)
     return {
         "device_uid": device.device_uid,
         "device_name": device.device_name,
@@ -125,39 +131,44 @@ async def delete_device(
     return {"message": f"Đã xoá thiết bị {device_uid} khỏi registry."}
 
 
-def _make_firmware_snippet(device_uid: str, device_secret: str) -> str:
-    return f"""\
-// CubeSat PTIT-STEM - MQTT Credentials
-// Paste this block into your ESP32 firmware.
+@router.get('/{device_uid}/mqtt')
+async def mqtt_configuration(device_uid: str, response: Response,
+                             db: AsyncSession = Depends(get_db),
+                             current_user: User = Depends(get_required_user)):
+    response.headers['Cache-Control'] = 'no-store'
+    device, credential = await device_mqtt.owned_credential(db, device_uid, current_user.id)
+    return device_mqtt.metadata(device, credential)
 
-#include <WiFi.h>
-#include <PubSubClient.h>
 
-const char* WIFI_SSID      = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD  = "YOUR_WIFI_PASSWORD";
+@router.post('/{device_uid}/mqtt/rotate')
+async def rotate_mqtt(device_uid: str, response: Response,
+                      db: AsyncSession = Depends(get_db),
+                      current_user: User = Depends(get_required_user)):
+    response.headers['Cache-Control'] = 'no-store'
+    return await device_mqtt.rotate(db, device_uid, current_user.id)
 
-const char* MQTT_HOST      = "mqtt.ptit-stem-cube.local";
-const int   MQTT_PORT      = 8883;
-const char* MQTT_USERNAME  = "{device_uid}";
-const char* MQTT_PASSWORD  = "{device_secret}";
-const char* MQTT_CLIENT_ID = "{device_uid}";
 
-const char* TOPIC_PUB = "sensors/{device_uid}/telemetry";
-const char* TOPIC_CMD = "cmd/{device_uid}";
+@router.post('/{device_uid}/mqtt/revoke')
+async def revoke_mqtt(device_uid: str, db: AsyncSession = Depends(get_db),
+                      current_user: User = Depends(get_required_user)):
+    return await device_mqtt.revoke(db, device_uid, current_user.id)
 
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
 
-void connectMQTT() {{
-  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-  while (!mqttClient.connected()) {{
-    Serial.println("Connecting to MQTT...");
-    if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD)) {{
-      Serial.println("MQTT Connected!");
-      mqttClient.subscribe(TOPIC_CMD);
-    }} else {{
-      delay(3000);
-    }}
-  }}
-}}
-"""
+def _make_firmware_snippet(device_uid: str, device_secret: str, username: str | None = None) -> str:
+    settings = get_settings()
+    username = username or f'dev_{device_uid}'
+    # Configuration fragment only: firmware must supply its trusted CA/bundle.
+    return '\n'.join([
+        '// Device MQTT config. Password is returned only at registration/rotation.',
+        f'const char* MQTT_HOST = {json.dumps(settings.mqtt_host)};',
+        f'const int MQTT_PORT = {settings.mqtt_port};',
+        f'const bool MQTT_TLS = {str(settings.mqtt_tls).lower()};',
+        f'const char* MQTT_USERNAME = {json.dumps(username)};',
+        f'const char* MQTT_PASSWORD = {json.dumps(device_secret)};',
+        f'const char* MQTT_CLIENT_ID = {json.dumps(username)};',
+        f'const char* DEVICE_UID = {json.dumps(device_uid)};',
+        f'const char* TOPIC_PUB = {json.dumps(f"sensors/{device_uid}/telemetry")};',
+        f'const char* TOPIC_CMD = {json.dumps(f"cmd/{device_uid}/#")};',
+        '// TLS: use WiFiClientSecure with the broker trusted root CA or a CA bundle.',
+        '// ESP32 does not inherit the desktop OS CA store. Do not use WiFiClient on a TLS port.',
+    ])

@@ -12,6 +12,8 @@ class CreateDeviceResponse(BaseModel):
     device_uid: str = Field(..., description="UID của thiết bị đã tạo")
     device_name: str = Field(..., description="Tên thiết bị đã tạo")
     device_secret: str = Field(..., description="Secret của thiết bị đã tạo")
+    mqtt_username: str
+    credential_backend: Literal['postgresql'] = 'postgresql'
     message: str = Field(..., description="Thông báo về việc tạo thiết bị thành công")
 
 class DeviceDetailsResponse(BaseModel):

@@ -45,7 +45,7 @@ class DeviceRepository:
         device.status = 'offline'
         await self.db.execute(update(MQTTCredential).where(
             MQTTCredential.device_id == device.id
-        ).values(enabled=False, deleted_at=now))
+        ).values(enabled=False, deleted_at=now, revoked_at=now))
         await self.db.execute(delete(MQTTACL).where(MQTTACL.device_id == device.id))
         await self.db.flush()
 
