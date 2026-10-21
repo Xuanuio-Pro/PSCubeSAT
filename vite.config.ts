@@ -18,6 +18,17 @@ export default defineConfig(({ mode }) => {
   worker: {
     format: 'es',
   },
+  // Prebundle lazy lab dependencies before opening USB: discovering them later
+  // can trigger a full-page reload and tear down an active Serial connection.
+  optimizeDeps: {
+    include: [
+      '@monaco-editor/react', 'blockly', 'blockly/blocks', 'blockly/msg/vi',
+      'esptool-js', 'react-markdown', 'remark-gfm', 'spark-md5',
+      'echarts-for-react/esm/core', 'echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers',
+      'three', '@react-three/fiber', '@react-three/drei',
+      'leaflet', 'react-leaflet', 'react-grid-layout/legacy',
+    ],
+  },
   build: {
     target: 'esnext',
   },

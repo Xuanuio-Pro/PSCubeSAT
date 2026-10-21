@@ -6,6 +6,7 @@ from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from fastapi import FastAPI
 from loguru import logger
 
+from app.core.config import get_settings, validate_production
 from app.core.logging import configure_logging
 from app.core.redis import close_redis, init_redis
 from app.db import close_db, init_db
@@ -23,6 +24,7 @@ async def _cancel_task(task: asyncio.Task) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
+    validate_production(get_settings())
     logger.info("CubeSat FastAPI Backend starting")
     compiler_svc.init_all_caches()
     async with AsyncExitStack() as resources:

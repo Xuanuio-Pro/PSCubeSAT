@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useAuth, request } from './auth-api';
+import { useLocation } from 'react-router-dom';
+import { useAuth, request, authorizedFetch } from './auth-api';
 import { getAuthToken } from './auth-storage';
 import { useSerial } from './serial-api';
 import { TelemetryContext } from './telemetry-api';
 import { adaptWebSocketMessage, demoFrame } from '../telemetry/adapters';
-import { adaptSerialEntry } from '../telemetry/serial-entry';
-import { createTelemetryStore, telemetryStatus } from '../telemetry/store';
+import { createPracticeDecoder } from '../telemetry/practice';
+import { getLessonForLab } from '../data/curriculum';
+import { createTelemetryStore, currentReadings, telemetryStatus } from '../telemetry/store';
 import { startTelemetrySocket, telemetrySocketUrl } from '../telemetry/socket';
 
 /** @typedef {{device_uid: string, device_name: string, device_type: string}} DeviceInfo */
 
 export function TelemetryProvider({ children }) {
+  const route = useLocation();
+  const labId = Number(/^\/lab(\d+)$/.exec(route.pathname)?.[1] ?? 0);
+  const lesson = getLessonForLab(labId, new URLSearchParams(route.search).get('lesson'));
+  const exerciseId = lesson.type === 'practice' ? lesson.id : '';
   const { user } = useAuth();
   const { subscribe, isConnected, isConnecting, sessionId } = useSerial();
   const serialConnected = useRef(isConnected);
@@ -68,20 +74,25 @@ export function TelemetryProvider({ children }) {
     store.select('serial', serialBinding);
     store.setLink(serialConnected.current ? 'connected' : 'offline');
     let generation = store.getSnapshot().generation;
+    const decode = createPracticeDecoder(exerciseId);
     return subscribe(entry => {
       if (!serialConnected.current) return;
       if (store.getSnapshot().generation !== generation) return;
-      const frame = adaptSerialEntry(entry, serialBinding);
-      if (!frame) return;
+      if (entry.type !== 'rx' || entry.origin !== 'serial') return;
+      const { frame, events, invalidate } = decode(entry, store.getSnapshot().deviceId);
       const current = store.getSnapshot();
       // Unbound USB learns its first explicit device UID, then remains isolated.
-      if (serialBinding === 'serial-local' && !current.latest && frame.device_id !== current.deviceId) {
+      if (frame && serialBinding === 'serial-local' && !current.latest && frame.device_id !== current.deviceId) {
         generation = store.select('serial', frame.device_id);
         store.setLink('connected');
       }
-      store.ingest(frame, generation);
+      // Explicitly bound streams cannot contribute even activity from another device.
+      if (frame && frame.device_id !== store.getSnapshot().deviceId) return;
+      store.observe(events, entry.receivedAt, generation);
+      store.invalidate(invalidate, generation);
+      if (frame) store.ingest(frame, generation);
     });
-  }, [subscribe, sessionId, state.mode, serialBinding, store, user?.id]);
+  }, [subscribe, sessionId, state.mode, serialBinding, store, user?.id, exerciseId]);
 
   useEffect(() => {
     if (state.mode === 'serial') store.setLink(isConnecting ? 'connecting' : isConnected ? 'connected' : 'offline');
@@ -117,7 +128,7 @@ export function TelemetryProvider({ children }) {
     const stop = startTelemetrySocket({
       url, store, generation,
       getInitial: async () => {
-        const response = await fetch(`/api/telemetry/latest/${encodeURIComponent(state.deviceId)}`, {
+        const response = await authorizedFetch(`/api/telemetry/latest/${encodeURIComponent(state.deviceId)}`, {
           signal: AbortSignal.any([abort.signal, AbortSignal.timeout(10000)]), headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -131,7 +142,7 @@ export function TelemetryProvider({ children }) {
     return () => { abort.abort(); stop(); };
   }, [state.mode, state.deviceId, state.generation, user, store]);
 
-  return <TelemetryContext.Provider value={{ ...state, status: telemetryStatus(state, state.now),
+  return <TelemetryContext.Provider value={{ ...state, latest: currentReadings(state), exerciseId, status: telemetryStatus(state, state.now),
     isCurrentSelection: generation => store.getSnapshot().generation === generation,
     devices, deviceError, serialBinding, selectSource, selectDevice, refreshDevices: () => setRefresh(value => value + 1),
   }}>{children}</TelemetryContext.Provider>;

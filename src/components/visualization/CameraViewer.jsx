@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useTelemetry } from '../../contexts/telemetry-api';
 
 export default function CameraViewer() {
-  const { history, generation } = useTelemetry();
+  const { history, generation, activity } = useTelemetry();
+  const capture = activity.subsystems.camera;
   const images = [...new Set(history.filter(frame => frame.imageData).map(frame => frame.imageData))].slice(-10).reverse();
   const [selected, setSelected] = useState(null);
-  useEffect(() => setSelected(null), [generation]);
-  const currentImage = selected && images.includes(selected) ? selected : images[0] ?? null;
-  const gallery = images;
+  const [failed, setFailed] = useState([]);
+  useEffect(() => { setSelected(null); setFailed([]); }, [generation]);
+  const gallery = images.filter(value => !failed.includes(value));
+  const currentImage = selected && gallery.includes(selected) ? selected : gallery[0] ?? null;
 
   return (
     <div className="card">
@@ -18,10 +20,13 @@ export default function CameraViewer() {
         </span>
       </div>
       <div className="card-body" style={{ textAlign: 'center' }}>
+        {failed.length > 0 && <p role="status" className="practice-note">Đã bỏ qua ảnh không giải mã được. Kiểm tra JPEG/PNG và dữ liệu truyền qua Serial.</p>}
+        {capture && <p className="practice-note">{capture.text} · {new Date(capture.at).toLocaleTimeString()}{capture.phase === 'saved' && ' · Đã lưu tại thiết bị; chưa nhận dữ liệu ảnh về trình duyệt.'}</p>}
         {currentImage ? (
           <img
             src={currentImage}
             alt="Camera capture"
+            onError={() => setFailed(previous => [...previous, currentImage].slice(-10))}
             style={{
               maxWidth: '100%',
               maxHeight: '250px',

@@ -1,9 +1,21 @@
 # Standalone production stack. Do not merge with docker-compose.yml:
 # only the TLS gateway publishes ports; frontend/backend stay internal.
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend-env: &backend-env
+  APP_ENV: production
+  REDIS_URL: redis://redis:6379
+  ALLOWED_ORIGINS: https://${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
+
 services:
   gateway:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *bounded-logs
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
     ports:
@@ -20,38 +32,81 @@ services:
       - cubesat_net
 
   frontend:
+    image: pscubesat-frontend:${RELEASE_TAG:-server}
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *bounded-logs
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/index.html"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     depends_on:
-      - fastapi
+      fastapi:
+        condition: service_healthy
     networks:
       - cubesat_net
 
   fastapi:
+    image: pscubesat-backend:${RELEASE_TAG:-server}
     build:
       context: ./fastapi-backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *bounded-logs
     env_file:
-      - ./fastapi-backend/.env
+      - ${BACKEND_ENV_FILE:-./fastapi-backend/.env}
     environment:
-      REDIS_URL: redis://redis:6379
-      ALLOWED_ORIGINS: https://${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
+      <<: *backend-env
+      # Only Nginx is reachable on this private network; API has no public port.
+      FORWARDED_ALLOW_IPS: "*"
     volumes:
       - build_cache:/app/build_cache
+      - backend_logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3).read()"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 4
+    stop_grace_period: 30s
     networks:
       - cubesat_net
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *bounded-logs
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     volumes:
       - redis_data:/data
+    networks:
+      - cubesat_net
+
+  migrate:
+    image: pscubesat-backend:${RELEASE_TAG:-server}
+    build:
+      context: ./fastapi-backend
+      dockerfile: Dockerfile
+    env_file:
+      - ${BACKEND_ENV_FILE:-./fastapi-backend/.env}
+    environment: *backend-env
+    command: ["sh", "-c", "python server_preflight.py && python -m alembic upgrade head"]
+    restart: "no"
+    logging: *bounded-logs
     networks:
       - cubesat_net
 
@@ -61,5 +116,6 @@ networks:
 volumes:
   redis_data:
   build_cache:
+  backend_logs:
   caddy_data:
   caddy_config:

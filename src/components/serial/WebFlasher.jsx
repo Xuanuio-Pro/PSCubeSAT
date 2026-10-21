@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSerial } from '../../contexts/serial-api';
 import { getAuthToken } from '../../contexts/auth-storage';
+import { authorizedFetch } from '../../contexts/auth-api';
 import { downloadFlashFiles, writeArtifact } from './flash-artifact';
 
 export default function WebFlasher({ code = '', labId = undefined, inline = false, showIcon = true, buttonClassName = '', label = 'Nạp Code' }) {
@@ -16,11 +17,13 @@ export default function WebFlasher({ code = '', labId = undefined, inline = fals
     if (!ready || isFlashing || !serialSupport.available) return;
     setStatus('flashing');
     setProgress(0);
+    const token = getAuthToken();
     try {
       await withFlashPort(async port => {
         print('Đang kiểm tra và tải bộ firmware...', 'system');
-        const files = await downloadFlashFiles(build.artifact, code, getAuthToken());
+        const files = await downloadFlashFiles(build.artifact, code, token, authorizedFetch);
         const { ESPLoader, Transport } = await import('esptool-js');
+        if (!token || token !== getAuthToken()) throw new Error('Phiên đăng nhập đã kết thúc. Đăng nhập lại trước khi nạp.');
         const transport = new Transport(port);
         const loader = new ESPLoader({ transport, baudrate: 115200,
           terminal: { clean() {}, write: text => print(text, 'system'), writeLine: text => print(text, 'system') } });

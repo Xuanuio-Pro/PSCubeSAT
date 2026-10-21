@@ -17,7 +17,48 @@
 #include <Arduino.h>
 #include "PTITCube.h"
 #include <ArduinoJson.h>
+#include <SD.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 #include <atomic>
+
+// Replace this block with the device configuration returned by registration/rotation.
+// These are runtime constants: library .cpp files do not inherit sketch #defines.
+const char* MQTT_HOST = "";
+const int MQTT_PORT = 8883;
+const bool MQTT_TLS = true;
+const char* MQTT_USERNAME = "";
+const char* MQTT_PASSWORD = "";
+const char* MQTT_CLIENT_ID = "";
+const char* DEVICE_UID = "";
+const char* TOPIC_PUB = ""; // Empty derives sensors/<DEVICE_UID>/telemetry.
+const char* TOPIC_CMD = ""; // Reserved; commands in this lesson use USB/LoRa.
+// Set a trusted PEM root CA for deployment. Prototype verification bypass is explicit.
+const char* MQTT_CA_PEM = nullptr;
+const bool MQTT_ALLOW_INSECURE = false;
+
+WiFiClient mqttPlainTransport;
+WiFiClientSecure mqttTlsTransport;
+PubSubClient classroomMqtt;
+bool mqttConfigured = false;
+
+void configureTelemetryMqtt() {
+    if (!strlen(MQTT_HOST) || !strlen(DEVICE_UID) || !strlen(MQTT_USERNAME) || !strlen(MQTT_PASSWORD) || !strlen(MQTT_CLIENT_ID)) {
+        Serial.println("[MQTT] Not configured: supply device credential/config block; continuing USB/SD/LoRa.");
+        return;
+    }
+    if (MQTT_TLS) {
+        if (MQTT_CA_PEM && strlen(MQTT_CA_PEM)) mqttTlsTransport.setCACert(MQTT_CA_PEM);
+        else if (MQTT_ALLOW_INSECURE) mqttTlsTransport.setInsecure();
+        else { Serial.println("[MQTT] TLS CA is not configured; MQTT remains offline."); return; }
+        mqttTlsTransport.setHandshakeTimeout(5);
+        classroomMqtt.setClient(mqttTlsTransport);
+    } else classroomMqtt.setClient(mqttPlainTransport);
+    classroomMqtt.setServer(MQTT_HOST, MQTT_PORT);
+    classroomMqtt.setSocketTimeout(3);
+    mqttConfigured = classroomMqtt.setBufferSize(2048);
+}
 #ifndef PTIT_ENABLE_GPS
 #define PTIT_ENABLE_GPS 1
 #endif
@@ -58,7 +99,14 @@ std::atomic<bool> isTelemetryPaused{false};
 // CDH: Duy trì kết nối WiFi & MQTT
 void cdhLoop() {
     BusGuard guard(PTIT_BUS_MQTT);
-    if (guard) cdh.update();
+    if (!guard || !mqttConfigured || WiFi.status() != WL_CONNECTED) return;
+    static uint32_t lastAttempt = 0;
+    if (!classroomMqtt.connected() && millis() - lastAttempt >= 10000) {
+        lastAttempt = millis();
+        const bool connected = classroomMqtt.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
+        PTIT_Scheduler::println(connected ? "[MQTT] Connected" : "[MQTT] Connect failed: " + String(classroomMqtt.state()));
+    }
+    classroomMqtt.loop();
 }
 
 // Sensor: Đọc cảm biến qua I2C (BMP280, MPU6050/MPU6500, QMC5883L)
@@ -83,6 +131,37 @@ void gpsLoop() {
 
 // COM: Nhận và xử lý lệnh từ trạm mặt đất qua LoRa
 // Xử lý các lệnh hệ thống (trả về chuỗi rỗng nếu không phải lệnh hệ thống)
+// Check directory type before the legacy library's cd/ls command reports OK.
+String checkedStorageCommand(PTIT_Storage& disk, const String& input) {
+    if (!disk.isReady()) return "ERR: SD not ready";
+    String command = input; command.trim();
+    const int separator = command.indexOf(' ');
+    String verb = separator < 0 ? command : command.substring(0, separator);
+    verb.toLowerCase();
+    String argument = separator < 0 ? "" : command.substring(separator + 1);
+    argument.trim();
+    if ((verb == "cd" || verb == "ls") && !(verb == "cd" && argument == "..")) {
+        String path = argument.length() ? argument : (verb == "cd" ? "/" : disk.handleCommand("pwd"));
+        if (path == ".") path = disk.handleCommand("pwd");
+        if (!path.startsWith("/")) {
+            const String cwd = disk.handleCommand("pwd");
+            path = cwd + (cwd.endsWith("/") ? "" : "/") + path;
+        }
+        File directory = SD.open(path.c_str());
+        if (!directory || !directory.isDirectory()) return "ERR: Not a directory: " + path;
+    }
+    return disk.handleCommand(input);
+}
+
+bool captureUniquePhoto() {
+    static uint32_t nextImage = 0;
+    String path;
+    do { path = "/photos/rtos_" + String(nextImage++) + ".jpg"; } while (SD.exists(path.c_str()));
+    const bool saved = camera.captureToFile(path.c_str());
+    if (saved) PTIT_Scheduler::println("[OK] Da luu anh: " + path);
+    return saved;
+}
+
 String processSystemCommand(String command) {
     if (command == "ping") {
         if (!PTIT_ENABLE_LORA) return "PONG (local Serial)";
@@ -132,7 +211,7 @@ String processSystemCommand(String command) {
         if (!uart) return "ERR: UART2 busy";
         BusGuard spi(PTIT_BUS_SPI, 1000);
         if (!spi) return "ERR: SD busy";
-        bool success = camera.capture();
+        bool success = captureUniquePhoto();
         return success ? "Photo captured!" : "ERR: Capture failed";
     }
     if (command == "status") {
@@ -178,7 +257,7 @@ void comLoop() {
         // Nếu không phải lệnh hệ thống, chuyển cho SD Card xử lý
         if (response == "") {
             if (PTIT_Scheduler::lock(PTIT_BUS_SPI, 200)) {
-                response = storage.handleCommand(cmd);
+                response = checkedStorageCommand(storage, cmd);
                 PTIT_Scheduler::unlock(PTIT_BUS_SPI);
             } else {
                 response = "ERR: SD busy";
@@ -200,7 +279,11 @@ void telemetryLoop() {
     if (isTelemetryPaused) return;
     String payloads[6];
     const char* labels[] = {"EPS", "Env", "Acc", "Gyro", "Mag", "GPS"};
-    const char* topics[] = {"eps", "env", "acc", "gyro", "mag", "gps"};
+    JsonDocument cloud;
+    cloud["type"] = "telemetry";
+    cloud["device_id"] = DEVICE_UID;
+    cloud["source"] = "hardware";
+    cloud["uptime_ms"] = millis();
     JsonDocument doc;
     auto encode = [&](int index) {
         payloads[index].reserve(160);
@@ -210,18 +293,26 @@ void telemetryLoop() {
     {
         BusGuard guard(PTIT_BUS_I2C);
         if (!guard) { PTIT_Scheduler::println("[TELEMETRY] I2C snapshot busy; skipped"); return; }
-        doc["battery_v"] = eps.getBatteryVoltage(); encode(0);
-        doc["temp"] = sensor.getTemperature(); doc["pressure"] = sensor.getPressure(); encode(1);
+        const float battery = eps.getBatteryVoltage();
+        doc["battery_v"] = battery; cloud["battery_v"] = battery; encode(0);
+        const float temperature = sensor.getTemperature(), pressure = sensor.getPressure();
+        doc["temp"] = temperature; doc["pressure"] = pressure;
+        cloud["temp"] = temperature; cloud["pressure"] = pressure; encode(1);
         doc["acc_x"] = sensor.getAccX(); doc["acc_y"] = sensor.getAccY(); doc["acc_z"] = sensor.getAccZ(); encode(2);
         doc["gyro_x"] = sensor.getGyroX(); doc["gyro_y"] = sensor.getGyroY(); doc["gyro_z"] = sensor.getGyroZ(); encode(3);
         doc["mag_x"] = sensor.getMagX(); doc["mag_y"] = sensor.getMagY(); doc["mag_z"] = sensor.getMagZ(); encode(4);
+        cloud["acc_x"] = sensor.getAccX() / 9.80665f; cloud["acc_y"] = sensor.getAccY() / 9.80665f; cloud["acc_z"] = sensor.getAccZ() / 9.80665f;
+        cloud["gyro_x"] = sensor.getGyroX() * 180.0f / PI; cloud["gyro_y"] = sensor.getGyroY() * 180.0f / PI; cloud["gyro_z"] = sensor.getGyroZ() * 180.0f / PI;
+        cloud["mag_x"] = sensor.getMagX() * 100.0f; cloud["mag_y"] = sensor.getMagY() * 100.0f; cloud["mag_z"] = sensor.getMagZ() * 100.0f;
     }
     {
         BusGuard guard(PTIT_BUS_UART2, 20);
         bool valid = guard && PTIT_ENABLE_GPS && gps.hasFix();
         doc["valid"] = valid;
-        if (valid) { doc["lat"] = gps.getLat(); doc["lng"] = gps.getLng(); }
-        else { doc["lat"] = nullptr; doc["lng"] = nullptr; }
+        if (valid) {
+            doc["lat"] = gps.getLat(); doc["lng"] = gps.getLng();
+            cloud["lat"] = gps.getLat(); cloud["lng"] = gps.getLng(); cloud["alt"] = gps.getAltitude();
+        } else { doc["lat"] = nullptr; doc["lng"] = nullptr; cloud["lat"] = nullptr; cloud["lng"] = nullptr; cloud["alt"] = nullptr; }
         encode(5);
     }
     for (int i = 0; i < 6; ++i) PTIT_Scheduler::println(String("[TELEMETRY] ") + labels[i] + ": " + payloads[i]);
@@ -236,9 +327,12 @@ void telemetryLoop() {
     }
     {
         BusGuard guard(PTIT_BUS_MQTT, 200);
-        if (guard) for (int i = 0; i < 6; ++i) {
-            String topic = String("cubesat/telemetry/") + topics[i];
-            cdh.publishData(topic.c_str(), payloads[i].c_str());
+        if (guard && mqttConfigured && classroomMqtt.connected()) {
+            String payload;
+            serializeJson(cloud, payload);
+            const String topic = strlen(TOPIC_PUB) ? String(TOPIC_PUB) : String("sensors/") + DEVICE_UID + "/telemetry";
+            const bool sent = classroomMqtt.publish(topic.c_str(), payload.c_str());
+            PTIT_Scheduler::println(sent ? "[MQTT] Publish submitted (QoS0; no broker ACK)" : "[MQTT] Publish failed");
         }
     }
     if (PTIT_ENABLE_LORA) for (const auto& payload : payloads) {
@@ -259,9 +353,14 @@ void serialLoop() {
                 command.trim();
                 if (command.length()) {
                     String response = processSystemCommand(command);
+                    if (!response.length()) {
+                        BusGuard guard(PTIT_BUS_SPI, 200);
+                        response = guard ? checkedStorageCommand(storage, command) : "ERR: SD busy";
+                    }
                     PTIT_Scheduler::println(response.length() ? response : "ERR: Unknown command");
                 }
             }
+            if (discard) PTIT_Scheduler::println("ERR: Command exceeds 128 bytes");
             command = ""; discard = false;
         } else if (!discard && c != '\r') {
             if (command.length() < 128) command += c;
@@ -284,6 +383,7 @@ void setup() {
     eps.init();
     storage.init();
     cdh.init();
+    configureTelemetryMqtt();
     camera.init(12, 14);
 
     // Cấu hình LoRa

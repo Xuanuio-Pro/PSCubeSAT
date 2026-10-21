@@ -1,0 +1,27 @@
+# Replacement release behind the server's existing HTTPS proxy / Cloudflare Tunnel.
+# Use alone: docker compose --env-file .env.server -p pscubesat-next -f docker-compose.server.yml ...
+services:
+  frontend:
+    extends:
+      file: docker-compose.production.yml
+      service: frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5180}:80"
+  fastapi:
+    extends:
+      file: docker-compose.production.yml
+      service: fastapi
+  migrate:
+    extends:
+      file: docker-compose.production.yml
+      service: migrate
+  redis:
+    extends:
+      file: docker-compose.production.yml
+      service: redis
+networks:
+  cubesat_net:
+volumes:
+  redis_data:
+  build_cache:
+  backend_logs:

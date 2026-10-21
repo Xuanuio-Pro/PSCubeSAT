@@ -11,6 +11,7 @@
 
 #include <Arduino.h>
 #include <PTITCube.h>
+#include <SD.h>
 
 // Khởi tạo các phân hệ
 PTIT_Camera camera;
@@ -38,12 +39,13 @@ void loop() {
     // Đợi một chút để mạch chuyển đổi ổn định
     delay(100); 
 
-    if (camera.isReady()) {
+    { // Retry SD mount through captureToFile even after initialization failed.
         Serial.println("Chụp ảnh bằng Camera...");
-        bool saved = camera.captureToFile("/photos/multiplexer_test.jpg");
+        static uint32_t nextImage = 0;
+        String path;
+        do { path = "/photos/multiplexer_" + String(nextImage++) + ".jpg"; } while (SD.exists(path.c_str()));
+        bool saved = camera.captureToFile(path.c_str());
         Serial.println(saved ? "[RESULT] JPEG saved and validated" : "[RESULT] Capture failed; see camera error above");
-    } else {
-        Serial.println("Thẻ SD chưa sẵn sàng; chưa thể lưu ảnh.");
     }
     
     delay(5000);

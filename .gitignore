@@ -82,3 +82,7 @@ Thumbs.db
 scratch/
 tmp/
 *.tmp
+.env.server
+fastapi-backend/.env.production
+!.env.server.example
+!fastapi-backend/.env.production.example

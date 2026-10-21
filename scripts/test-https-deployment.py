@@ -82,9 +82,18 @@ def main():
         assert page.status == 200
         assert page.getheader('Permissions-Policy') == 'serial=(self)'
         page.read()
+        connection.request('GET', '/assets/missing.js')
+        missing = connection.getresponse()
+        assert missing.status == 404
+        missing.read()
+        connection.request('GET', '/index.html')
+        html = connection.getresponse()
+        assert html.getheader('Cache-Control') == 'no-cache'
+        html.read()
         connection.request('GET', '/api/health?usb=1')
         response = connection.getresponse()
         assert response.status == 200
+        assert response.getheader('Cache-Control') == 'no-store'
         assert json.loads(response.read()) == {'path': '/api/health?usb=1', 'scheme': 'https'}
         connection.close()
         redirect = http.client.HTTPConnection('localhost', http_port, timeout=5)

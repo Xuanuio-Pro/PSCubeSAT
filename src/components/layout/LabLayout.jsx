@@ -1,10 +1,13 @@
-import { cloneElement, isValidElement, useEffect, useRef } from 'react';
+import { cloneElement, isValidElement, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CourseSidebar from './CourseSidebar';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
-import { useAuth } from '../../contexts/auth-api';
+import { authorizedFetch, useAuth } from '../../contexts/auth-api';
+import { getAuthToken } from '../../contexts/auth-storage';
+import { downloadFile } from '../editor/blockly-project';
 import TelemetryControls from '../groundstation/TelemetryControls';
+import PracticeVisualization from '../visualization/PracticeVisualization';
 import { getLessonsForLab, getLessonForLab, LESSON_TYPE_LABELS } from '../../data/curriculum';
 import { lessonReadingContent } from '../../data/lesson-reading';
 
@@ -16,8 +19,10 @@ function LabStateTitle({ lab, lesson, position }) {
   </header>;
 }
 
-export default function LabLayout({ lab, editorPanel, visualizationPanel, practiceActions = null, practiceVariant = 'split' }) {
+export default function LabLayout({ lab, editorPanel, visualizationPanel = null, practiceActions = null, practiceVariant = 'split' }) {
   const mainRef = useRef(null);
+  const [downloadError, setDownloadError] = useState('');
+  const [downloading, setDownloading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, markVideoWatched, markDocViewed } = useAuth();
   const lessons = getLessonsForLab(lab?.id ?? 0);
@@ -26,6 +31,17 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
   const firstPractice = lessons.find(item => item.type === 'practice');
   const videoUrl = lab?.id === 0 ? lab.videoUrl : lesson.videoUrl;
   const selectLesson = id => setSearchParams(current => { const next = new URLSearchParams(current); next.set('lesson', id); return next; });
+  const downloadExample = async () => {
+    const token = getAuthToken();
+    setDownloading(true); setDownloadError('');
+    try {
+      const response = await authorizedFetch(`/api/curriculum/exercises/${encodeURIComponent(lesson.id)}/source`);
+      if (!response.ok) throw new Error(response.status === 401 ? 'Vui lòng đăng nhập lại.' : 'Không tải được mã mẫu. Vui lòng thử lại.');
+      const code = await response.text();
+      if (token && token === getAuthToken()) downloadFile(`${lesson.id}.ino`, code, 'text/plain');
+    } catch (error) { setDownloadError(error.message); }
+    finally { setDownloading(false); }
+  };
 
   useEffect(() => { if (mainRef.current) mainRef.current.scrollTop = 0; }, [lab?.id, lesson.id]);
   useEffect(() => {
@@ -69,8 +85,8 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
         {lesson.type === 'components' && <section className="lab-workspace lab-components-workspace" aria-label="Khám phá các phân hệ CubeSat">{visualizationPanel}</section>}
         {lesson.type === 'practice' && <>
           <section className="lesson-practice-brief" aria-label="Yêu cầu bài thực hành">
-            <div><h2>Yêu cầu thực hành</h2><p>{lesson.title}.</p><p>Tự viết C++ hoặc kéo thả Blockly, biên dịch đúng board và đối chiếu kết quả qua Serial/bảng dữ liệu. Mỗi bài có bản lưu riêng trên trình duyệt.</p></div>
-            <a href={lesson.repositoryUrl} target="_blank" rel="noreferrer">Hướng dẫn trên PTITCube ↗</a>
+            <div><h2>Yêu cầu thực hành</h2><p>{lesson.title}.</p></div>
+            <div className="lesson-example-links"><a href={lesson.repositoryUrl} target="_blank" rel="noreferrer">Hướng dẫn trên PTITCube ↗</a><button type="button" className="btn btn-sm btn-outline" disabled={downloading} onClick={downloadExample}>{downloading ? 'Đang tải mã mẫu…' : 'Tải mã mẫu ESP32 (.ino)'}</button>{downloadError && <small role="alert">{downloadError}</small>}</div>
           </section>
           <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${practiceVariant}`} aria-label={`Không gian thực hành ${lesson.exerciseCode}`}>
             <div className={`lab-practice-panels lab-practice-panels--${practiceVariant}`}>
@@ -78,7 +94,7 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
                 <div className="lab-practice-editor-frame">{scopedEditor}</div>
                 {practiceVariant !== 'split' && <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
               </div>
-              <div className="lab-practice-visualization">{visualizationPanel}</div>
+              <div className="lab-practice-visualization"><PracticeVisualization /></div>
             </div>
             {practiceVariant === 'split' && <div className="lab-practice-actions" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
           </section>
@@ -89,7 +105,6 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel, practi
           <ul className="lesson-summary-list">{lessons.filter(item => item.type === 'practice').map(item => <li key={item.id}><button type="button" onClick={() => selectLesson(item.id)}><code>{item.exerciseCode}</code><span>{item.title}</span></button></li>)}</ul>
           <p>Lưu mã .ino, file Blockly và kết quả kiểm thử để đưa vào báo cáo Lab {lab.id}.</p>
         </section>}
-        {lab.id > 0 && <p className="lesson-source">Lộ trình và bài thực hành: <a href="https://github.com/PTITCube" target="_blank" rel="noreferrer">PTITCube</a>. Video được hiển thị khi có đường dẫn bài giảng.</p>}
         <nav className="lesson-pagination" aria-label="Chuyển phần học">
           <button type="button" disabled={lessonIndex === 0} onClick={() => selectLesson(lessons[lessonIndex - 1].id)}>← Phần trước</button>
           <span>{lessonIndex + 1} / {lessons.length} · {LESSON_TYPE_LABELS[lesson.type]}</span>

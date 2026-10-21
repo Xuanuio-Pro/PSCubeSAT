@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     # Server
+    app_env: str = "development"
     port: int = 8000
     compiler_image: str = "pscubesat-compiler:1"
 
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
 
     # PostgreSQL
-    database_url: str = ""
+    database_url: str = Field(default="", repr=False)
 
     @property
     def async_database_url(self) -> str:
@@ -52,7 +53,7 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
     # JWT
-    jwt_secret: str = "change_me"
+    jwt_secret: str = Field(default="change_me", repr=False)
     jwt_expire_minutes: int = 1440
     google_client_id: str = ""
 
@@ -60,3 +61,39 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_production(settings: Settings) -> None:
+    """Fail before starting services; errors name variables without leaking values."""
+    if settings.app_env != "production":
+        return
+    from urllib.parse import urlsplit
+
+    if len(settings.jwt_secret) < 32 or any(
+        marker in settings.jwt_secret.lower() for marker in ("change", "replace", "your_", "<")
+    ):
+        raise RuntimeError(
+            "JWT_SECRET must be a unique production secret of at least 32 characters."
+        )
+    if (
+        "<" in settings.database_url
+        or not settings.database_url.startswith(
+            ("postgresql://", "postgres://", "postgresql+asyncpg://")
+        )
+        or not urlsplit(settings.database_url).hostname
+    ):
+        raise RuntimeError("DATABASE_URL must point to the production PostgreSQL database.")
+    origins = settings.allowed_origins_list
+    if not origins or any(
+        urlsplit(origin).scheme != "https"
+        or not urlsplit(origin).hostname
+        or urlsplit(origin).path
+        or urlsplit(origin).query
+        or urlsplit(origin).fragment
+        or urlsplit(origin).username
+        or "*" in urlsplit(origin).netloc
+        for origin in origins
+    ):
+        raise RuntimeError("ALLOWED_ORIGINS must contain exact HTTPS origins without paths.")
+    if not settings.mqtt_password or settings.mqtt_password.startswith(("<", "replace_")):
+        raise RuntimeError("MQTT_PASSWORD must be configured for the backend service account.")

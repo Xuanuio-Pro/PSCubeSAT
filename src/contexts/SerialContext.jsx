@@ -52,6 +52,7 @@ export function SerialProvider({ children }) {
       port = existingPort || await navigator.serial.requestPort();
       if (!mountedRef.current) return false;
       await port.open({ baudRate });
+      if (!mountedRef.current) { await port.close(); return false; }
       writer = port.writable.getWriter();
       const decoder = new TextDecoderStream();
       const inputDone = port.readable.pipeTo(/** @type {WritableStream<Uint8Array>} */ (decoder.writable));
@@ -128,6 +129,7 @@ export function SerialProvider({ children }) {
     try {
       // requestPort must run directly from the user's click, before network awaits.
       port = activeRef.current?.port || await navigator.serial.requestPort();
+      if (!mountedRef.current) throw new Error('Phiên làm việc đã kết thúc.');
       await disconnect();
       await operation(port);
     } finally {

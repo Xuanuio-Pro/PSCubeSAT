@@ -104,6 +104,10 @@ npm run dev
 
 ## 📡 Danh Sách Endpoint APIs & Services
 
+Triển khai thay bản cũ tại `cubesat.p-tech.xyz`: xem [quy trình chuyển server, env, backup/migration và rollback](Docs/SERVER_MIGRATION_CUBESAT.md). Dùng `docker-compose.server.yml` sau proxy hiện có; `docker-compose.production.yml` dành cho server tự chạy Caddy HTTPS.
+
+Ứng dụng yêu cầu đăng nhập để dùng Lab và các dịch vụ. API dịch vụ (kể cả health, compiler, artifact và mã mẫu) yêu cầu `Authorization: Bearer <access_token>`; WebSocket kiểm token và quyền sở hữu thiết bị. Đăng xuất/hết phiên đóng USB và telemetry. Xem [báo cáo đăng nhập và trực quan Lab](Docs/AUTH_LAB_VISUALIZATION_2026-10-21.md).
+
 ### HTTP REST APIs (`http://localhost:8003`)
 * `GET  /api/health`: Kiểm tra sức khỏe hệ thống & phiên bản PlatformIO Compiler.
 * `POST /api/compile`: Gửi mã C++/Arduino để biên dịch ra file `firmware.bin` (Base64).

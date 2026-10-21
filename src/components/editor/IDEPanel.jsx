@@ -118,7 +118,6 @@ function LabIDE({ labId, exerciseId, legacyFallback, setCode, variant, showToolb
           <button disabled={!document.text} onClick={() => downloadFile(`${fileStem}.ino`, document.text, 'text/plain')}>Tải .ino</button>
         </div>
       </div>
-      <div className="blockly-guide">Lệnh Arduino được đổi thành block tương ứng. Mã chưa có block tương ứng được giữ trong block C++ tùy chỉnh; trình biên dịch kiểm tra cú pháp C++.</div>
       <div className="cube-monaco"><MonacoEditor code={document.text ?? DEFAULT_ARDUINO_CODE} onChange={editCpp} height="100%" /></div>
     </div>
     {showToolbar && <div className="blockly-toolbar"><CloudCompiler code={effectiveCode} labId={labId} inline /><WebFlasher code={effectiveCode} labId={labId} inline /></div>}

@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.tables import User
 from app.services import artifacts, compiler_svc
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, get_required_user
 from app.services.lab1 import BOARD_PROFILES, get_template
 from app.services.progress import ProgressService
 
-router = APIRouter(prefix="/api", tags=["compiler"])
+router = APIRouter(prefix="/api", tags=["compiler"], dependencies=[Depends(get_required_user)])
 
 
 class CompileRequest(BaseModel):

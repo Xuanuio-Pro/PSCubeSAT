@@ -49,6 +49,23 @@ const aliases = {
   imageData: ['image_data', 'imageData'],
 };
 
+export function acceptsSerialMetadata(data, deviceId) {
+  return data && typeof data === 'object' && !Array.isArray(data)
+    && (data.type == null || ['telemetry', 'lab1'].includes(data.type))
+    && (data.schema_version === undefined || data.schema_version === 1)
+    && (data.source == null || data.source === 'hardware')
+    && (data.device_id == null || accepts(data.device_id, schema.properties.device_id))
+    && (data.seq === undefined || accepts(data.seq, schema.properties.seq))
+    && (data.timestamp === undefined || accepts(data.timestamp, schema.properties.timestamp))
+    && (!data.device_id || deviceId === 'serial-local' || data.device_id === deviceId);
+}
+
+export function explicitNullMeasurements(data) {
+  return Object.entries(aliases).filter(([, paths]) => paths.some(path =>
+    path.split('.').reduce((object, key) => object?.[key], data) !== undefined)
+    && read(data, paths) === null).map(([key]) => key);
+}
+
 /** Legacy Serial JSON -> the canonical contract. Non-telemetry log lines are ignored. */
 export function adaptSerialLine(text, deviceId = 'serial-local', now = Date.now()) {
   if (text.length > 65536) return null;
@@ -60,10 +77,7 @@ export function adaptSerialLine(text, deviceId = 'serial-local', now = Date.now(
     if (!trimmed.startsWith('{')) return null;
     try { data = JSON.parse(trimmed); } catch { return null; }
   }
-  if (!data || Array.isArray(data) || (data.type != null && !['telemetry', 'lab1'].includes(data.type))) return null;
-  if (data.schema_version !== undefined && data.schema_version !== 1) return null;
-  if (data.source != null && data.source !== 'hardware') return null;
-  if (data.device_id && deviceId !== 'serial-local' && data.device_id !== deviceId) return null;
+  if (!acceptsSerialMetadata(data, deviceId)) return null;
   const measurements = Object.fromEntries(Object.entries(aliases).map(([key, paths]) => [key, read(data, paths)]));
   if (Object.values(measurements).every(value => value === null)) return null;
   const frame = {

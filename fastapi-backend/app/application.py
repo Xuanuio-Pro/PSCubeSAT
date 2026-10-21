@@ -7,13 +7,24 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_console_encoding
 from app.lifespan import lifespan
-from app.routers import auth, compiler, devices, health, progress, root, simulations, telemetry
+from app.routers import (
+    auth,
+    compiler,
+    curriculum,
+    devices,
+    health,
+    progress,
+    root,
+    simulations,
+    telemetry,
+)
 from app.websocket.routes import router as websocket_router
 
 API_ROUTERS = (
     health.router,
     auth.router,
     compiler.router,
+    curriculum.router,
     telemetry.router,
     devices.router,
     simulations.router,

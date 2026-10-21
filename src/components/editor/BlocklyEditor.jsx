@@ -159,7 +159,6 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
       <button onClick={() => setReplacement(false)}>Hủy</button>
     </div>}
     {notice && <div className="blockly-notice" role="status"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo">Đóng</button></div>}
-    <div className="blockly-guide">Tự nối lệnh vào <strong>Khởi tạo</strong> hoặc <strong>Lặp liên tục</strong>. C++ và Blockly đồng bộ hai chiều. Hai khối rỗng dùng Serial 115200 và chu kỳ chờ 1000 ms mặc định.</div>
     <div ref={containerRef} className="blockly-canvas" aria-label={`Vùng kéo thả Blockly Lab ${labId}`} />
     <div className={`blockly-status ${report.issues.length ? 'has-errors' : ''}`} role="status">
       <span>{report.issues.length ? `${report.issues.length} lỗi cần sửa` : 'Sẵn sàng sinh C++'} · {report.blockCount} block</span><span>{saveState}</span>

@@ -6,11 +6,12 @@ const LABELS = { offline: 'Offline', waiting: 'Chờ dữ liệu', live: 'Đang 
 
 export default function TelemetryControls() {
   const { mode, deviceId, serialBinding, devices, status, link, error, deviceError, lastReceivedAt,
-    now, rejectedCount, selectSource, selectDevice, refreshDevices } = useTelemetry();
+    now, activity, rejectedCount, selectSource, selectDevice, refreshDevices } = useTelemetry();
   const { connect, disconnect, isConnected, isConnecting } = useSerial();
   const { user } = useAuth();
   const selected = mode === 'serial' ? serialBinding : deviceId;
   const age = lastReceivedAt === null ? null : Math.max(0, Math.floor((now - lastReceivedAt) / 1000));
+  const logsOnly = mode === 'serial' && link === 'connected' && age === null && activity.lastLineAt !== null && now - activity.lastLineAt <= 5000;
   return <section className="telemetry-controls" aria-label="Nguồn telemetry">
     <label>Nguồn dữ liệu
       <select value={mode} onChange={event => selectSource(event.target.value)}>
@@ -33,8 +34,8 @@ export default function TelemetryControls() {
     </button>}
     {user && mode !== 'demo' && <button type="button" className="btn btn-sm btn-outline" onClick={refreshDevices}>Tải lại thiết bị</button>}
     <div className={`telemetry-link telemetry-link--${status}`} role="status" aria-live="polite">
-      <strong>{link === 'connecting' ? 'Đang kết nối...' : LABELS[status]}</strong>
-      <span>{age === null ? 'Chưa nhận mẫu' : `Mẫu cuối: ${age}s trước`}{mode === 'demo' ? ' · DEMO' : ''}</span>
+      <strong>{link === 'connecting' ? 'Đang kết nối...' : logsOnly ? 'Đang nhận log Serial' : LABELS[status]}</strong>
+      <span>{age === null ? 'Chưa nhận mẫu đo' : `Mẫu đo cuối: ${age}s trước`}{mode === 'demo' ? ' · DEMO' : ''}{mode === 'serial' && activity.lastLineAt !== null ? ` · Log Serial: ${Math.max(0, Math.floor((now - activity.lastLineAt) / 1000))}s trước` : ''}</span>
     </div>
     {(error || deviceError || rejectedCount > 0) && <p className="telemetry-source-note">
       {error || deviceError || `${rejectedCount} bản tin sai thiết bị/nguồn đã bị loại.`}

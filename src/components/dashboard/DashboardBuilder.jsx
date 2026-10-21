@@ -6,6 +6,7 @@ import VoltageChart from '../visualization/VoltageChart';
 import GPSMap from '../visualization/GPSMap';
 import AttitudeViewer3D from '../visualization/AttitudeViewer3D';
 import SerialMonitor from '../serial/SerialMonitor';
+import CameraViewer from '../visualization/CameraViewer';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -169,12 +170,7 @@ export default function DashboardBuilder() {
       case 'alert': return <AlertWidget config={widget.config} />;
       case 'button': return <ButtonWidget config={widget.config} onSend={mode === 'serial' && isConnected ? send : undefined} />;
       case 'terminal': return <SerialMonitor height="100%" />;
-      case 'image': return (
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>
-          <span style={{ fontSize: '40px' }}>📷</span>
-          <p style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-sm)' }}>Image Viewer Widget</p>
-        </div>
-      );
+      case 'image': return <CameraViewer />;
       default: return <div>Unknown widget</div>;
     }
   };

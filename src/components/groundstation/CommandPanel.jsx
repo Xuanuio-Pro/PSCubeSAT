@@ -17,31 +17,41 @@ const PRESET_COMMANDS = [
   { cmd: 'help', label: '❓ Help', desc: 'Danh sách lệnh' },
 ];
 
-export default function CommandPanel() {
+/** @param {{commands?: string[], labId?: number, exerciseId?: string}} props */
+export default function CommandPanel({ commands = [], labId = 0, exerciseId = '' }) {
   const { isConnected, send } = useSerial();
-  const { mode, generation } = useTelemetry();
-  const canSend = mode === 'serial' && isConnected;
+  const { mode, generation, isCurrentSelection } = useTelemetry();
+  const [sending, setSending] = useState(false);
+  const [radioRole, setRadioRole] = useState(false);
+  const groundStation = labId === 5 && radioRole;
+  const available = groundStation && exerciseId.startsWith('Lab5-03') ? ['ping', 'battery', 'sensor', 'imu', 'gps', 'led on', 'led off', 'telemetry'] : commands;
+  const canSend = mode === 'serial' && isConnected && !sending && (groundStation || available.length > 0);
+  const presets = available.map(cmd => PRESET_COMMANDS.find(item => item.cmd === cmd) ?? { cmd, label: cmd === 'p' ? 'Chụp ảnh · p' : cmd === '1' ? 'Bật LED · 1' : cmd === '0' ? 'Tắt LED · 0' : cmd });
   const [customCmd, setCustomCmd] = useState('');
   const [history, setHistory] = useState([]);
 
-  useEffect(() => setHistory([]), [generation]);
+  useEffect(() => { setHistory([]); setRadioRole(false); setCustomCmd(''); }, [generation]);
 
-  const sendCommand = (cmd) => {
+  const sendCommand = async (cmd) => {
     if (!canSend) {
       alert('Vui lòng kết nối Serial trước.');
       return;
     }
-    send(cmd);
+    setSending(true);
+    let sent = false;
+    try { sent = await send(cmd); } catch { sent = false; } finally { setSending(false); }
+    if (!isCurrentSelection(generation)) return false;
     setHistory(prev => [
-      { cmd, time: new Date().toLocaleTimeString() },
+      { cmd, sent, time: new Date().toLocaleTimeString() },
       ...prev.slice(0, 19),
     ]);
+    return sent;
   };
 
   const handleCustomSend = () => {
     if (!customCmd.trim()) return;
-    sendCommand(customCmd.trim());
-    setCustomCmd('');
+    const command = customCmd.trim();
+    sendCommand(command).then(sent => { if (sent) setCustomCmd(current => current.trim() === command ? '' : current); });
   };
 
   return (
@@ -52,10 +62,15 @@ export default function CommandPanel() {
       <div className="card-body">
         {/* Preset buttons */}
         <div style={{ marginBottom: 'var(--space-md)', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
-          Lệnh nhanh
+          USB Serial · chờ phản hồi thiết bị sau khi gửi
         </div>
+        {labId === 5 && <label>Cổng USB đang nối với: <select aria-label="Vai trò cổng lệnh" value={groundStation ? 'gs' : 'obc'} onChange={event => setRadioRole(event.target.value === 'gs')}>
+          <option value="obc">OBC</option><option value="gs">Trạm GS qua USB–LoRa</option>
+        </select></label>}
+        {groundStation && <p className="telemetry-empty">Gửi qua cổng USB–LoRa của GS đã chọn.</p>}
+        {!groundStation && available.length === 0 && <p className="telemetry-empty">Bài này không nhận lệnh USB tại OBC.</p>}
         <div className="cmd-btn-grid">
-          {PRESET_COMMANDS.map(({ cmd, label }) => (
+          {presets.map(({ cmd, label }) => (
             <button key={cmd} disabled={!canSend} className="cmd-btn" onClick={() => sendCommand(cmd)} title={cmd}>
               {label}
             </button>
@@ -105,7 +120,7 @@ export default function CommandPanel() {
                   }}
                   onClick={() => sendCommand(h.cmd)}
                 >
-                  <span style={{ color: 'var(--text-muted)' }}>[{h.time}]</span> {h.cmd}
+                  <span style={{ color: 'var(--text-muted)' }}>[{h.time}]</span> {h.cmd} · {h.sent ? 'Đã gửi USB · chờ phản hồi Serial' : 'Gửi thất bại'}
                 </div>
               ))}
             </div>

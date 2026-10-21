@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSerial } from '../../contexts/serial-api';
-import { getAuthToken } from '../../contexts/auth-storage';
+import { authorizedFetch } from '../../contexts/auth-api';
 
 export default function CloudCompiler({ code, labId, onBinaryReady = undefined, inline = false, showIcon = true, buttonClassName = '' }) {
   const [status, setStatus] = useState('idle');
@@ -26,12 +26,10 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
     appendLog('🔨 Bắt đầu biên dịch trên Cloud...', 'system');
 
     try {
-      const token = getAuthToken();
-      const res = await fetch('/api/compile', {
+      const res = await authorizedFetch('/api/compile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ code, board, lab_id: labId, include_binary: !!onBinaryReady }),
       });

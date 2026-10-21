@@ -1,10 +1,45 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AuthContext, request } from './auth-api';
 import { getAuthToken, saveAuthToken, clearAuthToken } from './auth-storage';
+import { AUTH_EXPIRED_EVENT, tokenExpiresAt } from './auth-session';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const expired = () => { setUser(null); setLoading(false); };
+    window.addEventListener(AUTH_EXPIRED_EVENT, expired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, expired);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const token = getAuthToken();
+    const expiry = tokenExpiresAt(token || '');
+    const expire = () => {
+      if (getAuthToken() !== token) return;
+      clearAuthToken(); setUser(null);
+    };
+    let timer;
+    const schedule = () => {
+      if (expiry === null) return;
+      const remaining = expiry - Date.now();
+      if (remaining <= 0) expire();
+      else timer = setTimeout(schedule, Math.min(remaining, 2147483647));
+    };
+    schedule();
+    const verify = () => {
+      if (getAuthToken() !== token) { setUser(null); return; }
+      if (expiry !== null && Date.now() >= expiry) { expire(); return; }
+      request('/api/auth/me').catch(() => {}); // 401 invalidates the verified session centrally.
+    };
+    const poll = setInterval(verify, 60000);
+    window.addEventListener('focus', verify);
+    const storage = () => { if (getAuthToken() !== token) setUser(null); };
+    window.addEventListener('storage', storage);
+    return () => { clearTimeout(timer); clearInterval(poll); window.removeEventListener('focus', verify); window.removeEventListener('storage', storage); };
+  }, [user]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -51,13 +86,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const revoke = request('/api/auth/logout', { method: 'POST' });
+    clearAuthToken();
+    setUser(null); // Unmount services/USB immediately, even when the server is unavailable.
     try {
-      await request('/api/auth/logout', { method: 'POST' });
+      await revoke;
     } catch {
       // Lỗi thu hồi token phía server không quan trọng bằng việc xoá phiên cục bộ
-    } finally {
-      clearAuthToken();
-      setUser(null);
     }
   }, []);
 

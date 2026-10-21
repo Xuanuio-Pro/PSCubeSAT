@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { authorizedFetch } from '../../contexts/auth-api';
 
 const DOCS = import.meta.glob('/src/data/docs/*.md', { query: '?raw', import: 'default' });
 
@@ -23,7 +24,7 @@ export default function DocViewer({ docPath, content: directContent = '' }) {
       });
     } else {
       // Try fetching from server API
-      fetch(`/api/docs/${docPath}`)
+      authorizedFetch(`/api/docs/${docPath}`)
         .then(r => r.ok ? r.text() : Promise.reject())
         .then(text => { setContent(text); setLoading(false); })
         .catch(() => {

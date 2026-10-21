@@ -1,0 +1,13 @@
+# Optional: the existing proxy runs in Docker, on an existing external network.
+# Add after docker-compose.server.yml; route to pscubesat-next-web:80.
+services:
+  frontend:
+    networks:
+      cubesat_net:
+      ingress:
+        aliases:
+          - pscubesat-next-web
+networks:
+  ingress:
+    external: true
+    name: ${PROXY_NETWORK:?Set PROXY_NETWORK to the existing proxy Docker network}
