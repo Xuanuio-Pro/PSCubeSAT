@@ -11,7 +11,11 @@ if [[ $# -lt 2 ]]; then
 fi
 db_mode="$1"
 shift
-compose=(docker compose --env-file .env.server -p "${SERVER_PROJECT:-pscubesat-next}" -f docker-compose.server.yml)
+compose=(docker compose --env-file .env.server -f docker-compose.server.yml)
+# Otherwise the top-level Compose name reads SERVER_PROJECT from .env.server.
+if [[ -n "${SERVER_PROJECT:-}" ]]; then
+  compose+=(-p "$SERVER_PROJECT")
+fi
 case "$db_mode" in
   external) compose+=(-f docker-compose.database.yml) ;;
   managed) compose+=(-f docker-compose.postgres.yml) ;;

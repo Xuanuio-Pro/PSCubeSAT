@@ -1,5 +1,6 @@
 # Replacement release behind the server's existing HTTPS proxy / Cloudflare Tunnel.
 # Use alone: docker compose --env-file .env.server -p pscubesat-next -f docker-compose.server.yml ...
+name: ${SERVER_PROJECT:-pscubesat-next}
 services:
   frontend:
     extends:

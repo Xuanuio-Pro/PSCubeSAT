@@ -13,6 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import httpx
+from dotenv import set_key
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -41,7 +42,8 @@ def main():
     folder.mkdir(parents=True)
     database, broker = prefix + "-db", prefix + "-mqtt"
     database_network = prefix + "-database"
-    backend_env = folder / "backend.env"
+    backend_env = folder / "fastapi-backend/.env" if managed else folder / "backend.env"
+    backend_env.parent.mkdir(exist_ok=True)
     backend_env.write_text(
         (
             "DATABASE_URL=postgresql://unused:unused@127.0.0.1:1/unused\n"
@@ -57,9 +59,10 @@ def main():
         + "GOOGLE_CLIENT_ID=\nCOMPILER_IMAGE=pscubesat-compiler:1\n",
         encoding="utf-8",
     )
-    root_env = folder / "compose.env"
+    root_env = folder / ".env.server"
+    backend_file = "./fastapi-backend/.env" if managed else backend_env.as_posix()
     root_env.write_text(
-        f"SITE_DOMAIN=cubesat.p-tech.xyz\nRELEASE_TAG=server-review\nFRONTEND_PORT=0\nBACKEND_ENV_FILE={backend_env.as_posix()}\nDATABASE_NETWORK={database_network}\n"
+        f"SITE_DOMAIN=cubesat.p-tech.xyz\nRELEASE_TAG=server-review\nFRONTEND_PORT=0\nBACKEND_ENV_FILE={backend_file}\nDATABASE_NETWORK={database_network}\n"
         "POSTGRES_DB=test\nPOSTGRES_USER=test\nPOSTGRES_PASSWORD=test-only@:/?#%\n",
         encoding="utf-8",
     )
@@ -78,8 +81,7 @@ def main():
         str(ROOT),
         "--env-file",
         str(root_env),
-        "-p",
-        prefix,
+        *([] if managed else ["-p", prefix]),
         "-f",
         "docker-compose.server.yml",
         "-f",
@@ -88,6 +90,31 @@ def main():
         str(override),
     ]
     try:
+        if managed:
+            command(
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{folder.as_posix()}:/workspace",
+                "pscubesat-backend:server-review",
+                "python",
+                "-m",
+                "scripts.setup_managed_server",
+                "--root",
+                "/workspace",
+                "--project",
+                prefix,
+                "--frontend-port",
+                "5173",
+                "--release-tag",
+                "server-review",
+            )
+            # Adapt only fixture paths/host port and reuse the already-built test
+            # compiler tag. DB settings and project name come from the real setup.
+            set_key(str(root_env), "BACKEND_ENV_FILE", backend_env.as_posix())
+            set_key(str(root_env), "FRONTEND_PORT", "0")
+            set_key(str(backend_env), "COMPILER_IMAGE", "pscubesat-compiler:1")
         command("docker", "network", "create", prefix)
         if managed:
             command(*compose, "up", "-d", "--wait", "postgres")
@@ -168,6 +195,7 @@ def main():
             command("docker", "network", "rm", database_network, check=False)
         # Test secrets are no longer needed; keep no plaintext environment fixture.
         backend_env.unlink(missing_ok=True)
+        root_env.unlink(missing_ok=True)
 
 
 def prepare_external_database(database, database_network):

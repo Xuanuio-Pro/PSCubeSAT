@@ -25,7 +25,22 @@ Chế độ `managed` tạo DB mới, không tự chép dữ liệu DB cũ. Đ�
 
 Nếu proxy/cloudflared chạy trong Docker, đặt PROXY_NETWORK đúng network ingress hiện có rồi thêm `--proxy` **sau chế độ DB** trong mọi lệnh wrapper bên dưới. Ví dụ `bash deploy/server.sh external --proxy ps`. Tuyến domain trỏ `http://pscubesat-next-web:80`. Nếu ingress chạy trên host, không thêm `--proxy`, tuyến tới `http://127.0.0.1:5180`.
 
-Wrapper dùng project cố định `pscubesat-next` để giữ volume qua các lần cập nhật. Nếu đã dùng project khác, export SERVER_PROJECT bằng tên cũ trước khi chạy. Xem [hướng dẫn chuyển đổi](SERVER_MIGRATION_CUBESAT.md) để backup, chuyển domain và rollback.
+Wrapper đọc SERVER_PROJECT trong `.env.server`, mặc định `pscubesat-next`, để giữ volume qua các lần cập nhật. Biến SERVER_PROJECT đã export trong shell được ưu tiên. Nếu thay stack đang có, đặt đúng tên project cũ. Xem [hướng dẫn chuyển đổi](SERVER_MIGRATION_CUBESAT.md) để backup, chuyển domain và rollback.
+
+### Trường hợp đã xác nhận: server chưa có DB CubeSAT
+
+Danh sách container đang chạy/bị dừng không có PostgreSQL CubeSAT và host không lắng nghe cổng 5432: dùng DB managed riêng. Với stack hiện có network `pscubesat_cubesat_net`, project là `pscubesat`, frontend cổng 5173 và token tunnel trong `.env` root, chạy trong checkout server:
+
+```bash
+git pull --ff-only origin main
+bash deploy/initialize-cubesat.sh
+```
+
+Runner kiểm project của connector cũ, build image setup, cấu hình env, build FE/BE/compiler, chờ PostgreSQL healthy, probe bằng SELECT 1, migrate rồi up toàn bộ và preflight live. Nó dừng ở bước đầu tiên gặp lỗi. Có thể truyền tag release riêng làm tham số đầu tiên. Xem `deploy/initialize-cubesat.sh` để kiểm tra từng lệnh; không chạy `down -v`/`rm` hay xóa dữ liệu DB. Bước `up` có thể thay container ứng dụng/tunnel trong cùng project; không đổi dự án khác.
+
+Bước setup sửa `.env.server` và BE env tại chỗ, chỉ thực hiện khi đầu vào đã hợp lệ. Nó giữ credential MQTT; giữ JWT mạnh hiện có (chỉ tạo JWT khi thiếu/yếu); giữ POSTGRES_PASSWORD nếu đã cấu hình, nếu chưa có thì dùng password từ DB URL cũ hoặc tạo mới. Nó đổi DB URL sang `postgres:5432`, đặt project `pscubesat`, frontend 5173, BE 8000 và compiler tag `server-db`. Chạy lại không tự đổi password DB/JWT đã hợp lệ. Không in secret và không cần cài Python/pip trên host. Có thể commit source rồi pull nhưng hai file env thật phải ở server, không đưa vào Git.
+
+Setup chỉ sửa env; các lệnh tiếp theo tạo DB mới và migration. Chúng không phục hồi dữ liệu từ backup hay volume DB thất lạc. Nếu có backup CubeSAT cần phục hồi thì phục hồi vào DB trước khi mở dịch vụ. Không dùng `ptr_staging-db-1` hoặc DB của ứng dụng khác. Các lệnh wrapper này thay cho chạy lại Compose cũ, không merge vào file cũ. Cloudflared được thay trong cùng project, origin alias `nginx` vẫn giữ nguyên.
 
 ### Server đang chạy Compose cũ có cloudflared-cubesat
 
@@ -86,3 +101,5 @@ Hai test Docker dùng project/network/volume test ngẫu nhiên, broker riêng v
 Kết quả ngày 21/10/2026: build FE/BE PASS; 95 BE test (8 opt-in skipped); external và managed đều PASS, bao gồm recreate PostgreSQL giữ nguyên user; 8 tổ hợp Compose DB/ingress PASS. Chưa áp dụng thay đổi trực tiếp lên server thật từ môi trường kiểm thử này.
 
 Kiểm bổ sung cho Compose cũ: HTTP qua alias `nginx` và luồng external DB đầy đủ PASS; cấu hình `--tunnel` với external/managed DB PASS. Không khởi động connector Cloudflare hoặc thay tuyến domain production trong kiểm thử.
+
+Lượt setup managed: 99 BE test (8 opt-in skipped) PASS; image setup tạo env thật trong thư mục test rồi chạy PostgreSQL, probe, migration/idempotency, auth, MQTT, compiler, hash artifact, recreate DB giữ user và restart API PASS. Test cũng xác nhận Compose lấy đúng project từ `.env.server` khi không có `-p`, setup lặp lại giữ credential/JWT và thiếu MQTT/token thì dừng trước khi sửa file.
