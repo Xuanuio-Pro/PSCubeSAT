@@ -7,6 +7,7 @@ credentials, public domain, existing database or hardware are used.
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -19,6 +20,28 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def command(*args, check=True, input=None):
+    env = dict(os.environ)
+    # A production shell's exported Compose variables must never redirect tests.
+    for key in (
+        "SERVER_PROJECT",
+        "SERVER_NETWORK_NAME",
+        "SERVER_NETWORK_EXTERNAL",
+        "COMPOSE_PROJECT_NAME",
+        "COMPOSE_FILE",
+        "COMPOSE_PROFILES",
+        "COMPOSE_ENV_FILES",
+        "SITE_DOMAIN",
+        "RELEASE_TAG",
+        "FRONTEND_PORT",
+        "BACKEND_ENV_FILE",
+        "DATABASE_NETWORK",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "PROXY_NETWORK",
+        "TUNNEL_ENV_FILE",
+    ):
+        env.pop(key, None)
     return subprocess.run(
         args,
         cwd=ROOT,
@@ -27,6 +50,7 @@ def command(*args, check=True, input=None):
         text=True,
         encoding="utf-8",
         check=check,
+        env=env,
     )
 
 
@@ -38,6 +62,7 @@ def main():
     args = parser.parse_args()
     managed = args.database == "managed"
     prefix = "pscubesat-release-test-" + uuid4().hex[:8]
+    app_network = prefix + "_cubesat_net"
     folder = ROOT / "scratch" / prefix
     folder.mkdir(parents=True)
     database, broker = prefix + "-db", prefix + "-mqtt"
@@ -62,7 +87,7 @@ def main():
     root_env = folder / ".env.server"
     backend_file = "./fastapi-backend/.env" if managed else backend_env.as_posix()
     root_env.write_text(
-        f"SITE_DOMAIN=cubesat.p-tech.xyz\nRELEASE_TAG=server-review\nFRONTEND_PORT=0\nBACKEND_ENV_FILE={backend_file}\nDATABASE_NETWORK={database_network}\n"
+        f"SERVER_PROJECT={prefix}\nSITE_DOMAIN=cubesat.p-tech.xyz\nRELEASE_TAG=server-review\nFRONTEND_PORT=0\nBACKEND_ENV_FILE={backend_file}\nDATABASE_NETWORK={database_network}\n"
         "POSTGRES_DB=test\nPOSTGRES_USER=test\nPOSTGRES_PASSWORD=test-only@:/?#%\n",
         encoding="utf-8",
     )
@@ -71,7 +96,9 @@ def main():
     )
     override = folder / "test.json"
     override.write_text(
-        json.dumps({"networks": {"cubesat_net": {"external": True, "name": prefix}}}),
+        json.dumps(
+            {"networks": {"cubesat_net": {"external": True, "name": app_network}}}
+        ),
         encoding="utf-8",
     )
     compose = [
@@ -81,16 +108,48 @@ def main():
         str(ROOT),
         "--env-file",
         str(root_env),
-        *([] if managed else ["-p", prefix]),
+        "-p",
+        prefix,
         "-f",
         "docker-compose.server.yml",
         "-f",
         "docker-compose.postgres.yml" if managed else "docker-compose.database.yml",
-        "-f",
-        str(override),
+        *([] if managed else ["-f", str(override)]),
     ]
+    legacy_names = [prefix + "-old-" + role for role in ("frontend", "redis", "tunnel")]
+    old_network_id = None
     try:
         if managed:
+            # Reproduce the old Compose network (explicit bridge driver) with
+            # three live endpoints. Replacing it used to fail with active endpoints.
+            legacy_file = folder / "legacy.json"
+            legacy_file.write_text(
+                json.dumps(
+                    {
+                        "services": {
+                            f"old_{i}": {
+                                "image": "python:3.12-slim",
+                                "container_name": name,
+                                "command": [
+                                    "python",
+                                    "-c",
+                                    "import time; time.sleep(900)",
+                                ],
+                                "networks": ["cubesat_net"],
+                            }
+                            for i, name in enumerate(legacy_names)
+                        },
+                        "networks": {"cubesat_net": {"driver": "bridge"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            command(
+                "docker", "compose", "-p", prefix, "-f", str(legacy_file), "up", "-d"
+            )
+            old_network_id = command(
+                "docker", "network", "inspect", app_network, "--format", "{{.Id}}"
+            ).stdout.strip()
             command(
                 "docker",
                 "run",
@@ -109,13 +168,26 @@ def main():
                 "5173",
                 "--release-tag",
                 "server-review",
+                "--reuse-network",
+                app_network,
             )
             # Adapt only fixture paths/host port and reuse the already-built test
             # compiler tag. DB settings and project name come from the real setup.
             set_key(str(root_env), "BACKEND_ENV_FILE", backend_env.as_posix())
             set_key(str(root_env), "FRONTEND_PORT", "0")
             set_key(str(backend_env), "COMPILER_IMAGE", "pscubesat-compiler:1")
-        command("docker", "network", "create", prefix)
+            # Read-only check without -p; all mutations still pin the test project.
+            unpinned = compose.copy()
+            project_arg = unpinned.index("-p")
+            del unpinned[project_arg : project_arg + 2]
+            assert (
+                json.loads(command(*unpinned, "config", "--format", "json").stdout)[
+                    "name"
+                ]
+                == prefix
+            )
+        else:
+            command("docker", "network", "create", app_network)
         if managed:
             command(*compose, "up", "-d", "--wait", "postgres")
         else:
@@ -128,7 +200,7 @@ def main():
             "--name",
             broker,
             "--network",
-            prefix,
+            app_network,
             "--network-alias",
             "mqtt",
             "-v",
@@ -183,14 +255,28 @@ def main():
             "import urllib.request; r=urllib.request.urlopen('http://nginx/index.html', timeout=5); assert r.status == 200",
         )
         exercise_api(compose, broker, managed)
+        if managed:
+            assert (
+                command(
+                    "docker", "network", "inspect", app_network, "--format", "{{.Id}}"
+                ).stdout.strip()
+                == old_network_id
+            ), "Legacy network was replaced"
+            for name in legacy_names:
+                assert (
+                    command(
+                        "docker", "inspect", name, "--format", "{{.State.Running}}"
+                    ).stdout.strip()
+                    == "true"
+                ), "Legacy endpoint was stopped"
         print(
             f"PASS {args.database} DB: probe, migration/idempotency, health/start order, auth, MQTT->API, real compiler, artifact hashes, API restart"
         )
     finally:
         command(*compose, "down", "-v", "--remove-orphans", check=False)
-        for name in [broker] if managed else [broker, database]:
+        for name in [broker, *legacy_names] if managed else [broker, database]:
             command("docker", "rm", "-f", "-v", name, check=False)
-        command("docker", "network", "rm", prefix, check=False)
+        command("docker", "network", "rm", app_network, check=False)
         if not managed:
             command("docker", "network", "rm", database_network, check=False)
         # Test secrets are no longer needed; keep no plaintext environment fixture.

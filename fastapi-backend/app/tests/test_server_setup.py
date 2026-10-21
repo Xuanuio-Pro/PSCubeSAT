@@ -73,3 +73,11 @@ class ManagedServerSetupTests(unittest.TestCase):
             self.setup_env()
         self.assertEqual(self.backend.read_bytes(), before)
         self.assertFalse((self.root / ".env.server").exists())
+
+    def test_reuses_legacy_network_and_retains_it_on_subsequent_setup(self):
+        prepare(self.root, "pscubesat", 5173, True, "server-db", "pscubesat_cubesat_net")
+        server = dotenv_values(self.root / ".env.server", interpolate=False)
+        self.assertEqual(server["SERVER_NETWORK_NAME"], "pscubesat_cubesat_net")
+        self.assertEqual(server["SERVER_NETWORK_EXTERNAL"], "true")
+        self.setup_env()
+        self.assertEqual(dotenv_values(self.root / ".env.server", interpolate=False), server)

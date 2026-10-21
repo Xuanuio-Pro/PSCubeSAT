@@ -40,6 +40,12 @@ Runner kiểm project của connector cũ, build image setup, cấu hình env, b
 
 Bước setup sửa `.env.server` và BE env tại chỗ, chỉ thực hiện khi đầu vào đã hợp lệ. Nó giữ credential MQTT; giữ JWT mạnh hiện có (chỉ tạo JWT khi thiếu/yếu); giữ POSTGRES_PASSWORD nếu đã cấu hình, nếu chưa có thì dùng password từ DB URL cũ hoặc tạo mới. Nó đổi DB URL sang `postgres:5432`, đặt project `pscubesat`, frontend 5173, BE 8000 và compiler tag `server-db`. Chạy lại không tự đổi password DB/JWT đã hợp lệ. Không in secret và không cần cài Python/pip trên host. Có thể commit source rồi pull nhưng hai file env thật phải ở server, không đưa vào Git.
 
+### Nếu báo network has active endpoints
+
+Compose cũ khai báo network `cubesat_net` với `driver: bridge`. Khi đổi định nghĩa network trong cùng project, Compose có thể cố tái tạo `pscubesat_cubesat_net` rồi bị chặn vì frontend/Redis/tunnel cũ còn dùng nó. Initializer hiện đặt `SERVER_NETWORK_NAME=pscubesat_cubesat_net` và `SERVER_NETWORK_EXTERNAL=true`, dùng lại network nguyên trạng; chỉ tạo bridge nếu network chưa tồn tại. Các lệnh wrapper về sau đọc hai giá trị này từ `.env.server`.
+
+Pull bản sửa và chạy lại `bash deploy/initialize-cubesat.sh`; không cần xóa network, force-disconnect endpoint hoặc xóa volume. Password DB/JWT đã tạo được giữ lại. Dùng wrapper cho các lệnh triển khai, không gọi `down` bằng Compose cũ vì file cũ vẫn coi network là tài nguyên cần xóa. Network external tiếp tục tồn tại sau khi stack dừng.
+
 Setup chỉ sửa env; các lệnh tiếp theo tạo DB mới và migration. Chúng không phục hồi dữ liệu từ backup hay volume DB thất lạc. Nếu có backup CubeSAT cần phục hồi thì phục hồi vào DB trước khi mở dịch vụ. Không dùng `ptr_staging-db-1` hoặc DB của ứng dụng khác. Các lệnh wrapper này thay cho chạy lại Compose cũ, không merge vào file cũ. Cloudflared được thay trong cùng project, origin alias `nginx` vẫn giữ nguyên.
 
 ### Server đang chạy Compose cũ có cloudflared-cubesat
@@ -103,3 +109,5 @@ Kết quả ngày 21/10/2026: build FE/BE PASS; 95 BE test (8 opt-in skipped); e
 Kiểm bổ sung cho Compose cũ: HTTP qua alias `nginx` và luồng external DB đầy đủ PASS; cấu hình `--tunnel` với external/managed DB PASS. Không khởi động connector Cloudflare hoặc thay tuyến domain production trong kiểm thử.
 
 Lượt setup managed: 99 BE test (8 opt-in skipped) PASS; image setup tạo env thật trong thư mục test rồi chạy PostgreSQL, probe, migration/idempotency, auth, MQTT, compiler, hash artifact, recreate DB giữ user và restart API PASS. Test cũng xác nhận Compose lấy đúng project từ `.env.server` khi không có `-p`, setup lặp lại giữ credential/JWT và thiếu MQTT/token thì dừng trước khi sửa file.
+
+Lượt sửa active endpoints: đã tái hiện lỗi chuyển từ network `driver: bridge` sang định nghĩa mới khi còn ba endpoint. Sau sửa, test dùng network do Compose cũ tạo, giữ nguyên ID network và cả ba container cũ đang chạy trong suốt luồng DB/API/compiler; kết quả PASS. Bộ BE có 100 test (8 opt-in skipped); cấu hình fresh/external theo project và cú pháp shell PASS. Các biến Compose export từ shell được loại khỏi môi trường test và mọi lệnh thay đổi trong test đều cố định project test ngẫu nhiên.

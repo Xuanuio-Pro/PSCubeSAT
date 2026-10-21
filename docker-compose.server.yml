@@ -27,6 +27,8 @@ services:
       service: redis
 networks:
   cubesat_net:
+    name: ${SERVER_NETWORK_NAME:-${COMPOSE_PROJECT_NAME}_cubesat_net}
+    external: ${SERVER_NETWORK_EXTERNAL:-false}
 volumes:
   redis_data:
   build_cache:

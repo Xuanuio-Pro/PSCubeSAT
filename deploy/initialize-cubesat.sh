@@ -5,6 +5,8 @@ set -euo pipefail
 root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$root_dir"
 export SERVER_PROJECT=pscubesat
+export SERVER_NETWORK_NAME=pscubesat_cubesat_net
+export SERVER_NETWORK_EXTERNAL=true
 
 # Replacing a connector from a different project would leave two active origins.
 if docker container inspect cloudflared-cubesat >/dev/null 2>&1; then
@@ -19,7 +21,13 @@ docker build -t pscubesat-backend:setup fastapi-backend
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" \
   pscubesat-backend:setup python -m scripts.setup_managed_server \
   --root /workspace --project pscubesat --frontend-port 5173 \
-  --release-tag "${1:-server-db}" --tunnel
+  --release-tag "${1:-server-db}" --tunnel --reuse-network pscubesat_cubesat_net
+
+# Adopt the old network without changing its driver/config hash. Compose must
+# never recreate it while old frontend/Redis/tunnel endpoints are attached.
+if ! docker network inspect pscubesat_cubesat_net >/dev/null 2>&1; then
+  docker network create --driver bridge pscubesat_cubesat_net
+fi
 
 bash deploy/server.sh managed --tunnel config --quiet
 bash deploy/server.sh managed --tunnel build frontend fastapi

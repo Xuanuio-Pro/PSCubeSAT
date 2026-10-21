@@ -16,7 +16,14 @@ from sqlalchemy.engine import URL, make_url
 from app.core.config import Settings, validate_production
 
 
-def prepare(root: Path, project: str, frontend_port: int, tunnel: bool, release_tag: str):
+def prepare(
+    root: Path,
+    project: str,
+    frontend_port: int,
+    tunnel: bool,
+    release_tag: str,
+    network_name: str = "",
+):
     server_env = root / ".env.server"
     server = dotenv_values(server_env, interpolate=False) if server_env.exists() else {}
     backend_file = server.get("BACKEND_ENV_FILE") or "./fastapi-backend/.env"
@@ -81,6 +88,8 @@ def prepare(root: Path, project: str, frontend_port: int, tunnel: bool, release_
         "POSTGRES_DB": db_name,
         "POSTGRES_PASSWORD": password,
     }
+    if network_name:
+        updates.update(SERVER_NETWORK_NAME=network_name, SERVER_NETWORK_EXTERNAL="true")
     for key, value in updates.items():
         set_key(str(server_env), key, value, quote_mode="always")
     for key, value in {
@@ -103,13 +112,19 @@ def main():
     parser.add_argument("--frontend-port", type=int, default=5173)
     parser.add_argument("--release-tag", default="")
     parser.add_argument("--tunnel", action="store_true")
+    parser.add_argument("--reuse-network", default="", help="Adopt an existing app network")
     args = parser.parse_args()
     if not 1 <= args.frontend_port <= 65535:
         raise RuntimeError("Frontend port must be between 1 and 65535.")
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", args.project):
         raise RuntimeError("Use a lowercase Docker Compose project name.")
     generated, _ = prepare(
-        args.root.resolve(), args.project, args.frontend_port, args.tunnel, args.release_tag
+        args.root.resolve(),
+        args.project,
+        args.frontend_port,
+        args.tunnel,
+        args.release_tag,
+        args.reuse_network,
     )
     print("PASS env configured for managed PostgreSQL at postgres:5432; secret values omitted.")
     if generated:
