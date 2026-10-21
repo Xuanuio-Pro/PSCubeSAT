@@ -254,6 +254,15 @@ def main():
             "-c",
             "import urllib.request; r=urllib.request.urlopen('http://nginx/index.html', timeout=5); assert r.status == 200",
         )
+        command(
+            *compose,
+            "exec",
+            "-T",
+            "fastapi",
+            "python",
+            "-m",
+            "scripts.check_server_http",
+        )
         exercise_api(compose, broker, managed)
         if managed:
             assert (
@@ -351,6 +360,10 @@ def exercise_api(compose, broker, managed):
         )
         assert client.get("/assets/missing.js").status_code == 404
         assert client.get("/api/boards").status_code == 401
+        google_config = client.get("/api/auth/google/config")
+        assert google_config.status_code == 200 and google_config.json() == {
+            "client_id": ""
+        }
         registered = client.post(
             "/api/auth/register",
             json={"email": "release@example.com", "password": "test-password-123"},

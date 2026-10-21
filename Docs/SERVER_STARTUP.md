@@ -32,11 +32,18 @@ Wrapper đọc SERVER_PROJECT trong `.env.server`, mặc định `pscubesat-next
 Danh sách container đang chạy/bị dừng không có PostgreSQL CubeSAT và host không lắng nghe cổng 5432: dùng DB managed riêng. Với stack hiện có network `pscubesat_cubesat_net`, project là `pscubesat`, frontend cổng 5173 và token tunnel trong `.env` root, chạy trong checkout server:
 
 ```bash
+git stash push -m "cubesat-compose-before-production-fix" -- docker-compose.yml
 git pull --ff-only origin main
 bash deploy/initialize-cubesat.sh
 ```
 
-Runner kiểm project của connector cũ, build image setup, cấu hình env, build FE/BE/compiler, chờ PostgreSQL healthy, probe bằng SELECT 1, migrate rồi up toàn bộ và preflight live. Nó dừng ở bước đầu tiên gặp lỗi. Có thể truyền tag release riêng làm tham số đầu tiên. Xem `deploy/initialize-cubesat.sh` để kiểm tra từng lệnh; không chạy `down -v`/`rm` hay xóa dữ liệu DB. Bước `up` có thể thay container ứng dụng/tunnel trong cùng project; không đổi dự án khác.
+Lệnh stash giữ bản Compose cũ đã tùy chỉnh trên server trước khi cập nhật file cùng tên; chỉ áp dụng cho `docker-compose.yml`, không đụng file env. Tunnel được cấu hình qua overlay mới và token cũ, không cần khôi phục file Compose cũ sau cập nhật.
+
+Runner kiểm project của connector cũ, build image setup, cấu hình env, build FE/BE, chờ PostgreSQL healthy, probe bằng SELECT 1, migrate rồi up ứng dụng. Sau khi HTTP API đã qua kiểm tra mới build compiler và chạy preflight live. Nó dừng ở bước đầu tiên gặp lỗi và in dòng lệnh bị dừng; DB/API được khởi động trước bước toolchain để việc tải/build compiler không giữ website ở cấu hình BE cũ. Có thể truyền tag release riêng làm tham số đầu tiên. Xem `deploy/initialize-cubesat.sh` để kiểm tra từng lệnh; không chạy `down -v`/`rm` hay xóa dữ liệu DB. Bước `up` có thể thay container ứng dụng/tunnel trong cùng project; không đổi dự án khác.
+
+Sau khi up, runner kiểm `/api/auth/google/config` trực tiếp trong BE, qua Nginx và domain HTTPS. Tất cả phải trả HTTP 200 và JSON đúng schema; thiếu GOOGLE_CLIENT_ID chỉ tắt Google login, không làm config API trả 502. Nếu một lớp thất bại, runner báo đúng lớp và exit khác 0 thay vì thông báo đã triển khai thành công.
+
+Lỗi `ALLOWED_ORIGINS must contain exact HTTPS origins without paths` cho biết BE bị dừng trước khi khởi tạo DB. Compose cũ từng ghi đè bằng `https://cubesat.p-tech.xyz,http://localhost:5173,http://localhost:8003`; sửa `.env` không đủ vì `environment` được ưu tiên hơn `env_file`. Compose mặc định hiện dùng duy nhất `https://${SITE_DOMAIN:-cubesat.p-tech.xyz}`, và bộ server mới cũng dùng origin HTTPS tương ứng. Giữ APP_ENV=production; dùng initializer để tạo DB/migrate và thay stack đầy đủ, không chỉ restart container BE cũ.
 
 Bước setup sửa `.env.server` và BE env tại chỗ, chỉ thực hiện khi đầu vào đã hợp lệ. Nó giữ credential MQTT; giữ JWT mạnh hiện có (chỉ tạo JWT khi thiếu/yếu); giữ POSTGRES_PASSWORD nếu đã cấu hình, nếu chưa có thì dùng password từ DB URL cũ hoặc tạo mới. Nó đổi DB URL sang `postgres:5432`, đặt project `pscubesat`, frontend 5173, BE 8000 và compiler tag `server-db`. Chạy lại không tự đổi password DB/JWT đã hợp lệ. Không in secret và không cần cài Python/pip trên host. Có thể commit source rồi pull nhưng hai file env thật phải ở server, không đưa vào Git.
 
@@ -111,3 +118,5 @@ Kiểm bổ sung cho Compose cũ: HTTP qua alias `nginx` và luồng external DB
 Lượt setup managed: 99 BE test (8 opt-in skipped) PASS; image setup tạo env thật trong thư mục test rồi chạy PostgreSQL, probe, migration/idempotency, auth, MQTT, compiler, hash artifact, recreate DB giữ user và restart API PASS. Test cũng xác nhận Compose lấy đúng project từ `.env.server` khi không có `-p`, setup lặp lại giữ credential/JWT và thiếu MQTT/token thì dừng trước khi sửa file.
 
 Lượt sửa active endpoints: đã tái hiện lỗi chuyển từ network `driver: bridge` sang định nghĩa mới khi còn ba endpoint. Sau sửa, test dùng network do Compose cũ tạo, giữ nguyên ID network và cả ba container cũ đang chạy trong suốt luồng DB/API/compiler; kết quả PASS. Bộ BE có 100 test (8 opt-in skipped); cấu hình fresh/external theo project và cú pháp shell PASS. Các biến Compose export từ shell được loại khỏi môi trường test và mọi lệnh thay đổi trong test đều cố định project test ngẫu nhiên.
+
+Lượt sửa CORS/502: tái hiện production validation thất bại với override HTTP localhost cũ; origin hiệu lực của Compose mặc định sau sửa PASS. Bộ BE có 103 test (8 opt-in skipped) PASS; HTTP checker từ chối 502 và SPA HTML trả 200, chấp nhận config JSON hợp lệ khi Google chưa bật. Docker integration kiểm config API trực tiếp và qua Nginx trả 200 cùng luồng DB/auth/MQTT/compiler/artifact/restart PASS. Chưa chạy initializer trên server thật hoặc xác nhận HTTP 200 qua domain production trong lượt kiểm thử này.

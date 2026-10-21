@@ -32,6 +32,7 @@ class ProductionSettingsTests(unittest.TestCase):
             {"database_url": "postgresql:///test"},
             {"allowed_origins": "*"},
             {"allowed_origins": "http://cubesat.p-tech.xyz"},
+            {"allowed_origins": "https://cubesat.p-tech.xyz,http://localhost:5173"},
             {"allowed_origins": "https://cubesat.p-tech.xyz/path"},
             {"allowed_origins": "https://*.p-tech.xyz"},
             {"allowed_origins": "https://user:password@cubesat.p-tech.xyz"},

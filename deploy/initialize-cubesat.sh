@@ -2,6 +2,7 @@
 # Initial deployment for the confirmed server: pscubesat + existing tunnel,
 # no running CubeSAT DB. Creates its own PostgreSQL volume; never deletes data.
 set -euo pipefail
+trap 'status=$?; printf "Initialization stopped at line %s (exit %s). Send the last terminal error above.\n" "$LINENO" "$status" >&2; exit "$status"' ERR
 root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$root_dir"
 export SERVER_PROJECT=pscubesat
@@ -31,10 +32,13 @@ fi
 
 bash deploy/server.sh managed --tunnel config --quiet
 bash deploy/server.sh managed --tunnel build frontend fastapi
-docker build -f fastapi-backend/compiler/Dockerfile -t pscubesat-compiler:server-db fastapi-backend
 bash deploy/server.sh managed --tunnel up -d --wait postgres
 bash deploy/server.sh managed --tunnel run --rm --no-deps migrate python server_preflight.py --database
 bash deploy/server.sh managed --tunnel run --rm --no-deps migrate
 bash deploy/server.sh managed --tunnel up -d --wait --wait-timeout 180
 bash deploy/server.sh managed --tunnel ps -a
+bash deploy/server.sh managed --tunnel exec -T fastapi python -m scripts.check_server_http --public
+# Start and verify DB/API first, then prepare firmware compilation. A toolchain
+# build failure must not prevent the web backend from being brought online.
+docker build -f fastapi-backend/compiler/Dockerfile -t pscubesat-compiler:server-db fastapi-backend
 bash deploy/server.sh managed --tunnel run --rm --no-deps fastapi python server_preflight.py --live

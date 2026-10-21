@@ -42,7 +42,8 @@ services:
       - ./fastapi-backend/.env
     environment:
       - REDIS_URL=redis://redis:6379
-      - ALLOWED_ORIGINS=https://cubesat.p-tech.xyz,http://localhost:5173,http://localhost:8003
+      # Compose environment overrides env_file. Keep the server origin production-valid.
+      - ALLOWED_ORIGINS=https://${SITE_DOMAIN:-cubesat.p-tech.xyz}
     volumes:
       - ./fastapi-backend/app:/app/app
       - ./fastapi-backend/build_cache:/app/build_cache
