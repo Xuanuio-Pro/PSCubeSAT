@@ -6,7 +6,7 @@ root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$root_dir"
 
 if [[ $# -lt 2 ]]; then
-  echo 'Usage: bash deploy/server.sh external|managed|remote [--proxy] COMPOSE_COMMAND [ARGS...]' >&2
+  echo 'Usage: bash deploy/server.sh external|managed|remote [--proxy|--tunnel] COMPOSE_COMMAND [ARGS...]' >&2
   exit 2
 fi
 db_mode="$1"
@@ -18,10 +18,10 @@ case "$db_mode" in
   remote) ;;
   *) echo 'Database mode must be external, managed or remote.' >&2; exit 2 ;;
 esac
-if [[ "${1:-}" == --proxy ]]; then
-  compose+=(-f docker-compose.proxy.yml)
-  shift
-fi
+case "${1:-}" in
+  --proxy) compose+=(-f docker-compose.proxy.yml); shift ;;
+  --tunnel) compose+=(-f docker-compose.cloudflared.yml --profile tunnel); shift ;;
+esac
 if [[ $# -eq 0 ]]; then
   echo 'Missing Docker Compose command.' >&2
   exit 2

@@ -7,6 +7,11 @@ services:
       service: frontend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-5180}:80"
+    networks:
+      cubesat_net:
+        # Preserve the origin hostname used by the original Cloudflare Tunnel.
+        aliases:
+          - nginx
   fastapi:
     extends:
       file: docker-compose.production.yml

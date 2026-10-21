@@ -146,6 +146,15 @@ def main():
                 "SELECT count(*) FROM users WHERE email='legacy@example.test'",
             ).stdout.strip()
             assert kept == "1"
+        command(
+            *compose,
+            "exec",
+            "-T",
+            "fastapi",
+            "python",
+            "-c",
+            "import urllib.request; r=urllib.request.urlopen('http://nginx/index.html', timeout=5); assert r.status == 200",
+        )
         exercise_api(compose, broker, managed)
         print(
             f"PASS {args.database} DB: probe, migration/idempotency, health/start order, auth, MQTT->API, real compiler, artifact hashes, API restart"

@@ -1,0 +1,22 @@
+# Optional connector for the server whose existing Compose owns cloudflared.
+# Use the SAME Compose project as the old connector when replacing it.
+# Do not enable this alongside an independently managed, active connector.
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    env_file:
+      # Reuse the server's existing token file; never bake it into an image.
+      - ${TUNNEL_ENV_FILE:-./.env}
+    command: ["tunnel", "--no-autoupdate", "run"]
+    depends_on:
+      frontend:
+        condition: service_healthy
+    networks:
+      - cubesat_net
