@@ -4,8 +4,11 @@
 data
 logs
 build_cache
-.venv
-venv
 __pycache__
 **/__pycache__
 *.pyc
+.venv
+venv
+.pytest_cache
+.ruff_cache
+*.log

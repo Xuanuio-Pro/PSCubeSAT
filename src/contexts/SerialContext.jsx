@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { SerialContext } from './serial-api';
+import { getSerialSupport } from '../components/serial/serial-support';
 
 export function SerialProvider({ children }) {
+  const serialSupport = getSerialSupport();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sessionId, setSessionId] = useState(0);
@@ -37,12 +39,9 @@ export function SerialProvider({ children }) {
 
   const connect = useCallback(async (baudRate = 115200, existingPort = null) => {
     if (connectingRef.current || activeRef.current || flashRef.current) return false;
-    if (!window.isSecureContext) {
-      addLine('Trình duyệt chặn Serial trên HTTP qua IP mạng. Mở localhost trên máy cắm USB hoặc dùng HTTPS có chứng chỉ được tin cậy.', 'error');
-      return false;
-    }
-    if (!navigator.serial) {
-      addLine('Web Serial yêu cầu Chrome/Edge và HTTPS hoặc localhost.', 'error');
+    const support = getSerialSupport();
+    if (!support.available) {
+      addLine(support.message, 'error');
       return false;
     }
     connectingRef.current = true;
@@ -121,8 +120,8 @@ export function SerialProvider({ children }) {
 
   const withFlashPort = useCallback(async operation => {
     if (flashRef.current || connectingRef.current) throw new Error('Cổng Serial đang bận.');
-    if (!window.isSecureContext) throw new Error('HTTP qua IP mạng không được phép nạp USB. Dùng localhost trên máy cắm board hoặc HTTPS có chứng chỉ được tin cậy.');
-    if (!navigator.serial) throw new Error('Cần Chrome/Edge trên HTTPS hoặc localhost để nạp.');
+    const support = getSerialSupport();
+    if (!support.available) throw new Error(support.message);
     flashRef.current = true;
     setIsFlashing(true);
     let port;
@@ -161,6 +160,6 @@ export function SerialProvider({ children }) {
   const clearLines = useCallback(() => setLines([]), []);
   const print = useCallback((text, type = 'system') => addLine(text, type), [addLine]);
 
-  return <SerialContext.Provider value={{ isConnected, isConnecting, isFlashing, sessionId, lines,
+  return <SerialContext.Provider value={{ serialSupport, isConnected, isConnecting, isFlashing, sessionId, lines,
     builds, boards, selectBoard, saveBuild, withFlashPort, connect, disconnect, send, clearLines, subscribe, print }}>{children}</SerialContext.Provider>;
 }

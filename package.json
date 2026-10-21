@@ -28,7 +28,7 @@
     "test:blockly:compile": "node scripts/blockly-smoke.mjs && C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe scripts/blockly-compile-matrix.py",
     "preview": "vite preview",
     "dev:services": "cd fastapi-backend && C:/Users/Xuanuio/miniconda3/envs/stemcube/python.exe local_services.py",
-    "test:flash": "node --test tests/flash-artifact.test.js"
+    "test:flash": "node --test tests/flash-artifact.test.js tests/serial-support.test.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

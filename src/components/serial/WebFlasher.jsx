@@ -4,7 +4,7 @@ import { getAuthToken } from '../../contexts/auth-storage';
 import { downloadFlashFiles, writeArtifact } from './flash-artifact';
 
 export default function WebFlasher({ code = '', labId = undefined, inline = false, showIcon = true, buttonClassName = '', label = 'Nạp Code' }) {
-  const { builds, boards, isFlashing, withFlashPort, print } = useSerial();
+  const { builds, boards, isFlashing, withFlashPort, print, serialSupport } = useSerial();
   const build = builds[labId];
   const ready = !!build && build.source === code && build.artifact?.board === (boards[labId] || 'esp32');
   const [status, setStatus] = useState('idle');
@@ -13,7 +13,7 @@ export default function WebFlasher({ code = '', labId = undefined, inline = fals
   const finished = status === 'done' && ready && completedId === build?.artifact?.id;
 
   const handleFlash = async () => {
-    if (!ready || isFlashing) return;
+    if (!ready || isFlashing || !serialSupport.available) return;
     setStatus('flashing');
     setProgress(0);
     try {
@@ -45,10 +45,11 @@ export default function WebFlasher({ code = '', labId = undefined, inline = fals
       <button
         className={`btn btn-sm ${buttonClassName || (status === 'flashing' ? 'btn-secondary' : 'btn-success')}`}
         onClick={handleFlash}
-        disabled={!ready || isFlashing} title={!ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB'}
+        disabled={!ready || isFlashing || !serialSupport.available}
+        title={!serialSupport.available ? serialSupport.message : !ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB trên máy của bạn'}
         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
       >
-        {showIcon && '⚡'} {status === 'flashing' ? `Đang nạp... ${Math.round(progress)}%` : finished ? `${showIcon ? '✅ ' : ''}Nạp xong` : label}
+        {showIcon && '⚡'} {!serialSupport.available ? serialSupport.label : status === 'flashing' ? `Đang nạp... ${Math.round(progress)}%` : finished ? `${showIcon ? '✅ ' : ''}Nạp xong` : label}
       </button>
     );
   }
@@ -60,11 +61,13 @@ export default function WebFlasher({ code = '', labId = undefined, inline = fals
         <button
           className={`btn btn-sm ${status === 'flashing' ? 'btn-secondary' : 'btn-success'}`}
           onClick={handleFlash}
-          disabled={!ready || isFlashing} title={!ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB'}
+          disabled={!ready || isFlashing || !serialSupport.available}
+          title={!serialSupport.available ? serialSupport.message : !ready ? 'Biên dịch code hiện tại trước khi nạp' : 'Nạp firmware thật qua USB trên máy của bạn'}
         >
-          {status === 'flashing' ? 'Đang nạp...' : finished ? '✅ Hoàn tất' : 'Nạp code'}
+          {!serialSupport.available ? serialSupport.label : status === 'flashing' ? 'Đang nạp...' : finished ? '✅ Hoàn tất' : 'Nạp code'}
         </button>
       </div>
+      {!serialSupport.available && <div className="card-body" role="status">{serialSupport.message}</div>}
       {(status === 'flashing' || status === 'error' || finished) && (
         <div className="card-body">
           <div style={{

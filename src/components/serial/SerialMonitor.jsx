@@ -3,7 +3,7 @@ import { useSerial } from '../../contexts/serial-api';
 
 /** @param {{height?: number|string, variant?: string}} props */
 export default function SerialMonitor({ height = 350, variant = 'default' }) {
-  const { isConnected, lines, send, clearLines, connect } = useSerial();
+  const { isConnected, lines, send, clearLines, connect, serialSupport } = useSerial();
   const [input, setInput] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [showTimestamp, setShowTimestamp] = useState(true);
@@ -62,12 +62,13 @@ export default function SerialMonitor({ height = 350, variant = 'default' }) {
         </div>}
       </div>
       <div className="serial-monitor" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {!serialSupport.available && <div role="status" style={{ padding: '12px 16px', color: 'var(--accent-orange)', borderBottom: '1px solid var(--border-strong)', fontSize: '0.875rem' }}>{serialSupport.message}</div>}
         <div
           className="serial-output"
           ref={outputRef}
           style={{ flex: 1, maxHeight: height === '100%' ? 'none' : `${height}px` }}
         >
-          {!isConnected && lines.length === 0 && (
+          {!isConnected && lines.length === 0 && serialSupport.available && (
             <div style={{ color: 'var(--text-muted)', padding: '1rem', textAlign: 'center' }}>
               {variant === 'workspace' ? 'Đang kết nối Serial...' : <>Nhấn "Kết nối Serial" để bắt đầu<br /></>}
               {variant !== 'workspace' && <button

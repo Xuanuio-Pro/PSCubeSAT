@@ -1,0 +1,65 @@
+# Standalone production stack. Do not merge with docker-compose.yml:
+# only the TLS gateway publishes ports; frontend/backend stay internal.
+services:
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    networks:
+      - cubesat_net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - fastapi
+    networks:
+      - cubesat_net
+
+  fastapi:
+    build:
+      context: ./fastapi-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./fastapi-backend/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      ALLOWED_ORIGINS: https://${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
+    volumes:
+      - build_cache:/app/build_cache
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+    networks:
+      - cubesat_net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - cubesat_net
+
+networks:
+  cubesat_net:
+
+volumes:
+  redis_data:
+  build_cache:
+  caddy_data:
+  caddy_config:

@@ -15,7 +15,7 @@ import {
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isConnected, connect, disconnect } = useSerial();
+  const { isConnected, connect, disconnect, serialSupport } = useSerial();
   const { user, logout } = useAuth();
   const lab = getLabBySlug(location.pathname.replace('/', ''));
 
@@ -54,7 +54,8 @@ export default function Header() {
               className={`header-icon-action header-lab-message ${isConnected ? 'is-connected' : ''}`}
               onClick={() => isConnected ? disconnect() : connect()}
               aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-              title={isConnected ? 'Serial đã kết nối' : 'Kết nối Web Serial'}
+              disabled={!isConnected && !serialSupport.available}
+              title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
             >
               <MessageIcon size={18} />
               <span className="header-serial-indicator" aria-hidden="true" />
@@ -67,7 +68,8 @@ export default function Header() {
             className={`header-icon-action header-serial-action ${isConnected ? 'is-connected' : ''}`}
             onClick={() => isConnected ? disconnect() : connect()}
             aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-            title={isConnected ? 'Serial đã kết nối' : 'Kết nối Web Serial'}
+            disabled={!isConnected && !serialSupport.available}
+            title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
           >
             <span className="header-serial-dot" />
           </button>
