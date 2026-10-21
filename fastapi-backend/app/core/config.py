@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,28 @@ class Settings(BaseSettings):
 
     # PostgreSQL
     database_url: str = Field(default="", repr=False)
+    # Optional structured connection for Compose-managed PostgreSQL. A complete
+    # DATABASE_URL takes precedence for existing/external databases.
+    database_host: str = ""
+    database_port: int = Field(default=5432, ge=1, le=65535)
+    database_name: str = "cubesat"
+    database_user: str = "cubesat"
+    database_password: str = Field(default="", repr=False)
+
+    @model_validator(mode="after")
+    def resolve_database_url(self):
+        if not self.database_url and self.database_host:
+            from sqlalchemy.engine import URL
+
+            self.database_url = URL.create(
+                "postgresql+asyncpg",
+                username=self.database_user,
+                password=self.database_password,
+                host=self.database_host,
+                port=self.database_port,
+                database=self.database_name,
+            ).render_as_string(hide_password=False)
+        return self
 
     @property
     def async_database_url(self) -> str:

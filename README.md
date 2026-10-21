@@ -74,6 +74,8 @@ Dự án được xây dựng theo kiến trúc **Microservices + Realtime Strea
 
 ## 🚀 Hướng Dẫn Chạy Dự Án (Developer Quickstart)
 
+**Triển khai server:** dùng [hướng dẫn build/chạy BE + DB](Docs/SERVER_STARTUP.md). Chọn DB `external` để giữ dữ liệu container PostgreSQL đang có, hoặc `managed` cho cài mới. Không dùng Compose mặc định bên dưới để triển khai production.
+
 ### Yêu cầu môi trường (Prerequisites)
 - Docker & Docker Compose
 - Miniconda / Anaconda (Python 3.11+)

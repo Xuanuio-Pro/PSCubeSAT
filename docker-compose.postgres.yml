@@ -1,0 +1,44 @@
+# Opt-in fresh PostgreSQL installation. Existing DB users use database.yml instead.
+x-database-env: &database-env
+  # Override any host-local DATABASE_URL from the backend env file.
+  DATABASE_URL: ""
+  DATABASE_HOST: postgres
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: ${POSTGRES_DB:-cubesat}
+  DATABASE_USER: ${POSTGRES_USER:-cubesat}
+  DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.server}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cubesat}
+      POSTGRES_USER: ${POSTGRES_USER:-cubesat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.server}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 20
+    stop_grace_period: 30s
+    networks:
+      - cubesat_net
+  fastapi:
+    environment: *database-env
+  migrate:
+    environment: *database-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

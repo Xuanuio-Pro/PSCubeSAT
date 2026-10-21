@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import get_settings
+from app.db.connection import CONNECT_TIMEOUT, connect_database
 
 
 class Base(DeclarativeBase):
@@ -38,6 +39,7 @@ def get_engine():
         echo=False,
         future=True,
         pool_pre_ping=True,
+        connect_args={"timeout": CONNECT_TIMEOUT},
     )
 
 
@@ -67,6 +69,12 @@ async def close_db() -> None:
     await get_engine().dispose()
 
 
+async def check_database_connection() -> None:
+    """Read-only connection probe, including databases not yet migrated."""
+    async with connect_database(get_engine()) as conn:
+        await conn.execute(text("SELECT 1"))
+
+
 async def init_db() -> None:
     """Check connectivity and migration head; startup never mutates the schema."""
     from alembic.migration import MigrationContext
@@ -76,7 +84,7 @@ async def init_db() -> None:
 
     if not get_settings().database_url:
         raise RuntimeError("DATABASE_URL must be configured before startup.")
-    async with get_engine().connect() as conn:
+    async with connect_database(get_engine()) as conn:
         heads = await conn.run_sync(
             lambda sync: MigrationContext.configure(sync).get_current_heads()
         )

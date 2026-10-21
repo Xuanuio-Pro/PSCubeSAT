@@ -1,5 +1,7 @@
 import unittest
 
+from sqlalchemy.engine import make_url
+
 from app.core.config import Settings, validate_production
 
 
@@ -43,3 +45,20 @@ class ProductionSettingsTests(unittest.TestCase):
         self.assertNotIn("postgresql://", rendered)
         self.assertNotIn("a" * 48, rendered)
         self.assertNotIn("test-password", rendered)
+
+    def test_structured_database_password_is_url_encoded_and_hidden(self):
+        password = "p@ss:/?#% +$'word"
+        settings = self.settings(
+            database_url="", database_host="postgres", database_password=password
+        )
+        url = make_url(settings.async_database_url)
+        self.assertEqual(url.password, password)
+        self.assertEqual(url.host, "postgres")
+        self.assertEqual(url.port, 5432)
+        self.assertEqual(url.database, "cubesat")
+        self.assertNotIn(password, repr(settings))
+        validate_production(settings)
+
+    def test_explicit_database_url_takes_precedence_over_structured_defaults(self):
+        settings = self.settings(database_host="postgres", database_password="unused")
+        self.assertEqual(make_url(settings.async_database_url).host, "db")

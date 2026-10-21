@@ -2,6 +2,8 @@
 
 ## Cấu hình đã chuẩn bị
 
+Lệnh build/chạy ngắn gọn cho DB hiện có hoặc DB cài mới: [SERVER_STARTUP.md](SERVER_STARTUP.md).
+
 Source cũ tại `C:/Users/Xuanuio/Desktop/IEC/CubeSAT/PTIT-STEM-CUBE` được đọc để đối chiếu. Bản mới đang ở `C:/Users/Xuanuio/Desktop/IEC/CubeSAT/PSCubeSAT`. Không ghi đè thư mục cũ và chưa đổi tuyến domain/server thật trong lượt cấu hình này.
 
 Domain phân giải qua Cloudflare. Khi kiểm tra từ môi trường này ngày 21/10/2026, trang chính và API trả HTTP 403; chưa thể kết luận là ứng dụng, WAF hay Access đang chặn. Không có SSH hoặc cấu hình proxy thật trong task để xác nhận cách server vận hành.
@@ -40,6 +42,34 @@ Trong checkout mới trên server, tạo `.env.server` từ `.env.server.example
 Compose tự đặt APP_ENV=production, Redis nội bộ và CORS đúng domain. FE mặc định `/api` và `/ws` cùng origin; không cần VITE_API_URL, không đưa credential MQTT/DB vào VITE_*. `VITE_WS_URL` để trống trừ khi cố tình dùng origin khác. FE env được đọc khi build; file .env host bị loại khỏi build context để tránh nhúng nhầm cấu hình phát triển.
 
 EMQX: đăng ký user web ghi DB trực tiếp; credential thiết bị/ACL trong DB. Broker vẫn cần nguồn PostgreSQL đọc view `emqx_mqtt_authn/authz` bằng role có quyền SELECT. Migration không tự cấu hình broker và không cần gọi 18083. Giữ tài khoản dịch vụ BE; kiểm quyền subscribe `sensors/+/telemetry`. Xem [EMQX PostgreSQL](EMQX_POSTGRES_SETUP.md).
+
+## PostgreSQL đang ở container khác
+
+Lỗi `ConnectionRefusedError: [Errno 111] Connection refused` tại `init_db()` nghĩa là BE chưa mở được kết nối TCP tới PostgreSQL. Chưa thể kết luận sai mật khẩu hay lỗi TLS từ thông báo này. Compose bản mới không tự tạo PostgreSQL và không tự tham gia network của stack DB cũ.
+
+Trên server, xác định container và network (không in env/credential):
+
+```sh
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Networks}}'
+# Thay TEN_CONTAINER_DB bằng tên thật lấy ở trên.
+docker inspect TEN_CONTAINER_DB --format '{{json .NetworkSettings.Networks}}'
+docker exec TEN_CONTAINER_DB pg_isready -h 127.0.0.1 -p 5432
+```
+
+Trong `.env.server`, đặt `DATABASE_NETWORK` bằng **network bridge hiện có của DB**. Trong BE `.env`, đặt `DATABASE_URL` dùng tên/alias container PostgreSQL trên network đó, cổng **nội bộ** (mặc định 5432). Ví dụ nếu host map `15432:5432`, container BE vẫn kết nối `ten-db:5432`, không dùng `localhost:15432` hay IP container dễ thay đổi. Giữ nguyên user/password/database của DB thật; URL-encode ký tự đặc biệt trong credential. Nếu PostgreSQL cấu hình cổng nội bộ khác thì dùng cổng thực tế đó.
+
+Thêm overlay DB vào **mọi** lệnh Compose, gồm build, migration, up, logs và các lần cập nhật tiếp theo:
+
+```sh
+docker compose --env-file .env.server -p pscubesat-next -f docker-compose.server.yml -f docker-compose.database.yml config --quiet
+docker compose --env-file .env.server -p pscubesat-next -f docker-compose.server.yml -f docker-compose.database.yml build fastapi
+# Chỉ SELECT 1, không đổi schema, không cần Redis/compiler đang chạy.
+docker compose --env-file .env.server -p pscubesat-next -f docker-compose.server.yml -f docker-compose.database.yml run --rm --no-deps migrate python server_preflight.py --database
+```
+
+Khi kiểm tra DB PASS và đã backup DB/chọn cửa sổ chuyển đổi, dùng cùng các tham số Compose để chạy `run --rm --no-deps migrate`, rồi `up -d --wait`. Nếu proxy cũng nằm trong Docker, thêm cả `-f docker-compose.proxy.yml` và cấu hình `PROXY_NETWORK` riêng. Overlay DB chỉ nối API/migrate tới DB, không nối frontend/Redis tới mạng DB, không mở thêm cổng PostgreSQL và không quản lý/xóa container hoặc volume DB cũ. Kiểm tra PostgreSQL lắng nghe trên interface Docker và `pg_hba.conf` cho phép subnet của network đã chọn nếu kết nối vẫn bị từ chối.
+
+Kiểm thử bổ sung ngày 21/10/2026: cả DB external trên network riêng và DB managed cài mới đã PASS probe trước migration, migration lặp lại, API healthy, auth, MQTT, compiler/artifact và restart. External giữ user schema cũ; managed giữ user khi recreate container DB bằng volume cũ và hỗ trợ mật khẩu cần URL encoding. Bộ BE có 95 test (8 opt-in skipped), Docker build FE/BE và 8 tổ hợp cấu hình DB/ingress PASS. Đây là kiểm thử container cô lập trên máy phát triển; network/hostname PostgreSQL thật trên server vẫn cần xác nhận.
 
 ## Thứ tự chuyển đổi
 

@@ -29,10 +29,24 @@ async def live_checks():
     print("PASS compiler image present (compile still needs an actual build check)")
 
 
+async def database_check():
+    from app.db.database import check_database_connection, close_db
+
+    try:
+        await check_database_connection()
+        print("PASS PostgreSQL connectivity (SELECT 1; no schema changes)")
+    finally:
+        await close_db()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    checks = parser.add_mutually_exclusive_group()
+    checks.add_argument(
         "--live", action="store_true", help="Check DB/migrations, Redis and Docker image"
+    )
+    checks.add_argument(
+        "--database", action="store_true", help="Check only DB connectivity; no migration required"
     )
     args = parser.parse_args()
     settings = get_settings()
@@ -48,6 +62,8 @@ def main():
     print("PASS production environment (secret values omitted)")
     if args.live:
         asyncio.run(live_checks())
+    elif args.database:
+        asyncio.run(database_check())
 
 
 if __name__ == "__main__":
