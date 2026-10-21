@@ -1,0 +1,74 @@
+{
+  "installed_on": "2026-10-21",
+  "scope": "project",
+  "installer": "Codex skill-installer",
+  "skills": [
+    {
+      "directory": "frontend-design",
+      "name": "frontend-design",
+      "repository": "https://github.com/anthropics/skills",
+      "upstream_path": "skills/frontend-design",
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "status": "installed",
+      "skill_sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+      "file_count": 2,
+      "unresolved_local_markdown_links": []
+    },
+    {
+      "directory": "ui-ux-pro-max",
+      "name": "ui-ux-pro-max",
+      "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "upstream_path": ".claude/skills/ui-ux-pro-max",
+      "commit": "56ea9cf174ed86786187daa9de0e6247cb0747e4",
+      "status": "installed",
+      "skill_sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9",
+      "file_count": 73,
+      "unresolved_local_markdown_links": []
+    },
+    {
+      "directory": "web-design-guidelines",
+      "name": "web-design-guidelines",
+      "repository": "https://github.com/vercel-labs/agent-skills",
+      "upstream_path": "skills/web-design-guidelines",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "status": "installed",
+      "skill_sha256": "f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f",
+      "file_count": 1,
+      "unresolved_local_markdown_links": []
+    },
+    {
+      "directory": "taste-skill",
+      "name": "design-taste-frontend",
+      "repository": "https://github.com/Leonxlnx/taste-skill",
+      "upstream_path": null,
+      "commit": null,
+      "status": "preserved-existing",
+      "skill_sha256": "811c25c8a3a132fccdd98f80d149d276b93b5754bbe1cf5766f607692897bc9c",
+      "file_count": 1,
+      "unresolved_local_markdown_links": []
+    },
+    {
+      "directory": "impeccable",
+      "name": "impeccable",
+      "repository": "https://github.com/pbakaus/impeccable",
+      "upstream_path": ".agents/skills/impeccable",
+      "commit": "dad8dbb3aac21ad1fa236c110315ef4abece23e8",
+      "status": "installed",
+      "skill_sha256": "88e9a46a91b6ddd1059f03f578bd0f9bbe6d212d6a395124379b9bb5c97c5cf2",
+      "file_count": 62,
+      "unresolved_local_markdown_links": []
+    },
+    {
+      "directory": "motion-design",
+      "name": "motion-design",
+      "repository": "https://github.com/LottieFiles/motion-design-skill",
+      "upstream_path": "skills/motion-design",
+      "commit": "f9a8a041b85185ee4881b3471d3415e939aac772",
+      "status": "installed",
+      "skill_sha256": "8729ecbc7e5736c1295baaa8ba0384bb4b1aac9cf91b83fcdc64d9548a57bb19",
+      "file_count": 17,
+      "unresolved_local_markdown_links": []
+    }
+  ],
+  "hash_normalization": "SKILL.md decoded as UTF-8 with LF line endings"
+}

@@ -1,0 +1,4 @@
+# Keep upstream skill resources and verified firmware stable across Windows/Linux.
+# Their upstream whitespace is retained so source/build checksums remain meaningful.
+.agents/skills/** text=auto eol=lf -whitespace
+fastapi-backend/app/firmware/curriculum/*.cpp text eol=lf -whitespace
