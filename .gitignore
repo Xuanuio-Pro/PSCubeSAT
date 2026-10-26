@@ -86,3 +86,4 @@ tmp/
 fastapi-backend/.env.production
 !.env.server.example
 !fastapi-backend/.env.production.example
+*.code-workspace

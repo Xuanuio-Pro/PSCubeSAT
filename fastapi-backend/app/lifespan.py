@@ -40,6 +40,11 @@ async def lifespan(app: FastAPI):
         consumer = asyncio.create_task(mqtt_consumer.start(), name="mqtt-consumer")
         resources.push_async_callback(_cancel_task, consumer)
         resources.push_async_callback(simulation_manager.shutdown)
+        if get_settings().lms_class_mode:
+            from app.services.question_generation import worker
+
+            quizzes = asyncio.create_task(worker(), name="quiz-worker")
+            resources.push_async_callback(_cancel_task, quizzes)
         logger.success("Backend resources ready")
         yield
     logger.info("CubeSat FastAPI Backend stopped")

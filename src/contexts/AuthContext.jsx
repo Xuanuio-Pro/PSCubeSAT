@@ -6,6 +6,18 @@ import { AUTH_EXPIRED_EVENT, tokenExpiresAt } from './auth-session';
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [classMode, setClassMode] = useState(null);
+  const [legacyAllowed, setLegacyAllowed] = useState(true);
+  const userId = user?.id;
+
+  useEffect(() => {
+    let active = true;
+    setClassMode(null);
+    if (userId) request('/api/lms/config')
+      .then(config => { if (active) { setLegacyAllowed(config.legacy_allowed !== false); setClassMode(config.class_mode); } })
+      .catch(() => { if (active) setClassMode(false); });
+    return () => { active = false; };
+  }, [userId]);
 
   useEffect(() => {
     const expired = () => { setUser(null); setLoading(false); };
@@ -32,7 +44,10 @@ export function AuthProvider({ children }) {
     const verify = () => {
       if (getAuthToken() !== token) { setUser(null); return; }
       if (expiry !== null && Date.now() >= expiry) { expire(); return; }
-      request('/api/auth/me').catch(() => {}); // 401 invalidates the verified session centrally.
+      request('/api/auth/me').then(current => {
+        if (getAuthToken() === token) setUser(previous => previous &&
+          (previous.role !== current.role || previous.full_name !== current.full_name) ? current : previous);
+      }).catch(() => {}); // 401 invalidates the verified session centrally.
     };
     const poll = setInterval(verify, 60000);
     window.addEventListener('focus', verify);
@@ -114,6 +129,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, loading, login, loginGoogle, register, logout, isAuthenticated: !!user,
+      classMode, legacyAllowed,
       changePassword, markVideoWatched, markDocViewed,
     }}>
       {children}

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LABS } from '../../data/labs';
-import { getLessonsForLab, lessonUrl } from '../../data/curriculum';
+const lessonUrl = (slug, id) => `/${slug}?lesson=${encodeURIComponent(id)}`;
 import logoSvg from '../../assets/logo.svg';
 import { HomeIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from '../common/HeaderIcons';
 
-export default function CourseSidebar({ currentLabId, activeLesson, onSelectLesson }) {
+export default function CourseSidebar({ labs, currentLabId, activeLesson, onSelectLesson }) {
   const navigate = useNavigate();
   const [expandedLab, setExpandedLab] = useState(currentLabId);
   const [collapsed, setCollapsed] = useState(false);
@@ -36,7 +35,7 @@ export default function CourseSidebar({ currentLabId, activeLesson, onSelectLess
       <div className="course-rail">
         <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
         <nav className="course-rail-nav" aria-label="Chọn Lab">
-          {LABS.map((lab) => (
+          {labs.map((lab) => (
             <Link
               to={`/${lab.slug}`}
               key={lab.id}
@@ -66,10 +65,10 @@ export default function CourseSidebar({ currentLabId, activeLesson, onSelectLess
         </div>
 
         <div className="curriculum-list">
-          {LABS.map((lab) => {
+          {labs.map((lab) => {
             const isCurrentLab = lab.id === currentLabId;
             const isExpanded = expandedLab === lab.id;
-            const lessons = getLessonsForLab(lab.id);
+            const lessons = lab.lessons;
 
             return (
               <div key={lab.id} className={`accordion-section ${isCurrentLab ? 'current' : ''}`}>

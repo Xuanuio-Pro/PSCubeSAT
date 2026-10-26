@@ -1,0 +1,3085 @@
+{
+  "course_id": "cubesat",
+  "course_title": "CubeSAT Learning Platform",
+  "source_hash": "e570df5f5316f5a1d1712c20f25e04ca2a6c079a4b583ba84f237982e401af9d",
+  "labs": [
+    {
+      "id": 0,
+      "order_no": 0,
+      "title": "Giới thiệu Tổng quan",
+      "objectives": "Tổng quan CubeSat, các thành phần cốt lõi và kiến trúc hệ thống.",
+      "estimated_minutes": 0,
+      "groups": [],
+      "evidence": "Tổng quan các phân hệ",
+      "lessons": [
+        {
+          "id": "overview",
+          "lab_id": 0,
+          "type": "video",
+          "order_no": 0,
+          "title": "Tổng quan bài học",
+          "content": {
+            "group": "Phần 1/3",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document",
+          "lab_id": 0,
+          "type": "document",
+          "order_no": 1,
+          "title": "Tài liệu hướng dẫn",
+          "content": {
+            "group": "Phần 2/3",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung tài liệu giới thiệu Lab 0."
+            ],
+            "markdown": ""
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "components",
+          "lab_id": 0,
+          "type": "practice",
+          "order_no": 2,
+          "title": "Thành phần",
+          "content": {
+            "group": "Phần 3/3",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "",
+            "repository_url": "",
+            "mode": "exploration",
+            "instructions": "",
+            "evidence": "Tổng quan các phân hệ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": true,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "labtest-0",
+          "lab_id": 0,
+          "type": "labtest",
+          "order_no": 3,
+          "title": "Kiểm tra cuối Lab 0",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "order_no": 1,
+      "title": "Máy tính trên bo mạch (OBC)",
+      "objectives": "Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.",
+      "estimated_minutes": 0,
+      "groups": [],
+      "evidence": "Web IDE và kết nối OBC",
+      "lessons": [
+        {
+          "id": "video-1-1",
+          "lab_id": 1,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về vi điều khiển và phân hệ Xử lý trung tâm",
+          "content": {
+            "group": "Phần 1/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-1-1",
+          "lab_id": 1,
+          "type": "document",
+          "order_no": 1,
+          "title": "Kiến trúc phần cứng vi điều khiển và các chuẩn giao tiếp",
+          "content": {
+            "group": "Phần 2/13",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 1.1: Kiến trúc phần cứng vi điều khiển và các chuẩn giao tiếp\n\nOBC thực thi chương trình điều khiển và trao đổi dữ liệu với các phân hệ. Phân biệt chân nguồn, GND và GPIO trước khi đấu nối.\n\nUART truyền dữ liệu nối tiếp; I2C dùng SDA/SCL và địa chỉ thiết bị; SPI dùng clock, đường dữ liệu và chân chọn chip. Đối chiếu sơ đồ bo để chọn đúng chân và mức điện áp.\n\nTrong Arduino, setup() chạy sau khởi động; loop() lặp lại liên tục. Serial giúp quan sát log và nhận lệnh từ máy tính.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-1-2",
+          "lab_id": 1,
+          "type": "video",
+          "order_no": 2,
+          "title": "Cách biên dịch và nạp code lần đầu",
+          "content": {
+            "group": "Phần 3/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-1-2",
+          "lab_id": 1,
+          "type": "document",
+          "order_no": 3,
+          "title": "Hướng dẫn sử dụng Web IDE tích hợp",
+          "content": {
+            "group": "Phần 4/13",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 1.2: Hướng dẫn sử dụng Web IDE tích hợp\n\nMở từng bài thực hành để viết C++ hoặc nối block trong hai vùng Khởi tạo và Lặp liên tục. Sửa C++ cập nhật ngược Blockly; chỉnh block cập nhật lại mã.\n\nChọn đúng ESP32 hoặc ESP32-S3, biên dịch và đọc log trước khi nạp. Kết nối bo qua USB, chọn đúng cổng Serial và quan sát chương trình sau khi reset.\n\nMỗi bài tự lưu riêng trên trình duyệt. Tải file .ino và xuất JSON Blockly để sao lưu/chuyển máy; thay đổi mã yêu cầu biên dịch lại trước khi nạp.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab1-01_Blink_LED",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Nhấp nháy đèn LED để kiểm tra bo mạch",
+          "content": {
+            "group": "Phần 5/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-01_Blink_LED",
+            "repository_url": "https://github.com/PTITCube/Lab1-01_Blink_LED",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab1-02_Serial_Communication",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 5,
+          "title": "Gửi và nhận dữ liệu từ máy tính",
+          "content": {
+            "group": "Phần 6/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-02_Serial_Communication",
+            "repository_url": "https://github.com/PTITCube/Lab1-02_Serial_Communication",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab1-03_Serial_Control_LED",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 6,
+          "title": "Điều khiển LED bằng lệnh gửi từ máy tính",
+          "content": {
+            "group": "Phần 7/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-03_Serial_Control_LED",
+            "repository_url": "https://github.com/PTITCube/Lab1-03_Serial_Control_LED",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-1-3",
+          "lab_id": 1,
+          "type": "video",
+          "order_no": 7,
+          "title": "Giới thiệu về kết nối WiFi và Máy chủ Web",
+          "content": {
+            "group": "Phần 8/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-1-3",
+          "lab_id": 1,
+          "type": "document",
+          "order_no": 8,
+          "title": "Lý thuyết về Máy chủ Web và giao thức truyền tải",
+          "content": {
+            "group": "Phần 9/13",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 1.3: Lý thuyết về Máy chủ Web và giao thức truyền tải\n\nWiFi Station kết nối vào mạng có sẵn; Access Point tạo mạng để thiết bị khác kết nối. Phân biệt tên mạng, địa chỉ IP và trạng thái kết nối.\n\nMáy chủ HTTP tiếp nhận request theo đường dẫn và trả response gồm mã trạng thái, header và nội dung. Trình duyệt gửi yêu cầu để đọc trạng thái hoặc điều khiển LED.\n\nĐọc địa chỉ IP trên Serial, kiểm tra máy tính ở đúng mạng. Không đưa mật khẩu WiFi thực vào kho mã hoặc báo cáo công khai.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab1-04_WiFi_Connection",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 9,
+          "title": "Kết nối vào mạng WiFi có sẵn",
+          "content": {
+            "group": "Phần 10/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-04_WiFi_Connection",
+            "repository_url": "https://github.com/PTITCube/Lab1-04_WiFi_Connection",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab1-05_WiFi_AP_Mode",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 10,
+          "title": "Phát WiFi từ vệ tinh",
+          "content": {
+            "group": "Phần 11/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-05_WiFi_AP_Mode",
+            "repository_url": "https://github.com/PTITCube/Lab1-05_WiFi_AP_Mode",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab1-06_Web_Server_LED",
+          "lab_id": 1,
+          "type": "practice",
+          "order_no": 11,
+          "title": "Dựng máy chủ điều khiển LED qua trình duyệt",
+          "content": {
+            "group": "Phần 12/13",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab1-06_Web_Server_LED",
+            "repository_url": "https://github.com/PTITCube/Lab1-06_Web_Server_LED",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Web IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-1",
+          "lab_id": 1,
+          "type": "document",
+          "order_no": 12,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Phần 13/13",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nHoàn thiện kỹ năng lập trình cơ bản và kết nối mạng cho vi điều khiển chính.\n\n## Minh chứng đầu ra\n\nWeb IDE và kết nối OBC"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-1",
+          "lab_id": 1,
+          "type": "labtest",
+          "order_no": 13,
+          "title": "Kiểm tra cuối Lab 1",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "order_no": 2,
+      "title": "Phân hệ Năng lượng (EPS)",
+      "objectives": "Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Nguồn và pin",
+        "ADC",
+        "Thư viện pin",
+        "Tiết kiệm năng lượng"
+      ],
+      "evidence": "Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng",
+      "lessons": [
+        {
+          "id": "video-2-1",
+          "lab_id": 2,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về Hệ thống Nguồn trên vệ tinh",
+          "content": {
+            "group": "Nguồn và pin",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-2-1",
+          "lab_id": 2,
+          "type": "document",
+          "order_no": 1,
+          "title": "Tổng quan hệ thống Nguồn (Pin, Mạch sạc, Chuyển đổi điện áp)",
+          "content": {
+            "group": "Nguồn và pin",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 2.1: Tổng quan hệ thống Nguồn (Pin, Mạch sạc, Chuyển đổi điện áp)\n\nEPS phân phối năng lượng từ pin và nguồn sạc đến các phân hệ. Xác định điện áp định mức và yêu cầu dòng của từng tải theo tài liệu phần cứng.\n\nĐiện áp ADC có thể đã qua cầu chia áp. Quy đổi theo cấu hình đo và tỷ số chia áp thực tế trước khi suy ra điện áp pin.\n\nPhần trăm pin là ước lượng phụ thuộc loại pin và thuật toán. Đối chiếu điện áp với đồng hồ và quan sát khi tải hoạt động.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 2: Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-2-2",
+          "lab_id": 2,
+          "type": "video",
+          "order_no": 2,
+          "title": "Cách chuyển đổi giá trị điện áp Analog",
+          "content": {
+            "group": "ADC",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab2-01a_Battery_GPIO",
+          "lab_id": 2,
+          "type": "practice",
+          "order_no": 3,
+          "title": "Đọc điện áp pin bằng ADC (Analog)",
+          "content": {
+            "group": "ADC",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab2-01a_Battery_GPIO",
+            "repository_url": "https://github.com/PTITCube/Lab2-01a_Battery_GPIO",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab2-01b_Battery_Library",
+          "lab_id": 2,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Tính toán phần trăm pin vệ tinh (Dùng thư viện PTITCube)",
+          "content": {
+            "group": "Thư viện pin",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab2-01b_Battery_Library",
+            "repository_url": "https://github.com/PTITCube/Lab2-01b_Battery_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "document-2-2",
+          "lab_id": 2,
+          "type": "document",
+          "order_no": 5,
+          "title": "Quản lý rủi ro sụt áp và các chế độ ngủ",
+          "content": {
+            "group": "Tiết kiệm năng lượng",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 2.2: Quản lý rủi ro sụt áp và các chế độ ngủ\n\nTải hoạt động đồng thời có thể làm nguồn sụt áp. Ghi nhận điện áp và log reset để phân biệt lỗi phần mềm với vấn đề cấp nguồn.\n\nDeep sleep giảm điện năng bằng cách tạm dừng phần lớn hoạt động. Xác định nguồn đánh thức và chu kỳ lấy mẫu trước khi cho bo ngủ.\n\nHoàn tất ghi file và truyền dữ liệu trước khi ngủ. So sánh thời gian hoạt động/ngủ với yêu cầu nhiệm vụ.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 2: Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab2-02_Power_Saving",
+          "lab_id": 2,
+          "type": "practice",
+          "order_no": 6,
+          "title": "Kích hoạt chế độ ngủ sâu tiết kiệm năng lượng",
+          "content": {
+            "group": "Tiết kiệm năng lượng",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab2-02_Power_Saving",
+            "repository_url": "https://github.com/PTITCube/Lab2-02_Power_Saving",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-2",
+          "lab_id": 2,
+          "type": "document",
+          "order_no": 7,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Tiết kiệm năng lượng",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nNắm vững cách quản lý, tối ưu và tiết kiệm điện năng cho vệ tinh.\n\n## Minh chứng đầu ra\n\nĐọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-2",
+          "lab_id": 2,
+          "type": "labtest",
+          "order_no": 8,
+          "title": "Kiểm tra cuối Lab 2",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "order_no": 3,
+      "title": "Xử lý Dữ liệu và Lệnh (CDH)",
+      "objectives": "Giao tiếp với thẻ nhớ để ghi nhận dữ liệu.",
+      "estimated_minutes": 0,
+      "groups": [
+        "MicroSD/SPI",
+        "Ghi log",
+        "Quản lý file qua lệnh"
+      ],
+      "evidence": "File log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ",
+      "lessons": [
+        {
+          "id": "video-3-1",
+          "lab_id": 3,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về Hệ thống Lưu trữ dữ liệu dự phòng trên vệ tinh",
+          "content": {
+            "group": "MicroSD/SPI",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-3-1",
+          "lab_id": 3,
+          "type": "document",
+          "order_no": 1,
+          "title": "Giao thức giao tiếp nối tiếp và kiến trúc hệ thống tập tin",
+          "content": {
+            "group": "MicroSD/SPI",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 3.1: Giao thức giao tiếp nối tiếp và kiến trúc hệ thống tập tin\n\nMicroSD có thể giao tiếp qua SPI. Kiểm tra CS, SCK, MOSI, MISO và nguồn; nhiều thiết bị cùng bus cần chân chọn riêng.\n\nHệ thống tập tin tổ chức dữ liệu theo đường dẫn, thư mục và file. Phân biệt tạo mới, ghi đè và ghi nối tiếp khi lưu log.\n\nKiểm tra kết quả mở/ghi file, đóng hoặc flush phù hợp. Đọc lại dữ liệu và xử lý trường hợp không có thẻ; không rút nguồn khi đang ghi.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 3: Giao tiếp với thẻ nhớ để ghi nhận dữ liệu.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-3-2",
+          "lab_id": 3,
+          "type": "video",
+          "order_no": 2,
+          "title": "Thao tác đọc/ghi file an toàn, tránh hỏng thẻ nhớ",
+          "content": {
+            "group": "MicroSD/SPI",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab3-01a_MicroSD_SPI",
+          "lab_id": 3,
+          "type": "practice",
+          "order_no": 3,
+          "title": "Giao tiếp thẻ nhớ bằng thư viện SD gốc (SPI thô)",
+          "content": {
+            "group": "MicroSD/SPI",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab3-01a_MicroSD_SPI",
+            "repository_url": "https://github.com/PTITCube/Lab3-01a_MicroSD_SPI",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "File log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab3-01b_MicroSD_Library",
+          "lab_id": 3,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Ghi log dữ liệu tự động (Dùng thư viện PTITCube)",
+          "content": {
+            "group": "Ghi log",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab3-01b_MicroSD_Library",
+            "repository_url": "https://github.com/PTITCube/Lab3-01b_MicroSD_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "File log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab3-02_Linux_FS_Commands",
+          "lab_id": 3,
+          "type": "practice",
+          "order_no": 5,
+          "title": "Xây dựng hệ thống lệnh quản lý file qua máy tính",
+          "content": {
+            "group": "Quản lý file qua lệnh",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab3-02_Linux_FS_Commands",
+            "repository_url": "https://github.com/PTITCube/Lab3-02_Linux_FS_Commands",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "File log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-3",
+          "lab_id": 3,
+          "type": "document",
+          "order_no": 6,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Quản lý file qua lệnh",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nCấu hình thành công hộp đen lưu trữ dữ liệu liên tục cho vệ tinh.\n\n## Minh chứng đầu ra\n\nFile log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-3",
+          "lab_id": 3,
+          "type": "labtest",
+          "order_no": 7,
+          "title": "Kiểm tra cuối Lab 3",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "order_no": 4,
+      "title": "Phân hệ Cảm biến (Sensor)",
+      "objectives": "Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Môi trường",
+        "IMU",
+        "GPS",
+        "Camera",
+        "Tích hợp cảm biến"
+      ],
+      "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng",
+      "lessons": [
+        {
+          "id": "video-4-1",
+          "lab_id": 4,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu tổng quan về hệ thống Cảm biến và Máy ảnh trên vệ tinh",
+          "content": {
+            "group": "Môi trường",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-4-1",
+          "lab_id": 4,
+          "type": "document",
+          "order_no": 1,
+          "title": "Nguyên lý hoạt động và giao tiếp truyền dữ liệu của các cảm biến qua mạng I2C",
+          "content": {
+            "group": "Môi trường",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 4.1: Nguyên lý hoạt động và giao tiếp truyền dữ liệu của các cảm biến qua mạng I2C\n\nI2C sử dụng SDA và SCL để giao tiếp với thiết bị có địa chỉ riêng. Kiểm tra nguồn, GND chung và điện trở kéo lên theo phần cứng.\n\nĐọc thanh ghi gồm chọn địa chỉ thiết bị, thanh ghi và nhận số byte tương ứng. Đối chiếu thứ tự byte, độ nhạy và đơn vị theo datasheet.\n\nSo sánh cách đọc thanh ghi với thư viện PTITCube. Quan sát dữ liệu khi đứng yên và khi thay đổi môi trường/tư thế để nhận biết lỗi đo.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 4: Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-4-2",
+          "lab_id": 4,
+          "type": "video",
+          "order_no": 2,
+          "title": "Tương tác với cảm biến nhiệt độ và áp suất",
+          "content": {
+            "group": "Môi trường",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-01a_Environment_I2C",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 3,
+          "title": "Đọc cảm biến BMP280 bằng giao tiếp I2C",
+          "content": {
+            "group": "Môi trường",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-01a_Environment_I2C",
+            "repository_url": "https://github.com/PTITCube/Lab4-01a_Environment_I2C",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-01b_Environment_Library",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Tối ưu hóa đọc dữ liệu cảm biến môi trường",
+          "content": {
+            "group": "Môi trường",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-01b_Environment_Library",
+            "repository_url": "https://github.com/PTITCube/Lab4-01b_Environment_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-4-3",
+          "lab_id": 4,
+          "type": "video",
+          "order_no": 5,
+          "title": "Tương tác với cảm biến gia tốc và đo góc nghiêng",
+          "content": {
+            "group": "IMU",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-02a_IMU_I2C",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 6,
+          "title": "Đọc thanh ghi thô MPU6050/6500 bằng I2C",
+          "content": {
+            "group": "IMU",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-02a_IMU_I2C",
+            "repository_url": "https://github.com/PTITCube/Lab4-02a_IMU_I2C",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-02b_IMU_Library",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 7,
+          "title": "Tính toán góc nghiêng vệ tinh (Attitude)",
+          "content": {
+            "group": "IMU",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-02b_IMU_Library",
+            "repository_url": "https://github.com/PTITCube/Lab4-02b_IMU_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-4-4",
+          "lab_id": 4,
+          "type": "video",
+          "order_no": 8,
+          "title": "Tương tác và lấy dữ liệu tọa độ từ module định vị",
+          "content": {
+            "group": "GPS",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-4-2",
+          "lab_id": 4,
+          "type": "document",
+          "order_no": 9,
+          "title": "Trích xuất và phân tích định dạng dữ liệu thô trả về từ module định vị",
+          "content": {
+            "group": "GPS",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 4.2: Trích xuất và phân tích định dạng dữ liệu thô trả về từ module định vị\n\nGPS thường phát câu NMEA qua UART. Thu thập một dòng hoàn chỉnh trước khi tách trường và kiểm tra checksum theo định dạng module.\n\nPhân biệt thời gian, trạng thái fix, vĩ độ, kinh độ và cao độ. Đổi tọa độ NMEA đúng định dạng và dấu theo bán cầu.\n\nChỉ dùng vị trí khi có fix hợp lệ; không coi giá trị 0 hoặc bản tin cũ là tọa độ hiện tại. Đối chiếu dữ liệu thô với thư viện.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 4: Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab4-03a_GPS_UART",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 10,
+          "title": "Đọc dữ liệu chuẩn NMEA thô từ module qua UART",
+          "content": {
+            "group": "GPS",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-03a_GPS_UART",
+            "repository_url": "https://github.com/PTITCube/Lab4-03a_GPS_UART",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-03b_GPS_Library",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 11,
+          "title": "Bóc tách tọa độ kinh tuyến, vĩ tuyến tự động",
+          "content": {
+            "group": "GPS",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-03b_GPS_Library",
+            "repository_url": "https://github.com/PTITCube/Lab4-03b_GPS_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-4-5",
+          "lab_id": 4,
+          "type": "video",
+          "order_no": 12,
+          "title": "Tương tác, gửi lệnh chụp ảnh và thu thập hình ảnh từ module Máy ảnh",
+          "content": {
+            "group": "Camera",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-04a_Camera_UART",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 13,
+          "title": "Gửi tập lệnh điều khiển máy ảnh qua UART",
+          "content": {
+            "group": "Camera",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-04a_Camera_UART",
+            "repository_url": "https://github.com/PTITCube/Lab4-04a_Camera_UART",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-04b_Camera_Library",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 14,
+          "title": "Chụp ảnh và hiển thị về màn hình",
+          "content": {
+            "group": "Camera",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-04b_Camera_Library",
+            "repository_url": "https://github.com/PTITCube/Lab4-04b_Camera_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab4-05_Read_All_Sensors",
+          "lab_id": 4,
+          "type": "practice",
+          "order_no": 15,
+          "title": "Tổng hợp đọc tất cả cảm biến",
+          "content": {
+            "group": "Tích hợp cảm biến",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab4-05_Read_All_Sensors",
+            "repository_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-4",
+          "lab_id": 4,
+          "type": "document",
+          "order_no": 16,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Tích hợp cảm biến",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nXây dựng thành công hệ thống thu thập dữ liệu đa cảm biến toàn diện.\n\n## Minh chứng đầu ra\n\nDữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-4",
+          "lab_id": 4,
+          "type": "labtest",
+          "order_no": 17,
+          "title": "Kiểm tra cuối Lab 4",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "order_no": 5,
+      "title": "Truyền thông và Trạm mặt đất",
+      "objectives": "Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Gửi telemetry",
+        "Nhận lệnh",
+        "Liên lạc hai chiều"
+      ],
+      "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối",
+      "lessons": [
+        {
+          "id": "video-5-1",
+          "lab_id": 5,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về phân hệ Giao tiếp Viễn thông không dây",
+          "content": {
+            "group": "Gửi telemetry",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-5-1",
+          "lab_id": 5,
+          "type": "document",
+          "order_no": 1,
+          "title": "Sóng vô tuyến và module truyền phát tín hiệu tầm xa",
+          "content": {
+            "group": "Gửi telemetry",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 5.1: Sóng vô tuyến và module truyền phát tín hiệu tầm xa\n\nĐường truyền vô tuyến phụ thuộc tần số, công suất, anten và môi trường. Kiểm tra cấu hình hai đầu và hướng dẫn module trước khi truyền.\n\nPhân biệt UART giữa vi điều khiển và module với đường vô tuyến giữa hai module. Theo dõi log tại cả bên gửi và nhận.\n\nThử bản tin ngắn có số thứ tự để đo mất gói và thời gian nhận, sau đó mới tích hợp dữ liệu cảm biến.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 5: Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-5-2",
+          "lab_id": 5,
+          "type": "video",
+          "order_no": 2,
+          "title": "Hướng dẫn cấu hình các tham số vật lý của sóng vô tuyến",
+          "content": {
+            "group": "Gửi telemetry",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab5-01a_Send_Telemetry_UART",
+          "lab_id": 5,
+          "type": "practice",
+          "order_no": 3,
+          "title": "Cấu hình thanh ghi LoRa và phát dữ liệu qua UART",
+          "content": {
+            "group": "Gửi telemetry",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab5-01a_Send_Telemetry_UART",
+            "repository_url": "https://github.com/PTITCube/Lab5-01a_Send_Telemetry_UART",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab5-01b_Send_Telemetry_Library",
+          "lab_id": 5,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Đóng gói packet Telemetry hoàn chỉnh",
+          "content": {
+            "group": "Gửi telemetry",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab5-01b_Send_Telemetry_Library",
+            "repository_url": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "document-5-2",
+          "lab_id": 5,
+          "type": "document",
+          "order_no": 5,
+          "title": "Đóng gói bản tin và kiến trúc Trạm mặt đất",
+          "content": {
+            "group": "Nhận lệnh",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 5.2: Đóng gói bản tin và kiến trúc Trạm mặt đất\n\nPacket cần có ranh giới, loại bản tin, định danh thiết bị và payload. Hai đầu thống nhất cách mã hóa, độ dài và kiểm tra lỗi.\n\nTelemetry truyền trạng thái/giá trị đo về trạm; command gửi yêu cầu điều khiển lên vệ tinh. Kiểm tra lệnh trước khi thực thi và phản hồi kết quả xử lý.\n\nPhân biệt dữ liệu mới, đã cũ và mất kết nối. Lưu log gửi/nhận để truy vết sai lệch hoặc trùng gói.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 5: Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab5-02a_Receive_Command_UART",
+          "lab_id": 5,
+          "type": "practice",
+          "order_no": 6,
+          "title": "Lắng nghe chuỗi dữ liệu thô",
+          "content": {
+            "group": "Nhận lệnh",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab5-02a_Receive_Command_UART",
+            "repository_url": "https://github.com/PTITCube/Lab5-02a_Receive_Command_UART",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab5-02b_Receive_Command_Library",
+          "lab_id": 5,
+          "type": "practice",
+          "order_no": 7,
+          "title": "Giải mã lệnh (Command) từ Trái Đất",
+          "content": {
+            "group": "Nhận lệnh",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab5-02b_Receive_Command_Library",
+            "repository_url": "https://github.com/PTITCube/Lab5-02b_Receive_Command_Library",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-5-3",
+          "lab_id": 5,
+          "type": "video",
+          "order_no": 8,
+          "title": "Xây dựng Trạm mặt đất để thu phát tín hiệu",
+          "content": {
+            "group": "Nhận lệnh",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab5-03_Satellite_Comm_System",
+          "lab_id": 5,
+          "type": "practice",
+          "order_no": 9,
+          "title": "Xây dựng hệ thống liên lạc vệ tinh và trạm mặt đất",
+          "content": {
+            "group": "Liên lạc hai chiều",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab5-03_Satellite_Comm_System",
+            "repository_url": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-5",
+          "lab_id": 5,
+          "type": "document",
+          "order_no": 10,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Liên lạc hai chiều",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nThiết lập thành công luồng giao tiếp vô tuyến hai chiều giữa vệ tinh và mặt đất.\n\n## Minh chứng đầu ra\n\nBản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-5",
+          "lab_id": 5,
+          "type": "labtest",
+          "order_no": 11,
+          "title": "Kiểm tra cuối Lab 5",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "order_no": 6,
+      "title": "Cấu trúc và vận hành đa nhiệm",
+      "objectives": "Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Lắp ráp cơ khí",
+        "Task/scheduler",
+        "Khóa tài nguyên",
+        "Watchdog"
+      ],
+      "evidence": "Checklist lắp ráp, lịch chạy task và minh chứng phục hồi khi treo",
+      "lessons": [
+        {
+          "id": "video-6-1",
+          "lab_id": 6,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về cơ khí và cấu trúc bảo vệ vệ tinh",
+          "content": {
+            "group": "Lắp ráp cơ khí",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-6-1",
+          "lab_id": 6,
+          "type": "document",
+          "order_no": 1,
+          "title": "Khái quát về vật liệu và cấu trúc cơ khí của vệ tinh",
+          "content": {
+            "group": "Lắp ráp cơ khí",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 6.1: Khái quát về vật liệu và cấu trúc cơ khí của vệ tinh\n\nKhung cơ khí giữ vị trí và bảo vệ các bo. Đối chiếu kích thước, điểm bắt vít, khoảng cách cách điện và đường đi dây theo bản vẽ.\n\nLắp từng cụm khi đã ngắt nguồn; kiểm tra vật dẫn có thể gây chạm chập và tránh kéo căng cáp.\n\nSau lắp ráp, kiểm tra nguồn và từng phân hệ trước khi vận hành toàn bộ hệ thống.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-6-2",
+          "lab_id": 6,
+          "type": "video",
+          "order_no": 2,
+          "title": "Hướng dẫn lắp ráp khung vệ tinh cơ khí",
+          "content": {
+            "group": "Lắp ráp cơ khí",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "video-6-3",
+          "lab_id": 6,
+          "type": "video",
+          "order_no": 3,
+          "title": "Tại sao phần mềm vệ tinh cần Hệ điều hành?",
+          "content": {
+            "group": "Task/scheduler",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-6-2",
+          "lab_id": 6,
+          "type": "document",
+          "order_no": 4,
+          "title": "Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực",
+          "content": {
+            "group": "Task/scheduler",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 6.2: Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực\n\nTác vụ RTOS có hàm thực thi, stack và độ ưu tiên. Bộ điều phối phân chia thời gian chạy cho các tác vụ sẵn sàng.\n\nPhân tách nháy LED, lấy mẫu và truyền tin theo chu kỳ. Tránh vòng bận không nhường CPU; dùng cơ chế chờ của RTOS.\n\nGhi thời gian thực thi và kiểm tra tác vụ ưu tiên cao có làm đói tác vụ khác hay không.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab6-01_Multitasking_Scheduler",
+          "lab_id": 6,
+          "type": "practice",
+          "order_no": 5,
+          "title": "Chạy song song nháy đèn, đọc cảm biến, gửi thông tin",
+          "content": {
+            "group": "Task/scheduler",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab6-01_Multitasking_Scheduler",
+            "repository_url": "https://github.com/PTITCube/Lab6-01_Multitasking_Scheduler",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Checklist lắp ráp, lịch chạy task và minh chứng phục hồi khi treo"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "document-6-3",
+          "lab_id": 6,
+          "type": "document",
+          "order_no": 6,
+          "title": "Tranh chấp tài nguyên và cơ chế khóa bảo vệ",
+          "content": {
+            "group": "Khóa tài nguyên",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 6.3: Tranh chấp tài nguyên và cơ chế khóa bảo vệ\n\nHai tác vụ truy cập đồng thời dữ liệu hoặc bus có thể gây race condition. Xác định tài nguyên dùng chung và vùng cần bảo vệ.\n\nDùng mutex cho tài nguyên cần độc quyền; queue giúp truyền dữ liệu giữa tác vụ. Không giữ khóa khi chờ lâu hoặc chờ tài nguyên khác thiếu thứ tự rõ ràng.\n\nThiết kế timeout và đường xử lý lỗi; thử tình huống mất thiết bị, lỗi truyền và tác vụ dừng bất thường.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-6-4",
+          "lab_id": 6,
+          "type": "video",
+          "order_no": 7,
+          "title": "Thực hành gỡ lỗi treo hệ thống bằng Bộ định thời",
+          "content": {
+            "group": "Watchdog",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-6-4",
+          "lab_id": 6,
+          "type": "document",
+          "order_no": 8,
+          "title": "Bộ định thời Watchdog Timer trong hàng không vũ trụ",
+          "content": {
+            "group": "Watchdog",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 6.4: Bộ định thời Watchdog Timer trong hàng không vũ trụ\n\nWatchdog phát hiện phần mềm không tiến triển trong thời gian cho phép. Chọn timeout dựa trên thời gian xử lý dài nhất đã đo.\n\nChỉ cập nhật watchdog khi tác vụ đã hoàn thành bước kiểm tra cần thiết. Cập nhật vô điều kiện có thể che việc hệ thống bị treo.\n\nThử gây treo có kiểm soát, đọc nguyên nhân reset và kiểm tra khả năng khởi động lại. Watchdog bổ sung phục hồi, không bảo đảm phần mềm tuyệt đối không lỗi.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab6-02_Watchdog_And_Event",
+          "lab_id": 6,
+          "type": "practice",
+          "order_no": 9,
+          "title": "Kích hoạt tự động khởi động lại hệ thống khi bị treo",
+          "content": {
+            "group": "Watchdog",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab6-02_Watchdog_And_Event",
+            "repository_url": "https://github.com/PTITCube/Lab6-02_Watchdog_And_Event",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Checklist lắp ráp, lịch chạy task và minh chứng phục hồi khi treo"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-6",
+          "lab_id": 6,
+          "type": "document",
+          "order_no": 10,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Watchdog",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nHoàn thiện bộ khung vật lý và đảm bảo độ tin cậy tuyệt đối cho phần mềm bay.\n\n## Minh chứng đầu ra\n\nChecklist lắp ráp, lịch chạy task và minh chứng phục hồi khi treo"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-6",
+          "lab_id": 6,
+          "type": "labtest",
+          "order_no": 11,
+          "title": "Kiểm tra cuối Lab 6",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "order_no": 7,
+      "title": "Tích hợp Hệ thống và Nhiệm vụ",
+      "objectives": "Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Multiplexer",
+        "Chương trình tổng hợp",
+        "RTOS"
+      ],
+      "evidence": "Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ",
+      "lessons": [
+        {
+          "id": "video-7-1",
+          "lab_id": 7,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về bài toán Tích hợp Hệ thống trên vệ tinh",
+          "content": {
+            "group": "Multiplexer",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-7-1",
+          "lab_id": 7,
+          "type": "document",
+          "order_no": 1,
+          "title": "Kỹ thuật ghép kênh bằng IC phần cứng",
+          "content": {
+            "group": "Multiplexer",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 7.1: Kỹ thuật ghép kênh bằng IC phần cứng\n\nGhép kênh cho phép dùng chung đường giao tiếp giữa nhiều thiết bị. Phần mềm cần chọn đúng kênh trước mỗi phiên trao đổi.\n\nKiểm tra sơ đồ MUX, chân điều khiển và trạng thái mặc định; tránh hai thiết bị cùng điều khiển đường tín hiệu.\n\nTrong đa nhiệm, bảo vệ việc chọn kênh và giao tiếp bằng cùng cơ chế khóa để tác vụ khác không đổi kênh giữa phiên.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 7: Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab7-01_Camera_Multiplexer",
+          "lab_id": 7,
+          "type": "practice",
+          "order_no": 2,
+          "title": "Chuyển mạch luân phiên phần cứng",
+          "content": {
+            "group": "Multiplexer",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab7-01_Camera_Multiplexer",
+            "repository_url": "https://github.com/PTITCube/Lab7-01_Camera_Multiplexer",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "video-7-2",
+          "lab_id": 7,
+          "type": "video",
+          "order_no": 3,
+          "title": "Phân tích luồng dữ liệu của Phần mềm bay tổng hợp",
+          "content": {
+            "group": "Chương trình tổng hợp",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-7-2",
+          "lab_id": 7,
+          "type": "document",
+          "order_no": 4,
+          "title": "Kiến trúc phân lớp phần mềm Vệ tinh toàn diện",
+          "content": {
+            "group": "Chương trình tổng hợp",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 7.2: Kiến trúc phân lớp phần mềm Vệ tinh toàn diện\n\nTách lớp truy cập phần cứng, dịch vụ phân hệ, xử lý nhiệm vụ và giao tiếp trạm. Mỗi lớp có trách nhiệm và đầu vào/đầu ra rõ ràng.\n\nBản tuần tự xử lý công việc theo vòng lặp; bản RTOS chia tác vụ và đồng bộ dữ liệu. So sánh độ trễ, tài nguyên và khả năng phục hồi.\n\nThống nhất đơn vị, chu kỳ lấy mẫu và quy tắc lỗi. Kiểm thử từng phân hệ rồi chạy kịch bản toàn hệ thống có ghi log.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 7: Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "Lab7-02_Full_Satellite_Program",
+          "lab_id": 7,
+          "type": "practice",
+          "order_no": 5,
+          "title": "Phần mềm vệ tinh hoàn chỉnh với vòng lặp tuần tự",
+          "content": {
+            "group": "Chương trình tổng hợp",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab7-02_Full_Satellite_Program",
+            "repository_url": "https://github.com/PTITCube/Lab7-02_Full_Satellite_Program",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "Lab7-03_RTOS_Satellite_System",
+          "lab_id": 7,
+          "type": "practice",
+          "order_no": 6,
+          "title": "Hệ thống vệ tinh chạy đa nhiệm RTOS",
+          "content": {
+            "group": "RTOS",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab7-03_RTOS_Satellite_System",
+            "repository_url": "https://github.com/PTITCube/Lab7-03_RTOS_Satellite_System",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-7",
+          "lab_id": 7,
+          "type": "document",
+          "order_no": 7,
+          "title": "Tổng kết",
+          "content": {
+            "group": "RTOS",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nVệ tinh đã tích hợp hoàn chỉnh và sẵn sàng cho chuyến bay thử nghiệm thực tế.\n\n## Minh chứng đầu ra\n\nKiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-7",
+          "lab_id": 7,
+          "type": "labtest",
+          "order_no": 8,
+          "title": "Kiểm tra cuối Lab 7",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "order_no": 8,
+      "title": "Capstone Mini-Project",
+      "objectives": "Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.",
+      "estimated_minutes": 0,
+      "groups": [
+        "Yêu cầu nhiệm vụ",
+        "Thiết kế",
+        "Triển khai",
+        "Báo cáo/demo"
+      ],
+      "evidence": "Mã nguồn, cấu hình dashboard, dữ liệu demo và báo cáo theo rubric",
+      "lessons": [
+        {
+          "id": "video-8-1",
+          "lab_id": 8,
+          "type": "video",
+          "order_no": 0,
+          "title": "Giới thiệu về Kỹ thuật Hệ thống trong thiết kế và chế tạo vệ tinh",
+          "content": {
+            "group": "Yêu cầu nhiệm vụ",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "document-8-1",
+          "lab_id": 8,
+          "type": "document",
+          "order_no": 1,
+          "title": "Giới thiệu lược đồ ngôn ngữ mô hình hóa trong thiết kế hệ thống",
+          "content": {
+            "group": "Thiết kế",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 8.1: Giới thiệu lược đồ ngôn ngữ mô hình hóa trong thiết kế hệ thống\n\nBắt đầu từ yêu cầu nhiệm vụ và tiêu chí đo được. Mô tả ranh giới hệ thống, các phân hệ, luồng dữ liệu và giao diện.\n\nDùng sơ đồ khối, trạng thái hoặc trình tự để giải thích hoạt động. Liên kết mỗi yêu cầu với phép kiểm chứng cụ thể.\n\nTheo dõi thay đổi thiết kế, giả định và kết quả kiểm thử để báo cáo có thể truy vết.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 8: Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "document-8-2",
+          "lab_id": 8,
+          "type": "document",
+          "order_no": 2,
+          "title": "Gợi ý ý tưởng Đồ án (Vệ tinh khí tượng, Vệ tinh cảnh báo cháy rừng)",
+          "content": {
+            "group": "Thiết kế",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Doc 8.2: Gợi ý ý tưởng Đồ án (Vệ tinh khí tượng, Vệ tinh cảnh báo cháy rừng)\n\nVới vệ tinh khí tượng, xác định đại lượng đo, đơn vị, chu kỳ lấy mẫu và cách lưu/truyền dữ liệu. Với cảnh báo cháy, phân biệt tín hiệu quan sát với kết luận cần thêm bằng chứng.\n\nDashboard cần nguồn dữ liệu, định danh thiết bị và trạng thái mới/cũ/mất kết nối rõ ràng. Không trộn dữ liệu minh họa với dữ liệu phần cứng.\n\nChọn nhiệm vụ có tiêu chí kiểm chứng phù hợp bộ kit; chuẩn bị yêu cầu, kiến trúc, chương trình và số liệu thực nghiệm.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 8: Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "video-8-2",
+          "lab_id": 8,
+          "type": "video",
+          "order_no": 3,
+          "title": "Hướng dẫn cách tạo ra Dashboard trực quan hóa dữ liệu vệ tinh",
+          "content": {
+            "group": "Triển khai",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: cung cấp URL video thật và thời lượng."
+            ],
+            "url": ""
+          },
+          "completion_rule": {
+            "kind": "watched_ratio",
+            "ratio": 0.9
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        },
+        {
+          "id": "Lab8-01_Custom_Mission",
+          "lab_id": 8,
+          "type": "practice",
+          "order_no": 4,
+          "title": "Khung mã nguồn tiêu chuẩn để tự tùy biến",
+          "content": {
+            "group": "Triển khai",
+            "estimated_minutes": null,
+            "todos": [
+              "TODO GV: bổ sung hướng dẫn, rubric, kết quả mong đợi và lỗi thường gặp từ học liệu đã duyệt."
+            ],
+            "exercise_id": "Lab8-01_Custom_Mission",
+            "repository_url": "https://github.com/PTITCube/Lab8-01_Custom_Mission",
+            "mode": "hardware",
+            "instructions": "",
+            "evidence": "Mã nguồn, cấu hình dashboard, dữ liệu demo và báo cáo theo rubric"
+          },
+          "completion_rule": {
+            "kind": "teacher_review"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": false
+        },
+        {
+          "id": "summary-8",
+          "lab_id": 8,
+          "type": "document",
+          "order_no": 5,
+          "title": "Tổng kết",
+          "content": {
+            "group": "Báo cáo/demo",
+            "estimated_minutes": null,
+            "todos": [],
+            "markdown": "# Tổng kết\n\nHoàn tất đồ án, sinh viên nắm vững quy trình thiết kế và vận hành sứ mệnh vệ tinh độc lập.\n\n## Minh chứng đầu ra\n\nMã nguồn, cấu hình dashboard, dữ liệu demo và báo cáo theo rubric"
+          },
+          "completion_rule": {
+            "kind": "read_confirmation"
+          },
+          "preview_allowed": false,
+          "default_enabled": true,
+          "default_required": true
+        },
+        {
+          "id": "labtest-8",
+          "lab_id": 8,
+          "type": "labtest",
+          "order_no": 6,
+          "title": "Kiểm tra cuối Lab 8",
+          "content": {
+            "todos": [
+              "TODO GV: ngân hàng 20 câu chưa được soạn/duyệt."
+            ],
+            "bank_ready": false
+          },
+          "completion_rule": {
+            "kind": "quiz_pass",
+            "pass_score": 4
+          },
+          "preview_allowed": false,
+          "default_enabled": false,
+          "default_required": false
+        }
+      ]
+    }
+  ],
+  "legacy": [
+    {
+      "id": 0,
+      "slug": "lab0",
+      "title": "Giới thiệu Tổng quan",
+      "subtitle": "PTIT STEM CubeSat Overview",
+      "icon": "🛰️",
+      "color": "var(--accent-blue)",
+      "bgColor": "var(--accent-blue-glow)",
+      "description": "Tổng quan CubeSat, các thành phần cốt lõi và kiến trúc hệ thống.",
+      "features": [
+        "video",
+        "document",
+        "componentViewer"
+      ],
+      "videoUrl": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "docPath": "lab0-intro",
+      "lessons": [
+        {
+          "id": "overview",
+          "type": "video",
+          "label": "01",
+          "title": "Tổng quan bài học",
+          "reading": ""
+        },
+        {
+          "id": "document",
+          "type": "document",
+          "label": "02",
+          "title": "Tài liệu hướng dẫn",
+          "reading": "# 02: Tài liệu hướng dẫn\n\n\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 0: Tổng quan CubeSat, các thành phần cốt lõi và kiến trúc hệ thống.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "components",
+          "type": "components",
+          "label": "03",
+          "title": "Thành phần",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "slug": "lab1",
+      "title": "Máy tính trên bo mạch (OBC)",
+      "subtitle": "On-Board Computer — ESP32",
+      "icon": "🖥️",
+      "color": "var(--accent-purple)",
+      "bgColor": "var(--accent-purple-glow)",
+      "description": "Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial"
+      ],
+      "videoUrl": "",
+      "docPath": "lab1-obc",
+      "lessons": [
+        {
+          "id": "video-1-1",
+          "type": "video",
+          "label": "Video 1.1",
+          "title": "Giới thiệu về vi điều khiển và phân hệ Xử lý trung tâm",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-1-1",
+          "type": "document",
+          "label": "Doc 1.1",
+          "title": "Kiến trúc phần cứng vi điều khiển và các chuẩn giao tiếp",
+          "reading": "# Doc 1.1: Kiến trúc phần cứng vi điều khiển và các chuẩn giao tiếp\n\nOBC thực thi chương trình điều khiển và trao đổi dữ liệu với các phân hệ. Phân biệt chân nguồn, GND và GPIO trước khi đấu nối.\n\nUART truyền dữ liệu nối tiếp; I2C dùng SDA/SCL và địa chỉ thiết bị; SPI dùng clock, đường dữ liệu và chân chọn chip. Đối chiếu sơ đồ bo để chọn đúng chân và mức điện áp.\n\nTrong Arduino, setup() chạy sau khởi động; loop() lặp lại liên tục. Serial giúp quan sát log và nhận lệnh từ máy tính.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-1-2",
+          "type": "video",
+          "label": "Video 1.2",
+          "title": "Cách biên dịch và nạp code lần đầu",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-1-2",
+          "type": "document",
+          "label": "Doc 1.2",
+          "title": "Hướng dẫn sử dụng Web IDE tích hợp",
+          "reading": "# Doc 1.2: Hướng dẫn sử dụng Web IDE tích hợp\n\nMở từng bài thực hành để viết C++ hoặc nối block trong hai vùng Khởi tạo và Lặp liên tục. Sửa C++ cập nhật ngược Blockly; chỉnh block cập nhật lại mã.\n\nChọn đúng ESP32 hoặc ESP32-S3, biên dịch và đọc log trước khi nạp. Kết nối bo qua USB, chọn đúng cổng Serial và quan sát chương trình sau khi reset.\n\nMỗi bài tự lưu riêng trên trình duyệt. Tải file .ino và xuất JSON Blockly để sao lưu/chuyển máy; thay đổi mã yêu cầu biên dịch lại trước khi nạp.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab1-01_Blink_LED",
+          "type": "practice",
+          "label": "Thực hành 01",
+          "title": "Nhấp nháy đèn LED để kiểm tra bo mạch",
+          "exerciseCode": "Lab1-01_Blink_LED",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-01_Blink_LED",
+          "reading": ""
+        },
+        {
+          "id": "Lab1-02_Serial_Communication",
+          "type": "practice",
+          "label": "Thực hành 02",
+          "title": "Gửi và nhận dữ liệu từ máy tính",
+          "exerciseCode": "Lab1-02_Serial_Communication",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-02_Serial_Communication",
+          "reading": ""
+        },
+        {
+          "id": "Lab1-03_Serial_Control_LED",
+          "type": "practice",
+          "label": "Thực hành 03",
+          "title": "Điều khiển LED bằng lệnh gửi từ máy tính",
+          "exerciseCode": "Lab1-03_Serial_Control_LED",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-03_Serial_Control_LED",
+          "reading": ""
+        },
+        {
+          "id": "video-1-3",
+          "type": "video",
+          "label": "Video 1.3",
+          "title": "Giới thiệu về kết nối WiFi và Máy chủ Web",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-1-3",
+          "type": "document",
+          "label": "Doc 1.3",
+          "title": "Lý thuyết về Máy chủ Web và giao thức truyền tải",
+          "reading": "# Doc 1.3: Lý thuyết về Máy chủ Web và giao thức truyền tải\n\nWiFi Station kết nối vào mạng có sẵn; Access Point tạo mạng để thiết bị khác kết nối. Phân biệt tên mạng, địa chỉ IP và trạng thái kết nối.\n\nMáy chủ HTTP tiếp nhận request theo đường dẫn và trả response gồm mã trạng thái, header và nội dung. Trình duyệt gửi yêu cầu để đọc trạng thái hoặc điều khiển LED.\n\nĐọc địa chỉ IP trên Serial, kiểm tra máy tính ở đúng mạng. Không đưa mật khẩu WiFi thực vào kho mã hoặc báo cáo công khai.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 1: Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab1-04_WiFi_Connection",
+          "type": "practice",
+          "label": "Thực hành 04",
+          "title": "Kết nối vào mạng WiFi có sẵn",
+          "exerciseCode": "Lab1-04_WiFi_Connection",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-04_WiFi_Connection",
+          "reading": ""
+        },
+        {
+          "id": "Lab1-05_WiFi_AP_Mode",
+          "type": "practice",
+          "label": "Thực hành 05",
+          "title": "Phát WiFi từ vệ tinh",
+          "exerciseCode": "Lab1-05_WiFi_AP_Mode",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-05_WiFi_AP_Mode",
+          "reading": ""
+        },
+        {
+          "id": "Lab1-06_Web_Server_LED",
+          "type": "practice",
+          "label": "Thực hành 06",
+          "title": "Dựng máy chủ điều khiển LED qua trình duyệt",
+          "exerciseCode": "Lab1-06_Web_Server_LED",
+          "repositoryUrl": "https://github.com/PTITCube/Lab1-06_Web_Server_LED",
+          "reading": ""
+        },
+        {
+          "id": "summary-1",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 1",
+          "description": "Hoàn thiện kỹ năng lập trình cơ bản và kết nối mạng cho vi điều khiển chính.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "lab2",
+      "title": "Phân hệ Năng lượng (EPS)",
+      "subtitle": "Electrical Power System",
+      "icon": "🔋",
+      "color": "var(--accent-green)",
+      "bgColor": "var(--accent-green-glow)",
+      "description": "Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial"
+      ],
+      "videoUrl": "",
+      "docPath": "lab2-eps",
+      "lessons": [
+        {
+          "id": "video-2-1",
+          "type": "video",
+          "label": "Video 2.1",
+          "title": "Giới thiệu về Hệ thống Nguồn trên vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-2-1",
+          "type": "document",
+          "label": "Doc 2.1",
+          "title": "Tổng quan hệ thống Nguồn (Pin, Mạch sạc, Chuyển đổi điện áp)",
+          "reading": "# Doc 2.1: Tổng quan hệ thống Nguồn (Pin, Mạch sạc, Chuyển đổi điện áp)\n\nEPS phân phối năng lượng từ pin và nguồn sạc đến các phân hệ. Xác định điện áp định mức và yêu cầu dòng của từng tải theo tài liệu phần cứng.\n\nĐiện áp ADC có thể đã qua cầu chia áp. Quy đổi theo cấu hình đo và tỷ số chia áp thực tế trước khi suy ra điện áp pin.\n\nPhần trăm pin là ước lượng phụ thuộc loại pin và thuật toán. Đối chiếu điện áp với đồng hồ và quan sát khi tải hoạt động.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 2: Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-2-2",
+          "type": "video",
+          "label": "Video 2.2",
+          "title": "Cách chuyển đổi giá trị điện áp Analog",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab2-01a_Battery_GPIO",
+          "type": "practice",
+          "label": "Thực hành 01a",
+          "title": "Đọc điện áp pin bằng ADC (Analog)",
+          "exerciseCode": "Lab2-01a_Battery_GPIO",
+          "repositoryUrl": "https://github.com/PTITCube/Lab2-01a_Battery_GPIO",
+          "reading": ""
+        },
+        {
+          "id": "Lab2-01b_Battery_Library",
+          "type": "practice",
+          "label": "Thực hành 01b",
+          "title": "Tính toán phần trăm pin vệ tinh (Dùng thư viện PTITCube)",
+          "exerciseCode": "Lab2-01b_Battery_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab2-01b_Battery_Library",
+          "reading": ""
+        },
+        {
+          "id": "document-2-2",
+          "type": "document",
+          "label": "Doc 2.2",
+          "title": "Quản lý rủi ro sụt áp và các chế độ ngủ",
+          "reading": "# Doc 2.2: Quản lý rủi ro sụt áp và các chế độ ngủ\n\nTải hoạt động đồng thời có thể làm nguồn sụt áp. Ghi nhận điện áp và log reset để phân biệt lỗi phần mềm với vấn đề cấp nguồn.\n\nDeep sleep giảm điện năng bằng cách tạm dừng phần lớn hoạt động. Xác định nguồn đánh thức và chu kỳ lấy mẫu trước khi cho bo ngủ.\n\nHoàn tất ghi file và truyền dữ liệu trước khi ngủ. So sánh thời gian hoạt động/ngủ với yêu cầu nhiệm vụ.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 2: Quản lý năng lượng, đọc điện áp pin, và các chế độ tiết kiệm pin trên không gian.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab2-02_Power_Saving",
+          "type": "practice",
+          "label": "Thực hành 02",
+          "title": "Kích hoạt chế độ ngủ sâu tiết kiệm năng lượng",
+          "exerciseCode": "Lab2-02_Power_Saving",
+          "repositoryUrl": "https://github.com/PTITCube/Lab2-02_Power_Saving",
+          "reading": ""
+        },
+        {
+          "id": "summary-2",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 2",
+          "description": "Nắm vững cách quản lý, tối ưu và tiết kiệm điện năng cho vệ tinh.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "lab3",
+      "title": "Xử lý Dữ liệu và Lệnh (CDH)",
+      "subtitle": "Command and Data Handling",
+      "icon": "📊",
+      "color": "var(--accent-orange)",
+      "bgColor": "var(--accent-orange-glow)",
+      "description": "Giao tiếp với thẻ nhớ để ghi nhận dữ liệu.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "voltageChart"
+      ],
+      "videoUrl": "",
+      "docPath": "lab3-cdh",
+      "lessons": [
+        {
+          "id": "video-3-1",
+          "type": "video",
+          "label": "Video 3.1",
+          "title": "Giới thiệu về Hệ thống Lưu trữ dữ liệu dự phòng trên vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-3-1",
+          "type": "document",
+          "label": "Doc 3.1",
+          "title": "Giao thức giao tiếp nối tiếp và kiến trúc hệ thống tập tin",
+          "reading": "# Doc 3.1: Giao thức giao tiếp nối tiếp và kiến trúc hệ thống tập tin\n\nMicroSD có thể giao tiếp qua SPI. Kiểm tra CS, SCK, MOSI, MISO và nguồn; nhiều thiết bị cùng bus cần chân chọn riêng.\n\nHệ thống tập tin tổ chức dữ liệu theo đường dẫn, thư mục và file. Phân biệt tạo mới, ghi đè và ghi nối tiếp khi lưu log.\n\nKiểm tra kết quả mở/ghi file, đóng hoặc flush phù hợp. Đọc lại dữ liệu và xử lý trường hợp không có thẻ; không rút nguồn khi đang ghi.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 3: Giao tiếp với thẻ nhớ để ghi nhận dữ liệu.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-3-2",
+          "type": "video",
+          "label": "Video 3.2",
+          "title": "Thao tác đọc/ghi file an toàn, tránh hỏng thẻ nhớ",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab3-01a_MicroSD_SPI",
+          "type": "practice",
+          "label": "Thực hành 01a",
+          "title": "Giao tiếp thẻ nhớ bằng thư viện SD gốc (SPI thô)",
+          "exerciseCode": "Lab3-01a_MicroSD_SPI",
+          "repositoryUrl": "https://github.com/PTITCube/Lab3-01a_MicroSD_SPI",
+          "reading": ""
+        },
+        {
+          "id": "Lab3-01b_MicroSD_Library",
+          "type": "practice",
+          "label": "Thực hành 01b",
+          "title": "Ghi log dữ liệu tự động (Dùng thư viện PTITCube)",
+          "exerciseCode": "Lab3-01b_MicroSD_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab3-01b_MicroSD_Library",
+          "reading": ""
+        },
+        {
+          "id": "Lab3-02_Linux_FS_Commands",
+          "type": "practice",
+          "label": "Thực hành 02",
+          "title": "Xây dựng hệ thống lệnh quản lý file qua máy tính",
+          "exerciseCode": "Lab3-02_Linux_FS_Commands",
+          "repositoryUrl": "https://github.com/PTITCube/Lab3-02_Linux_FS_Commands",
+          "reading": ""
+        },
+        {
+          "id": "summary-3",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 3",
+          "description": "Cấu hình thành công hộp đen lưu trữ dữ liệu liên tục cho vệ tinh.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "lab4",
+      "title": "Phân hệ Cảm biến (Sensor)",
+      "subtitle": "Sensors — IMU, GPS, Camera",
+      "icon": "🔬",
+      "color": "var(--accent-cyan)",
+      "bgColor": "var(--accent-cyan-glow)",
+      "description": "Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "attitude3d",
+        "gpsMap",
+        "camera"
+      ],
+      "videoUrl": "",
+      "docPath": "lab4-sensor",
+      "lessons": [
+        {
+          "id": "video-4-1",
+          "type": "video",
+          "label": "Video 4.1",
+          "title": "Giới thiệu tổng quan về hệ thống Cảm biến và Máy ảnh trên vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-4-1",
+          "type": "document",
+          "label": "Doc 4.1",
+          "title": "Nguyên lý hoạt động và giao tiếp truyền dữ liệu của các cảm biến qua mạng I2C",
+          "reading": "# Doc 4.1: Nguyên lý hoạt động và giao tiếp truyền dữ liệu của các cảm biến qua mạng I2C\n\nI2C sử dụng SDA và SCL để giao tiếp với thiết bị có địa chỉ riêng. Kiểm tra nguồn, GND chung và điện trở kéo lên theo phần cứng.\n\nĐọc thanh ghi gồm chọn địa chỉ thiết bị, thanh ghi và nhận số byte tương ứng. Đối chiếu thứ tự byte, độ nhạy và đơn vị theo datasheet.\n\nSo sánh cách đọc thanh ghi với thư viện PTITCube. Quan sát dữ liệu khi đứng yên và khi thay đổi môi trường/tư thế để nhận biết lỗi đo.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 4: Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-4-2",
+          "type": "video",
+          "label": "Video 4.2",
+          "title": "Tương tác với cảm biến nhiệt độ và áp suất",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-01a_Environment_I2C",
+          "type": "practice",
+          "label": "Thực hành 01a",
+          "title": "Đọc cảm biến BMP280 bằng giao tiếp I2C",
+          "exerciseCode": "Lab4-01a_Environment_I2C",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-01a_Environment_I2C",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-01b_Environment_Library",
+          "type": "practice",
+          "label": "Thực hành 01b",
+          "title": "Tối ưu hóa đọc dữ liệu cảm biến môi trường",
+          "exerciseCode": "Lab4-01b_Environment_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-01b_Environment_Library",
+          "reading": ""
+        },
+        {
+          "id": "video-4-3",
+          "type": "video",
+          "label": "Video 4.3",
+          "title": "Tương tác với cảm biến gia tốc và đo góc nghiêng",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-02a_IMU_I2C",
+          "type": "practice",
+          "label": "Thực hành 02a",
+          "title": "Đọc thanh ghi thô MPU6050/6500 bằng I2C",
+          "exerciseCode": "Lab4-02a_IMU_I2C",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-02a_IMU_I2C",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-02b_IMU_Library",
+          "type": "practice",
+          "label": "Thực hành 02b",
+          "title": "Tính toán góc nghiêng vệ tinh (Attitude)",
+          "exerciseCode": "Lab4-02b_IMU_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-02b_IMU_Library",
+          "reading": ""
+        },
+        {
+          "id": "video-4-4",
+          "type": "video",
+          "label": "Video 4.4",
+          "title": "Tương tác và lấy dữ liệu tọa độ từ module định vị",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-4-2",
+          "type": "document",
+          "label": "Doc 4.2",
+          "title": "Trích xuất và phân tích định dạng dữ liệu thô trả về từ module định vị",
+          "reading": "# Doc 4.2: Trích xuất và phân tích định dạng dữ liệu thô trả về từ module định vị\n\nGPS thường phát câu NMEA qua UART. Thu thập một dòng hoàn chỉnh trước khi tách trường và kiểm tra checksum theo định dạng module.\n\nPhân biệt thời gian, trạng thái fix, vĩ độ, kinh độ và cao độ. Đổi tọa độ NMEA đúng định dạng và dấu theo bán cầu.\n\nChỉ dùng vị trí khi có fix hợp lệ; không coi giá trị 0 hoặc bản tin cũ là tọa độ hiện tại. Đối chiếu dữ liệu thô với thư viện.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 4: Tương tác với hệ sinh thái cảm biến để nhận biết môi trường không gian, tư thế vệ tinh và hình ảnh.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab4-03a_GPS_UART",
+          "type": "practice",
+          "label": "Thực hành 03a",
+          "title": "Đọc dữ liệu chuẩn NMEA thô từ module qua UART",
+          "exerciseCode": "Lab4-03a_GPS_UART",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-03a_GPS_UART",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-03b_GPS_Library",
+          "type": "practice",
+          "label": "Thực hành 03b",
+          "title": "Bóc tách tọa độ kinh tuyến, vĩ tuyến tự động",
+          "exerciseCode": "Lab4-03b_GPS_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-03b_GPS_Library",
+          "reading": ""
+        },
+        {
+          "id": "video-4-5",
+          "type": "video",
+          "label": "Video 4.5",
+          "title": "Tương tác, gửi lệnh chụp ảnh và thu thập hình ảnh từ module Máy ảnh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-04a_Camera_UART",
+          "type": "practice",
+          "label": "Thực hành 04a",
+          "title": "Gửi tập lệnh điều khiển máy ảnh qua UART",
+          "exerciseCode": "Lab4-04a_Camera_UART",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-04a_Camera_UART",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-04b_Camera_Library",
+          "type": "practice",
+          "label": "Thực hành 04b",
+          "title": "Chụp ảnh và hiển thị về màn hình",
+          "exerciseCode": "Lab4-04b_Camera_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-04b_Camera_Library",
+          "reading": ""
+        },
+        {
+          "id": "Lab4-05_Read_All_Sensors",
+          "type": "practice",
+          "label": "Thực hành 05",
+          "title": "Tổng hợp đọc tất cả cảm biến",
+          "exerciseCode": "Lab4-05_Read_All_Sensors",
+          "repositoryUrl": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors",
+          "reading": ""
+        },
+        {
+          "id": "summary-4",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 4",
+          "description": "Xây dựng thành công hệ thống thu thập dữ liệu đa cảm biến toàn diện.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "lab5",
+      "title": "Truyền thông và Trạm mặt đất",
+      "subtitle": "Communication and Ground Station",
+      "icon": "📡",
+      "color": "var(--accent-purple)",
+      "bgColor": "var(--accent-purple-glow)",
+      "description": "Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "groundStation"
+      ],
+      "videoUrl": "",
+      "docPath": "lab5-com",
+      "lessons": [
+        {
+          "id": "video-5-1",
+          "type": "video",
+          "label": "Video 5.1",
+          "title": "Giới thiệu về phân hệ Giao tiếp Viễn thông không dây",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-5-1",
+          "type": "document",
+          "label": "Doc 5.1",
+          "title": "Sóng vô tuyến và module truyền phát tín hiệu tầm xa",
+          "reading": "# Doc 5.1: Sóng vô tuyến và module truyền phát tín hiệu tầm xa\n\nĐường truyền vô tuyến phụ thuộc tần số, công suất, anten và môi trường. Kiểm tra cấu hình hai đầu và hướng dẫn module trước khi truyền.\n\nPhân biệt UART giữa vi điều khiển và module với đường vô tuyến giữa hai module. Theo dõi log tại cả bên gửi và nhận.\n\nThử bản tin ngắn có số thứ tự để đo mất gói và thời gian nhận, sau đó mới tích hợp dữ liệu cảm biến.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 5: Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-5-2",
+          "type": "video",
+          "label": "Video 5.2",
+          "title": "Hướng dẫn cấu hình các tham số vật lý của sóng vô tuyến",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-5-2",
+          "type": "document",
+          "label": "Doc 5.2",
+          "title": "Đóng gói bản tin và kiến trúc Trạm mặt đất",
+          "reading": "# Doc 5.2: Đóng gói bản tin và kiến trúc Trạm mặt đất\n\nPacket cần có ranh giới, loại bản tin, định danh thiết bị và payload. Hai đầu thống nhất cách mã hóa, độ dài và kiểm tra lỗi.\n\nTelemetry truyền trạng thái/giá trị đo về trạm; command gửi yêu cầu điều khiển lên vệ tinh. Kiểm tra lệnh trước khi thực thi và phản hồi kết quả xử lý.\n\nPhân biệt dữ liệu mới, đã cũ và mất kết nối. Lưu log gửi/nhận để truy vết sai lệch hoặc trùng gói.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 5: Truyền nhận dữ liệu tầm xa giữa Vệ tinh và Trạm mặt đất bằng sóng vô tuyến.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab5-01a_Send_Telemetry_UART",
+          "type": "practice",
+          "label": "Thực hành 01a",
+          "title": "Cấu hình thanh ghi LoRa và phát dữ liệu qua UART",
+          "exerciseCode": "Lab5-01a_Send_Telemetry_UART",
+          "repositoryUrl": "https://github.com/PTITCube/Lab5-01a_Send_Telemetry_UART",
+          "reading": ""
+        },
+        {
+          "id": "Lab5-01b_Send_Telemetry_Library",
+          "type": "practice",
+          "label": "Thực hành 01b",
+          "title": "Đóng gói packet Telemetry hoàn chỉnh",
+          "exerciseCode": "Lab5-01b_Send_Telemetry_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library",
+          "reading": ""
+        },
+        {
+          "id": "Lab5-02a_Receive_Command_UART",
+          "type": "practice",
+          "label": "Thực hành 02a",
+          "title": "Lắng nghe chuỗi dữ liệu thô",
+          "exerciseCode": "Lab5-02a_Receive_Command_UART",
+          "repositoryUrl": "https://github.com/PTITCube/Lab5-02a_Receive_Command_UART",
+          "reading": ""
+        },
+        {
+          "id": "Lab5-02b_Receive_Command_Library",
+          "type": "practice",
+          "label": "Thực hành 02b",
+          "title": "Giải mã lệnh (Command) từ Trái Đất",
+          "exerciseCode": "Lab5-02b_Receive_Command_Library",
+          "repositoryUrl": "https://github.com/PTITCube/Lab5-02b_Receive_Command_Library",
+          "reading": ""
+        },
+        {
+          "id": "video-5-3",
+          "type": "video",
+          "label": "Video 5.3",
+          "title": "Xây dựng Trạm mặt đất để thu phát tín hiệu",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab5-03_Satellite_Comm_System",
+          "type": "practice",
+          "label": "Thực hành 03",
+          "title": "Xây dựng hệ thống liên lạc vệ tinh và trạm mặt đất",
+          "exerciseCode": "Lab5-03_Satellite_Comm_System",
+          "repositoryUrl": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System",
+          "reading": ""
+        },
+        {
+          "id": "summary-5",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 5",
+          "description": "Thiết lập thành công luồng giao tiếp vô tuyến hai chiều giữa vệ tinh và mặt đất.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "lab6",
+      "title": "Phân hệ Cấu trúc (Structure)",
+      "subtitle": "Mechanical Structure and Integration",
+      "icon": "🔩",
+      "color": "var(--accent-orange)",
+      "bgColor": "var(--accent-orange-glow)",
+      "description": "Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "systemCheck"
+      ],
+      "videoUrl": "",
+      "docPath": "lab6-structure",
+      "lessons": [
+        {
+          "id": "video-6-1",
+          "type": "video",
+          "label": "Video 6.1",
+          "title": "Giới thiệu về cơ khí và cấu trúc bảo vệ vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-6-1",
+          "type": "document",
+          "label": "Doc 6.1",
+          "title": "Khái quát về vật liệu và cấu trúc cơ khí của vệ tinh",
+          "reading": "# Doc 6.1: Khái quát về vật liệu và cấu trúc cơ khí của vệ tinh\n\nKhung cơ khí giữ vị trí và bảo vệ các bo. Đối chiếu kích thước, điểm bắt vít, khoảng cách cách điện và đường đi dây theo bản vẽ.\n\nLắp từng cụm khi đã ngắt nguồn; kiểm tra vật dẫn có thể gây chạm chập và tránh kéo căng cáp.\n\nSau lắp ráp, kiểm tra nguồn và từng phân hệ trước khi vận hành toàn bộ hệ thống.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-6-2",
+          "type": "video",
+          "label": "Video 6.2",
+          "title": "Hướng dẫn lắp ráp khung vệ tinh cơ khí",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "video-6-3",
+          "type": "video",
+          "label": "Video 6.3",
+          "title": "Tại sao phần mềm vệ tinh cần Hệ điều hành?",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-6-2",
+          "type": "document",
+          "label": "Doc 6.2",
+          "title": "Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực",
+          "reading": "# Doc 6.2: Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực\n\nTác vụ RTOS có hàm thực thi, stack và độ ưu tiên. Bộ điều phối phân chia thời gian chạy cho các tác vụ sẵn sàng.\n\nPhân tách nháy LED, lấy mẫu và truyền tin theo chu kỳ. Tránh vòng bận không nhường CPU; dùng cơ chế chờ của RTOS.\n\nGhi thời gian thực thi và kiểm tra tác vụ ưu tiên cao có làm đói tác vụ khác hay không.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "document-6-3",
+          "type": "document",
+          "label": "Doc 6.3",
+          "title": "Tranh chấp tài nguyên và cơ chế khóa bảo vệ",
+          "reading": "# Doc 6.3: Tranh chấp tài nguyên và cơ chế khóa bảo vệ\n\nHai tác vụ truy cập đồng thời dữ liệu hoặc bus có thể gây race condition. Xác định tài nguyên dùng chung và vùng cần bảo vệ.\n\nDùng mutex cho tài nguyên cần độc quyền; queue giúp truyền dữ liệu giữa tác vụ. Không giữ khóa khi chờ lâu hoặc chờ tài nguyên khác thiếu thứ tự rõ ràng.\n\nThiết kế timeout và đường xử lý lỗi; thử tình huống mất thiết bị, lỗi truyền và tác vụ dừng bất thường.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab6-01_Multitasking_Scheduler",
+          "type": "practice",
+          "label": "Thực hành 01",
+          "title": "Chạy song song nháy đèn, đọc cảm biến, gửi thông tin",
+          "exerciseCode": "Lab6-01_Multitasking_Scheduler",
+          "repositoryUrl": "https://github.com/PTITCube/Lab6-01_Multitasking_Scheduler",
+          "reading": ""
+        },
+        {
+          "id": "video-6-4",
+          "type": "video",
+          "label": "Video 6.4",
+          "title": "Thực hành gỡ lỗi treo hệ thống bằng Bộ định thời",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-6-4",
+          "type": "document",
+          "label": "Doc 6.4",
+          "title": "Bộ định thời Watchdog Timer trong hàng không vũ trụ",
+          "reading": "# Doc 6.4: Bộ định thời Watchdog Timer trong hàng không vũ trụ\n\nWatchdog phát hiện phần mềm không tiến triển trong thời gian cho phép. Chọn timeout dựa trên thời gian xử lý dài nhất đã đo.\n\nChỉ cập nhật watchdog khi tác vụ đã hoàn thành bước kiểm tra cần thiết. Cập nhật vô điều kiện có thể che việc hệ thống bị treo.\n\nThử gây treo có kiểm soát, đọc nguyên nhân reset và kiểm tra khả năng khởi động lại. Watchdog bổ sung phục hồi, không bảo đảm phần mềm tuyệt đối không lỗi.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 6: Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab6-02_Watchdog_And_Event",
+          "type": "practice",
+          "label": "Thực hành 02",
+          "title": "Kích hoạt tự động khởi động lại hệ thống khi bị treo",
+          "exerciseCode": "Lab6-02_Watchdog_And_Event",
+          "repositoryUrl": "https://github.com/PTITCube/Lab6-02_Watchdog_And_Event",
+          "reading": ""
+        },
+        {
+          "id": "summary-6",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 6",
+          "description": "Hoàn thiện bộ khung vật lý và đảm bảo độ tin cậy tuyệt đối cho phần mềm bay.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "slug": "lab7",
+      "title": "Tích hợp Hệ thống và Nhiệm vụ",
+      "subtitle": "System Integration and Mission",
+      "icon": "🚀",
+      "color": "var(--accent-blue)",
+      "bgColor": "var(--accent-blue-glow)",
+      "description": "Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "attitude3d",
+        "gpsMap",
+        "voltageChart"
+      ],
+      "videoUrl": "",
+      "docPath": "lab7-integration",
+      "lessons": [
+        {
+          "id": "video-7-1",
+          "type": "video",
+          "label": "Video 7.1",
+          "title": "Giới thiệu về bài toán Tích hợp Hệ thống trên vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-7-1",
+          "type": "document",
+          "label": "Doc 7.1",
+          "title": "Kỹ thuật ghép kênh bằng IC phần cứng",
+          "reading": "# Doc 7.1: Kỹ thuật ghép kênh bằng IC phần cứng\n\nGhép kênh cho phép dùng chung đường giao tiếp giữa nhiều thiết bị. Phần mềm cần chọn đúng kênh trước mỗi phiên trao đổi.\n\nKiểm tra sơ đồ MUX, chân điều khiển và trạng thái mặc định; tránh hai thiết bị cùng điều khiển đường tín hiệu.\n\nTrong đa nhiệm, bảo vệ việc chọn kênh và giao tiếp bằng cùng cơ chế khóa để tác vụ khác không đổi kênh giữa phiên.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 7: Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab7-01_Camera_Multiplexer",
+          "type": "practice",
+          "label": "Thực hành 01",
+          "title": "Chuyển mạch luân phiên phần cứng",
+          "exerciseCode": "Lab7-01_Camera_Multiplexer",
+          "repositoryUrl": "https://github.com/PTITCube/Lab7-01_Camera_Multiplexer",
+          "reading": ""
+        },
+        {
+          "id": "video-7-2",
+          "type": "video",
+          "label": "Video 7.2",
+          "title": "Phân tích luồng dữ liệu của Phần mềm bay tổng hợp",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-7-2",
+          "type": "document",
+          "label": "Doc 7.2",
+          "title": "Kiến trúc phân lớp phần mềm Vệ tinh toàn diện",
+          "reading": "# Doc 7.2: Kiến trúc phân lớp phần mềm Vệ tinh toàn diện\n\nTách lớp truy cập phần cứng, dịch vụ phân hệ, xử lý nhiệm vụ và giao tiếp trạm. Mỗi lớp có trách nhiệm và đầu vào/đầu ra rõ ràng.\n\nBản tuần tự xử lý công việc theo vòng lặp; bản RTOS chia tác vụ và đồng bộ dữ liệu. So sánh độ trễ, tài nguyên và khả năng phục hồi.\n\nThống nhất đơn vị, chu kỳ lấy mẫu và quy tắc lỗi. Kiểm thử từng phân hệ rồi chạy kịch bản toàn hệ thống có ghi log.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 7: Lắp ráp toàn bộ các module đã học để hình thành một phần mềm bay hoàn thiện. Giải quyết các bài toán xung đột phần cứng.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "Lab7-02_Full_Satellite_Program",
+          "type": "practice",
+          "label": "Thực hành 02",
+          "title": "Phần mềm vệ tinh hoàn chỉnh với vòng lặp tuần tự",
+          "exerciseCode": "Lab7-02_Full_Satellite_Program",
+          "repositoryUrl": "https://github.com/PTITCube/Lab7-02_Full_Satellite_Program",
+          "reading": ""
+        },
+        {
+          "id": "Lab7-03_RTOS_Satellite_System",
+          "type": "practice",
+          "label": "Thực hành 03",
+          "title": "Hệ thống vệ tinh chạy đa nhiệm RTOS",
+          "exerciseCode": "Lab7-03_RTOS_Satellite_System",
+          "repositoryUrl": "https://github.com/PTITCube/Lab7-03_RTOS_Satellite_System",
+          "reading": ""
+        },
+        {
+          "id": "summary-7",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 7",
+          "description": "Vệ tinh đã tích hợp hoàn chỉnh và sẵn sàng cho chuyến bay thử nghiệm thực tế.",
+          "reading": ""
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "slug": "lab8",
+      "title": "Capstone Mini-Project",
+      "subtitle": "Custom Dashboard and Real-world Application",
+      "icon": "🏆",
+      "color": "var(--accent-cyan)",
+      "bgColor": "var(--accent-cyan-glow)",
+      "description": "Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.",
+      "features": [
+        "video",
+        "document",
+        "blockly",
+        "monaco",
+        "compiler",
+        "flasher",
+        "serial",
+        "dashboardBuilder"
+      ],
+      "videoUrl": "",
+      "docPath": "lab8-capstone",
+      "lessons": [
+        {
+          "id": "video-8-1",
+          "type": "video",
+          "label": "Video 8.1",
+          "title": "Giới thiệu về Kỹ thuật Hệ thống trong thiết kế và chế tạo vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "document-8-1",
+          "type": "document",
+          "label": "Doc 8.1",
+          "title": "Giới thiệu lược đồ ngôn ngữ mô hình hóa trong thiết kế hệ thống",
+          "reading": "# Doc 8.1: Giới thiệu lược đồ ngôn ngữ mô hình hóa trong thiết kế hệ thống\n\nBắt đầu từ yêu cầu nhiệm vụ và tiêu chí đo được. Mô tả ranh giới hệ thống, các phân hệ, luồng dữ liệu và giao diện.\n\nDùng sơ đồ khối, trạng thái hoặc trình tự để giải thích hoạt động. Liên kết mỗi yêu cầu với phép kiểm chứng cụ thể.\n\nTheo dõi thay đổi thiết kế, giả định và kết quả kiểm thử để báo cáo có thể truy vết.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 8: Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "document-8-2",
+          "type": "document",
+          "label": "Doc 8.2",
+          "title": "Gợi ý ý tưởng Đồ án (Vệ tinh khí tượng, Vệ tinh cảnh báo cháy rừng)",
+          "reading": "# Doc 8.2: Gợi ý ý tưởng Đồ án (Vệ tinh khí tượng, Vệ tinh cảnh báo cháy rừng)\n\nVới vệ tinh khí tượng, xác định đại lượng đo, đơn vị, chu kỳ lấy mẫu và cách lưu/truyền dữ liệu. Với cảnh báo cháy, phân biệt tín hiệu quan sát với kết luận cần thêm bằng chứng.\n\nDashboard cần nguồn dữ liệu, định danh thiết bị và trạng thái mới/cũ/mất kết nối rõ ràng. Không trộn dữ liệu minh họa với dữ liệu phần cứng.\n\nChọn nhiệm vụ có tiêu chí kiểm chứng phù hợp bộ kit; chuẩn bị yêu cầu, kiến trúc, chương trình và số liệu thực nghiệm.\n\n## Tự kiểm tra\n\n- Giải thích các khái niệm bằng sơ đồ hoặc ví dụ.\n- Xác định cấu hình phần cứng và cách quan sát kết quả cho bài thực hành liên quan.\n- Ghi lại điểm chưa rõ để đối chiếu khi chạy chương trình.\n\nMục tiêu Lab 8: Áp dụng Tư duy Kỹ thuật Hệ thống để sinh viên tự thiết kế, lên ý tưởng và thực hiện một Sứ mệnh Vệ tinh mang tính sáng tạo.\n\n[Lộ trình và các kho bài thực hành PTITCube](https://github.com/PTITCube)\n"
+        },
+        {
+          "id": "video-8-2",
+          "type": "video",
+          "label": "Video 8.2",
+          "title": "Hướng dẫn cách tạo ra Dashboard trực quan hóa dữ liệu vệ tinh",
+          "videoUrl": "",
+          "reading": ""
+        },
+        {
+          "id": "Lab8-01_Custom_Mission",
+          "type": "practice",
+          "label": "Thực hành 01",
+          "title": "Khung mã nguồn tiêu chuẩn để tự tùy biến",
+          "exerciseCode": "Lab8-01_Custom_Mission",
+          "repositoryUrl": "https://github.com/PTITCube/Lab8-01_Custom_Mission",
+          "reading": ""
+        },
+        {
+          "id": "summary-8",
+          "type": "summary",
+          "label": "Tổng hợp",
+          "title": "Tổng hợp Lab 8",
+          "description": "Hoàn tất đồ án, sinh viên nắm vững quy trình thiết kế và vận hành sứ mệnh vệ tinh độc lập.",
+          "reading": ""
+        }
+      ]
+    }
+  ]
+}

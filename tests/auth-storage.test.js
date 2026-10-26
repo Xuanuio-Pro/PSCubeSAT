@@ -14,6 +14,11 @@ test('JWT expiry scheduling handles malformed and finite numeric expirations', (
   for (const value of ['broken', '', token({}), token({ exp: '12345' }), token({ exp: null })]) assert.equal(tokenExpiresAt(value), null);
 });
 
+test('class and admin login destinations remain within the route allowlist', () => {
+  for (const path of ['/classes', '/classes/12', '/classes/12?tab=members', '/admin/users']) assert.equal(loginDestination(path), path);
+  for (const path of ['/classes/../admin', '/classes//evil.test', '/classes/0', '/admin', '/admin/users/../../evil', '/classes/%2f%2fevil.test']) assert.equal(loginDestination(path), '/');
+});
+
 test('remember choice controls persistence and switching/logging out removes old sessions', () => {
   const memoryStorage = () => {
     const values = new Map();

@@ -16,9 +16,14 @@ from app.db import get_db
 from app.models.tables import User
 from app.schemas.progress import LabProgressResponse
 from app.services.auth import get_required_user
+from app.services.permissions import require_legacy_allowed
 from app.services.progress import ProgressService
 
-router = APIRouter(prefix="/api/progress", tags=["progress"])
+router = APIRouter(
+    prefix="/api/progress",
+    tags=["progress"],
+    dependencies=[Depends(get_required_user), Depends(require_legacy_allowed)],
+)
 
 
 @router.get("", response_model=list[LabProgressResponse])

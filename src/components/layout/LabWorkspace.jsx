@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getLabById } from '../../data/labs';
+import { getLabById } from '../../data/lab-metadata';
 import LabLayout from './LabLayout';
 import IDEPanel from '../editor/IDEPanel';
 import LabPracticeActions from '../editor/LabPracticeActions';

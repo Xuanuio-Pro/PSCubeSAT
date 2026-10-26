@@ -10,7 +10,13 @@ export default defineConfig(({ mode }) => {
   const key = env.DEV_HTTPS_KEY
   if (Boolean(cert) !== Boolean(key)) throw new Error('Set both DEV_HTTPS_CERT and DEV_HTTPS_KEY')
   return {
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: 'curriculum-privacy',
+    generateBundle() {
+      const restricted = [...this.getModuleIds()].filter(id => /[\\/]src[\\/]data[\\/](curriculum|labs|lesson-reading)\.js(?:\?|$)/.test(id));
+      if (restricted.length) this.error('Restricted curriculum seed files must not be bundled into the browser.');
+    },
+  }],
   define: {
     global: 'window',
     'process.env': {},

@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
-import { LABS } from '../data/labs';
+import { LABS } from '../data/lab-metadata';
+import { useAuth } from '../contexts/auth-api';
 
 export default function HomePage() {
+  const { classMode, legacyAllowed } = useAuth();
+  // Users outside a pilot class keep the stable home page; pilot students learn from their class.
+  if (classMode && !legacyAllowed) return <div className="lms-shell"><header className="lms-heading"><h1>Học tập cùng CubeSAT</h1><p>Mở lớp của bạn để học chương trình do giảng viên phụ trách.</p></header><div className="lms-actions"><Link to="/classes">Lớp của tôi</Link><Link to="/preview">Khám phá nội dung trải nghiệm</Link></div></div>;
   return (
     <div className="home-page animate-fadeInUp">
       <section className="home-hero" aria-labelledby="home-hero-title">

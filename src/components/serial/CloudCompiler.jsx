@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSerial } from '../../contexts/serial-api';
 import { authorizedFetch } from '../../contexts/auth-api';
 
-export default function CloudCompiler({ code, labId, onBinaryReady = undefined, inline = false, showIcon = true, buttonClassName = '' }) {
+export default function CloudCompiler({ code, labId, classId = undefined, lessonId = undefined, configuredBoard = '', onBinaryReady = undefined, inline = false, showIcon = true, buttonClassName = '' }) {
   const [status, setStatus] = useState('idle');
   const [output, setOutput] = useState('');
   const { print, boards, selectBoard, saveBuild, isFlashing } = useSerial();
   const board = boards[labId] || 'esp32';
+  useEffect(() => { if (configuredBoard) selectBoard(labId, configuredBoard); }, [configuredBoard, labId, selectBoard]);
 
   const appendLog = (msg, type = 'system') => {
     setOutput(prev => prev + msg + '\n');
@@ -31,7 +32,7 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code, board, lab_id: labId, include_binary: !!onBinaryReady }),
+        body: JSON.stringify({ code, board, lab_id: labId, class_id: classId, lesson_id: lessonId, include_binary: !!onBinaryReady }),
       });
 
       const data = await res.json();
@@ -66,7 +67,7 @@ export default function CloudCompiler({ code, labId, onBinaryReady = undefined, 
   };
 
   const boardSelector = (
-    <select aria-label="Board biên dịch" value={board} disabled={status === 'compiling' || isFlashing}
+    <select aria-label="Board biên dịch" value={board} disabled={!!configuredBoard || status === 'compiling' || isFlashing}
       onChange={event => { selectBoard(labId, event.target.value); setStatus('idle'); }}>
       <option value="esp32s3">ESP32-S3</option>
       <option value="esp32">ESP32</option>

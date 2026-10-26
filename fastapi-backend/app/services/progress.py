@@ -64,7 +64,7 @@ class ProgressService:
         if progress.lab_id in LAB_IDS_WITHOUT_COMPILER:
             done = progress.video_watched and progress.doc_viewed
         else:
-            done = progress.compiled_at is not None
+            done = False  # A build is evidence of compilation, never lesson/lab completion.
 
         if done:
             progress.completed_at = datetime.now(timezone.utc)

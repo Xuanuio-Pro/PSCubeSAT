@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, request } from '../contexts/auth-api';
-import { LABS } from '../data/labs';
+import { LABS } from '../data/lab-metadata';
 import DeviceManager from '../components/profile/DeviceManager';
 
 const ROLE_LABEL = { admin: 'Quản trị viên', user: 'Học viên' };

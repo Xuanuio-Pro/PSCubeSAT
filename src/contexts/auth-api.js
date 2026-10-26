@@ -28,7 +28,7 @@ export async function request(path, options = {}) {
     const detail = Array.isArray(data.detail)
       ? data.detail.map((item) => item.msg).join(' ')
       : data.detail;
-    throw Object.assign(new Error(data.message || detail || 'Đã có lỗi xảy ra, vui lòng thử lại.'), { status: res.status });
+    throw Object.assign(new Error(data.message || detail || 'Đã có lỗi xảy ra, vui lòng thử lại.'), { status: res.status, code: data.code, details: data.details });
   }
   return data;
 }

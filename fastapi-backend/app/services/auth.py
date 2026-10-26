@@ -19,7 +19,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db import get_db
-from app.models.tables import GoogleIdentity, RevokedToken, User
+from app.models.tables import AccountStatus, GoogleIdentity, RevokedToken, User
 from app.repository.user import UserRepository
 from app.schemas.auth import (
     AuthTokenResponse,
@@ -62,7 +62,13 @@ async def get_current_user(
         if await db.get(RevokedToken, sha256(token.encode()).hexdigest()):
             return None
         user_id = int(payload["sub"])
-        result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
+        result = await db.execute(
+            select(User)
+            .where(
+                User.id == user_id, User.deleted_at.is_(None), User.status == AccountStatus.active
+            )
+            .execution_options(populate_existing=True)
+        )
         return result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"[Auth] get_current_user error: {e}")
@@ -157,6 +163,9 @@ class AuthService:
         ):
             raise ValueError("Email hoặc mật khẩu không chính xác.")
 
+        if user.status != AccountStatus.active:
+            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.")
+
         logger.info(f"[AuthService] 🔑 User logged in: {user.email}")
 
         token = create_access_token(
@@ -189,6 +198,8 @@ class AuthService:
         else:
             email = claims["email"].strip().lower()
             user = await self.user_repo.get_by_email(email)
+            if user and user.status != AccountStatus.active:
+                raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.")
             # Only link by email when Google is authoritative for that address.
             if user and not (email.endswith("@gmail.com") or claims.get("hd")):
                 raise ValueError("Email đã có tài khoản. Vui lòng đăng nhập bằng mật khẩu.")
@@ -212,6 +223,8 @@ class AuthService:
                 raise ValueError(
                     "Tài khoản đã tồn tại hoặc vừa được tạo. Vui lòng thử đăng nhập lại."
                 ) from exc
+        if user.status != AccountStatus.active:
+            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.")
         return AuthTokenResponse(
             access_token=create_access_token(
                 {"sub": str(user.id), "email": user.email, "role": user.role}

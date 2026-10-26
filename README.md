@@ -71,90 +71,108 @@ Dự án được xây dựng theo kiến trúc **Microservices + Realtime Strea
 * **Database**: PostgreSQL 16 (Lưu trữ Telemetry dài hạn) + Redis 7 (Caching trạng thái gần nhất).
 
 ---
+## 🚀 Chạy dự án trên máy dev (Developer Quickstart)
 
-## 🚀 Hướng Dẫn Chạy Dự Án (Developer Quickstart)
+Triển khai server không dùng các bước này: xem [SERVER_STARTUP.md](Docs/SERVER_STARTUP.md) và [RUNBOOK_RELEASE.md](Docs/RUNBOOK_RELEASE.md).
 
-**Triển khai server:** dùng [hướng dẫn build/chạy BE + DB](Docs/SERVER_STARTUP.md). Chọn DB `external` để giữ dữ liệu container PostgreSQL đang có, hoặc `managed` cho cài mới. Không dùng Compose mặc định bên dưới để triển khai production.
+### Yêu cầu
+- Node.js 20.19+ hoặc 22.12+ và npm (yêu cầu của Vite 8)
+- Python 3.11 (khuyên dùng `.venv` trong `fastapi-backend/`; `scripts/python.mjs` tự tìm `.venv`, conda env đang bật, hoặc biến `PSCUBESAT_PYTHON`)
+- Docker (PostgreSQL/Redis/Mosquitto cho dev và image compiler)
 
-### Yêu cầu môi trường (Prerequisites)
-- Docker & Docker Compose
-- Miniconda / Anaconda (Python 3.11+)
-- Node.js 18+ & npm
-
-### 1. Khởi động Hạ Tầng Docker (Backend, Broker, DB)
+### Lần đầu
 ```bash
-# Clone repo & chuyển vào thư mục dự án
-cd PTIT-STEM-CUBE
-
-# Khởi chạy các container (Mosquitto, FastAPI, Redis, Postgres)
-docker compose up -d
-
-# Kiểm tra trạng thái các container
-docker compose ps
-```
-
-### 2. Khởi Động Frontend (Vite Dev Server)
-```bash
-# Cài đặt thư viện frontend
+git clone https://github.com/Xuanuio-Pro/PSCubeSAT.git && cd PSCubeSAT
 npm install
 
-# Chạy server phát triển Frontend (Default: http://localhost:5173)
-npm run dev
+cd fastapi-backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate   |   Linux/macOS: source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+cp .env.example .env          # giá trị mặc định khớp DB dev bên dưới
+cp ../.env.example ../.env    # biến frontend (tùy chọn)
+docker build -f compiler/Dockerfile -t pscubesat-compiler:1 .   # chỉ cần khi thử biên dịch firmware
+cd ..
+
+npm run dev:db:docker         # PostgreSQL 16 dev tại 127.0.0.1:5432 (user cubesat / cubesat_dev)
+npm run db:migrate            # alembic upgrade head
+npm run curriculum:seed       # nạp giáo trình Lab 0–8 vào DB
 ```
 
+### Hằng ngày
+```bash
+npm run dev:db:docker   # nếu container DB chưa chạy (Windows có PostgreSQL portable: npm run dev:db)
+npm run dev             # tự chạy Redis/Mosquitto dev + migrate, rồi FE http://localhost:5173 và BE :8005
+```
+`npm run dev:fe` / `npm run dev:be` chạy riêng từng phần. Vite proxy `/api` và `/ws` sang BE.
+
+### Tài khoản và chế độ lớp học (LMS)
+- Đăng ký tài khoản trên giao diện (luôn là `user`). Không có API công khai tạo Admin; trên DB dev:
+  ```bash
+  docker compose -f docker-compose.dev.yml exec postgres \
+    psql -U cubesat -d cubesat -c "UPDATE users SET role='admin' WHERE email='you@example.com';"
+  ```
+- Bật học theo lớp: `LMS_CLASS_MODE=true` trong `fastapi-backend/.env`, khởi động lại BE. Hướng dẫn thao tác Admin/GV/SV: [USER_GUIDE.md](Docs/USER_GUIDE.md).
+
+### Kiểm tra trước khi push
+```bash
+npm run check             # lint, typecheck, test FE (node --test), ruff + unittest BE (SQLite)
+npm run build
+npm run test:be:postgres  # migration/khóa đồng thời trên PostgreSQL thật; cần POSTGRES_PASSWORD và POSTGRES_ADMIN_PASSWORD trong fastapi-backend/.env
+```
+Migration mới phải qua `python -m alembic upgrade head` trên DB sạch và `python -m alembic downgrade -1 && python -m alembic upgrade head` (chạy trong `fastapi-backend/`). Format Python: `python scripts/check_backend.py --fix`.
+
 ---
 
-## 📡 Danh Sách Endpoint APIs & Services
+## 📡 API & Services
 
-Triển khai thay bản cũ tại `cubesat.p-tech.xyz`: xem [quy trình chuyển server, env, backup/migration và rollback](Docs/SERVER_MIGRATION_CUBESAT.md). Dùng `docker-compose.server.yml` sau proxy hiện có; `docker-compose.production.yml` dành cho server tự chạy Caddy HTTPS.
+API (trừ đăng ký/đăng nhập) yêu cầu `Authorization: Bearer <access_token>`; WebSocket kiểm token và quyền sở hữu thiết bị. Tài liệu OpenAPI khi chạy dev: `http://localhost:8005/docs`.
 
-Ứng dụng yêu cầu đăng nhập để dùng Lab và các dịch vụ. API dịch vụ (kể cả health, compiler, artifact và mã mẫu) yêu cầu `Authorization: Bearer <access_token>`; WebSocket kiểm token và quyền sở hữu thiết bị. Đăng xuất/hết phiên đóng USB và telemetry. Xem [báo cáo đăng nhập và trực quan Lab](Docs/AUTH_LAB_VISUALIZATION_2026-10-21.md).
+| Nhóm | Endpoint chính |
+|---|---|
+| Hệ thống, compiler | `GET /api/health`, `POST /api/compile`, artifact/flash, `GET /api/devices`, `GET /api/telemetry/latest`, `WS /ws` |
+| Admin | `/api/admin/users`, `GET /api/admin/dashboard`, `PATCH /api/admin/classes/{id}/lms-mode` |
+| Lớp học | `/api/classes`, `/api/classes/{id}/members`, `/api/lms/config`, `/api/lms/lab-entry` |
+| Chương trình, tiến độ | `/api/classes/{id}/curriculum`, `/api/classes/{id}/learning-path`, sự kiện học, nộp/chấm thực hành |
+| Lab Test | ngân hàng câu hỏi (nhập JSON/CSV, duyệt, xuất bản), bắt đầu/lưu/nộp lượt thi |
+| Báo cáo | `GET /api/classes/{id}/reports?format=json\|csv` |
 
-### HTTP REST APIs (`http://localhost:8003`)
-* `GET  /api/health`: Kiểm tra sức khỏe hệ thống & phiên bản PlatformIO Compiler.
-* `POST /api/compile`: Gửi mã C++/Arduino để biên dịch ra file `firmware.bin` (Base64).
-* `GET  /api/devices`: Lấy danh sách thiết bị CubeSat đã đăng ký.
-* `POST /api/devices/register`: Đăng ký CubeSat mới (Sinh `device_id`, `device_secret`, cấu hình Mosquitto ACL & trả về C++ code template).
-* `DELETE /api/devices/{device_id}`: Xoá thiết bị khỏi hệ thống & Mosquitto Auth.
-* `GET  /api/telemetry/latest`: Lấy dữ liệu cảm biến mới nhất của các thiết bị.
-
-### WebSocket Realtime Stream
-* `WS /ws`: Kết nối nhận stream dữ liệu cảm biến (Telemetry) đẩy từ Mosquitto về Client theo thời gian thực.
+Lỗi nghiệp vụ LMS trả `{ "code", "message", "details" }` với mã ổn định (`MEMBERSHIP_REQUIRED`, `PREREQUISITE_NOT_MET`, `CLASS_READ_ONLY`, ...).
 
 ---
 
-## 📂 Cấu Trúc Thư Mục (Repository Structure)
+## 📂 Cấu trúc thư mục
 
 ```text
-PTIT-STEM-CUBE/
-├── fastapi-backend/         # Backend Python FastAPI
-│   ├── app/
-│   │   ├── routers/         # REST API Routes (health, compiler, telemetry, devices)
-│   │   ├── services/        # Business logic (compiler_svc, mqtt_consumer, mosquitto_mgr)
-│   │   ├── websocket/       # ConnectionManager xử lý WebSocket
-│   │   └── main.py          # App entrypoint & Lifespan handler
-│   ├── build_cache/         # Persistent cache của PlatformIO (esp32, esp32s3)
-│   ├── Dockerfile           # Dockerfile build backend container
-│   └── requirements.txt
-│
-├── mosquitto/               # Cấu hình & Dữ liệu Mosquitto Broker
-│   ├── config/              # mosquitto.conf, passwd, acl
-│   ├── data/                # Database lưu trữ mosquitto.db
-│   └── log/                 # mosquitto.log
-│
-├── src/                     # Source code React Frontend
-│   ├── components/          # React Components (WebCodeEditor, TelemetryCharts, DeviceRegistry...)
-│   ├── hooks/               # Custom React Hooks (useBackendWebSocket, useWebSerial...)
-│   ├── store/               # Zustand telemetry store
-│   └── App.tsx              # Main App entry & routing
-│
-├── docker-compose.yml       # Orchestration file cho toàn bộ Docker Stack
-├── vite.config.ts           # Config Vite (đã ignore build_cache để tránh reload trang)
-└── README.md
+PSCubeSAT/
+├── src/                      # React + Vite frontend
+│   ├── pages/                # Màn hình (Lab0–8, Classes*, QuestionBank, AdminDashboard, ClassReport...)
+│   ├── components/           # layout, editor (C++/Blockly), serial/flash, classes (LMS dùng chung)
+│   ├── contexts/             # AuthContext, TelemetryContext
+│   └── data/                 # Giáo trình tĩnh: curriculum.js, labs.js, lesson-reading.js
+├── fastapi-backend/          # FastAPI backend — xem fastapi-backend/README.md
+│   ├── app/routers/          # HTTP: chỉ validate + gọi service
+│   ├── app/services/         # Use case, transaction, phân quyền (permissions.py), báo cáo
+│   ├── app/models/           # ORM: tables.py, curriculum.py, learning.py, quiz.py
+│   ├── app/tests/            # unittest/pytest; *_postgres.py chạy khi PSCUBESAT_TEST_POSTGRES=1
+│   ├── alembic/versions/     # Migration đánh số 0001…; downgrade không xóa dữ liệu
+│   └── scripts/              # check_backend.py, load_test.py, công cụ vận hành
+├── tests/                    # Test frontend (node --test)
+├── scripts/                  # Tiện ích npm: python.mjs, export-curriculum.mjs, local-db
+├── public/templates/         # Mẫu nhập ngân hàng câu hỏi (JSON/CSV)
+├── Docs/                     # Kế hoạch, quyết định, runbook, hướng dẫn
+├── docker-compose.dev.yml    # Dịch vụ dev: postgres, redis, mqtt
+└── docker-compose.server.yml # Triển khai server (xem Docs/SERVER_STARTUP.md)
 ```
 
 ---
 
-## 👥 Hướng Dẫn Đóng Góp (Contribution Guidelines)
-1. Mọi code thay đổi ở Backend cần sử dụng `loguru` để ghi log thay cho `print` hoặc `logging` mặc định.
-2. Không sửa thủ công file `mosquitto/config/passwd` hay `acl` vì service `mosquitto_mgr.py` sẽ tự động cập nhật khi thao tác qua API `/api/devices`.
+## 👥 Hướng dẫn đóng góp
+
+- Quy tắc bắt buộc của dự án nằm ở [AGENTS.md](AGENTS.md); nghiệp vụ LMS theo [LMS_DEVELOPMENT_PLAN](Docs/LMS_DEVELOPMENT_PLAN_2026-10-22.md); giả định đã chốt ghi ở [DECISIONS.md](Docs/DECISIONS.md).
+- **Phân quyền ở server**: endpoint lớp dùng `require_class_member(...)` trong `app/services/permissions.py`; không dựa vào việc ẩn nút ở frontend.
+- **Thêm endpoint**: schema trong `app/schemas/`, logic + transaction trong `app/services/`, router mỏng trong `app/routers/`, đăng ký ở `app/application.py`; test API/phân quyền cùng lúc.
+- **Đổi schema DB**: sửa model + thêm migration Alembic mới (idempotent, downgrade giữ dữ liệu); `test_migrations.py` so khớp schema với ORM.
+- **Đổi giáo trình tĩnh** (`src/data/*`): chạy `npm run curriculum:export` để cập nhật `seed.json`; `npm run check` báo lệch.
+- Backend log bằng `loguru` (không `print`); không commit `.env`, secret, dữ liệu DB.
+- Không sửa thủ công `mosquitto/config/passwd`/`acl`; dùng API thiết bị.

@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.lms_errors import LMSError
+
 
 def _envelope(error_code: str, message: str, details=None) -> dict:
     return {
@@ -23,6 +25,17 @@ def _envelope(error_code: str, message: str, details=None) -> dict:
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(LMSError)
+    async def lms_error_handler(request: Request, exc: LMSError):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "code": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            },
+        )
+
     @app.exception_handler(ValueError)
     async def value_error_handler(request: Request, exc: ValueError):
         return JSONResponse(
@@ -32,6 +45,20 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(request: Request, exc: RequestValidationError):
+        if request.url.path.startswith(("/api/admin/", "/api/classes", "/api/attempts")):
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "code": "CONFIG_INVALID",
+                    "message": "Dữ liệu gửi lên không hợp lệ.",
+                    "details": {
+                        "fields": [
+                            {"loc": list(error["loc"]), "message": error["msg"]}
+                            for error in exc.errors()
+                        ]
+                    },
+                },
+            )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             # Omit input/ctx: they may contain secrets, exceptions, bytes or NaN.

@@ -7,11 +7,15 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
+from app.core.lms_errors import LMSError
 from app.db import get_db
 from app.models.tables import User
 from app.services import artifacts, compiler_svc
 from app.services.auth import get_current_user, get_required_user
+from app.services.curriculum_access import class_lesson
 from app.services.lab1 import BOARD_PROFILES, get_template
+from app.services.permissions import legacy_restricted
 from app.services.progress import ProgressService
 
 router = APIRouter(prefix="/api", tags=["compiler"], dependencies=[Depends(get_required_user)])
@@ -22,6 +26,8 @@ class CompileRequest(BaseModel):
     board: Literal["esp32s3", "esp32"] = "esp32s3"
     lab_id: Optional[int] = Field(default=None, ge=0, le=8)
     include_binary: bool = True
+    class_id: Optional[int] = Field(default=None, gt=0)
+    lesson_id: Optional[str] = Field(default=None, max_length=200)
 
     @field_validator("code")
     @classmethod
@@ -42,7 +48,13 @@ async def list_boards():
 
 
 @router.get("/labs/1/template")
-async def lab1_template(board: Literal["esp32s3", "esp32"] = Query(default="esp32s3")):
+async def lab1_template(
+    board: Literal["esp32s3", "esp32"] = Query(default="esp32s3"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_required_user),
+):
+    if await legacy_restricted(db, current_user):
+        raise LMSError(403, "MEMBERSHIP_REQUIRED", "Tải mã mẫu từ bài thực hành trong lớp.")
     return get_template(board)
 
 
@@ -61,6 +73,24 @@ async def compile_code(
             headers={"WWW-Authenticate": "Bearer"},
         )
     owner_id = current_user.id if current_user else None
+    # Class context is enforced when given, and always for students of a pilot class.
+    class_build = get_settings().lms_class_mode and (
+        req.class_id is not None
+        or req.lesson_id is not None
+        or await legacy_restricted(db, current_user)
+    )
+    if class_build:
+        if not req.class_id or not req.lesson_id:
+            raise LMSError(
+                403, "MEMBERSHIP_REQUIRED", "Biên dịch yêu cầu bài thực hành đang bật trong lớp."
+            )
+        lesson = await class_lesson(db, current_user, req.class_id, req.lesson_id)
+        if lesson["type"] != "practice" or lesson["content"].get("mode") == "exploration":
+            raise LMSError(403, "LESSON_DISABLED", "Bài này không có chức năng biên dịch.")
+        if req.lab_id != lesson["lab_id"] or lesson["content"].get("board", req.board) != req.board:
+            raise LMSError(
+                422, "CONFIG_INVALID", "Lab hoặc bo mạch không khớp cấu hình bài thực hành."
+            )
     if owner_id is not None:
         # End the auth read transaction rather than retaining a DB connection for a long build.
         await db.rollback()
@@ -72,7 +102,19 @@ async def compile_code(
         include_binary=req.include_binary,
     )
 
-    if result.get("success") and owner_id is not None and req.lab_id is not None:
+    if class_build:
+        user = await get_current_user(
+            token=request.headers.get("Authorization", "").partition(" ")[2], db=db
+        )
+        if user is None:
+            raise HTTPException(401, "Phiên đăng nhập không còn hợp lệ.")
+        await class_lesson(db, user, req.class_id, req.lesson_id)
+    if (
+        not class_build
+        and result.get("success")
+        and owner_id is not None
+        and req.lab_id is not None
+    ):
         try:
             await ProgressService(db).mark_compiled(owner_id, req.lab_id)
             result["progress_saved"] = True

@@ -17,3 +17,23 @@ services:
     volumes:
       - ./fastapi-backend/data/local-services/config:/mosquitto/config:ro
     restart: unless-stopped
+  # Optional local PostgreSQL: `npm run dev:db:docker`. Dev-only credentials, localhost only.
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/dev-postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cubesat"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
+
+volumes:
+  postgres_dev_data:

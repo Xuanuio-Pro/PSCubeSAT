@@ -6,21 +6,21 @@ import WebFlasher from '../serial/WebFlasher';
 import { sourceKey, downloadFile, DEFAULT_ARDUINO_CODE } from './blockly-project.js';
 import { cppToWorkspace } from './cpp-to-blockly.js';
 
-function restoreDocument(labId, exerciseId, legacyFallback) {
+function restoreDocument(labId, exerciseId, storageScope) {
   try {
-    const saved = JSON.parse(localStorage.getItem(sourceKey(labId, exerciseId)) || (legacyFallback ? localStorage.getItem(sourceKey(labId)) : null) || 'null');
+    const saved = JSON.parse(localStorage.getItem(sourceKey(labId, exerciseId, storageScope)) || 'null');
     if (saved?.version === 2 && typeof saved.code === 'string') return { text: saved.code, origin: 'cpp', legacyManualCode: saved.legacyManualCode || '' };
     if (saved?.mode === 'manual' && typeof saved.manualCode === 'string') return { text: saved.manualCode, origin: 'cpp', legacyManualCode: '' };
     return { text: null, origin: 'blocks', legacyManualCode: saved?.manualCode || '' };
   } catch { return { text: null, origin: 'blocks', legacyManualCode: '' }; }
 }
 
-export default function IDEPanel({ labId, exerciseId = '', legacyFallback = false, setCode, variant = 'default', showToolbar = true }) {
-  return <LabIDE key={`${labId}:${exerciseId}`} {...{ labId, exerciseId, legacyFallback, setCode, variant, showToolbar }} />;
+export default function IDEPanel({ labId, exerciseId = '', storageScope = '', legacyFallback = false, setCode, variant = 'default', showToolbar = true }) {
+  return <LabIDE key={`${labId}:${exerciseId}:${storageScope}`} {...{ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar }} />;
 }
 
-function LabIDE({ labId, exerciseId, legacyFallback, setCode, variant, showToolbar }) {
-  const [document, setDocument] = useState(() => restoreDocument(labId, exerciseId, legacyFallback));
+function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar }) {
+  const [document, setDocument] = useState(() => restoreDocument(labId, exerciseId, storageScope));
   const [tab, setTab] = useState('cpp');
   const [generated, setGenerated] = useState({ code: '', issues: [] });
   const [sync, setSync] = useState({ status: 'pending', error: '' });
@@ -66,9 +66,9 @@ function LabIDE({ labId, exerciseId, legacyFallback, setCode, variant, showToolb
   useEffect(() => { setCode(effectiveCode); }, [effectiveCode, setCode]);
   useEffect(() => {
     if (document.text === null) return;
-    try { localStorage.setItem(sourceKey(labId, exerciseId), JSON.stringify({ version: 2, code: document.text, legacyManualCode: document.legacyManualCode })); }
+    try { localStorage.setItem(sourceKey(labId, exerciseId, storageScope), JSON.stringify({ version: 2, code: document.text, legacyManualCode: document.legacyManualCode })); }
     catch { setMessage('Không lưu được mã C++ trên máy. Hãy tải file .ino để giữ lại.'); }
-  }, [document.text, document.legacyManualCode, labId, exerciseId]);
+  }, [document.text, document.legacyManualCode, labId, exerciseId, storageScope]);
   useEffect(() => {
     if (!expanded) return;
     const listener = event => {
@@ -85,6 +85,15 @@ function LabIDE({ labId, exerciseId, legacyFallback, setCode, variant, showToolb
     setDocument(current => ({ ...current, text, origin: 'cpp' }));
   };
   const backupCpp = () => { if (document.text) downloadFile(`${fileStem}-cpp-ban-sao.ino`, document.text, 'text/plain'); };
+  const restoreLegacy = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(sourceKey(labId, exerciseId)) || localStorage.getItem(sourceKey(labId)) || 'null');
+      const code = saved?.version === 2 ? saved.code : saved?.manualCode;
+      if (typeof code !== 'string') throw new Error('Không tìm thấy bản C++ cũ phù hợp.');
+      backupCpp(); editCpp(code);
+      setMessage('Đã khôi phục C++ cũ vào bài hiện tại. Bản lưu cũ được giữ lại.');
+    } catch (error) { setMessage(error.message); }
+  };
 
   return <div className={`card ide-panel cube-ide ide-panel--${variant}${expanded ? ' cube-ide--expanded' : ''}`}>
     <div className="cube-ide-header">
@@ -108,12 +117,13 @@ function LabIDE({ labId, exerciseId, legacyFallback, setCode, variant, showToolb
       {sync.status === 'error' && generated.code && <button onClick={() => { backupCpp(); setDocument(current => ({ ...current, text: generated.code, origin: 'blocks' })); }}>Lấy lại C++ từ block</button>}
     </div>}
     <div className="cube-ide-body" id={`${id}-blocks`} role="tabpanel" aria-labelledby={`${id}-blocks-tab`} hidden={tab !== 'blocks'} inert={pendingCpp}>
-      <BlocklyEditor labId={labId} exerciseId={exerciseId} legacyFallback={legacyFallback} onCodeChange={onGenerated} active={tab === 'blocks'} workspaceUpdate={workspaceUpdate} />
+      <BlocklyEditor labId={labId} exerciseId={exerciseId} storageScope={storageScope} legacyFallback={legacyFallback} onCodeChange={onGenerated} active={tab === 'blocks'} workspaceUpdate={workspaceUpdate} />
     </div>
     <div className="cube-ide-body cube-source-panel" id={`${id}-cpp`} role="tabpanel" aria-labelledby={`${id}-cpp-tab`} hidden={tab !== 'cpp'}>
       <div className="blockly-toolbar">
         <span>Sửa trực tiếp · tự lưu và cập nhật Blockly</span>
         <div className="blockly-toolbar-group">
+          {(storageScope || legacyFallback) && <button onClick={restoreLegacy}>Khôi phục C++ cũ</button>}
           {document.legacyManualCode && <button onClick={() => { backupCpp(); setSync({ status: 'pending', error: '' }); setDocument(current => ({ ...current, text: current.legacyManualCode, legacyManualCode: '', origin: 'cpp' })); }}>Mở bản C++ cũ</button>}
           <button disabled={!document.text} onClick={() => downloadFile(`${fileStem}.ino`, document.text, 'text/plain')}>Tải .ino</button>
         </div>

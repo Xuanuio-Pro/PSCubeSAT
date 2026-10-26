@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LABS } from '../../data/labs';
+import { LABS } from '../../data/lab-metadata';
 import logoSvg from '../../assets/logo.svg';
 
 export default function Sidebar() {

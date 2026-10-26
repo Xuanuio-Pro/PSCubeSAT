@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     app_env: str = "development"
     port: int = 8000
     compiler_image: str = "pscubesat-compiler:1"
+    lms_class_mode: bool = False
+    quiz_ai_provider: str = ""
+    quiz_ai_key: str = Field(default="", repr=False)
+    quiz_ai_model: str = ""
+    quiz_ai_endpoint: str = ""
+    quiz_ai_max_call_usd: str = ""
+    quiz_ai_daily_usd: str = ""
 
     # MQTT (Mosquitto)
     mqtt_host: str = "localhost"

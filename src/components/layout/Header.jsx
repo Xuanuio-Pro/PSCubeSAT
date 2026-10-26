@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSerial } from '../../contexts/serial-api';
 import { useAuth } from '../../contexts/auth-api';
-import { getLabBySlug } from '../../data/labs';
+import { getLabBySlug } from '../../data/lab-metadata';
 import logoSvg from '../../assets/logo.svg';
 import {
   HomeIcon,
@@ -16,7 +16,7 @@ export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isConnected, connect, disconnect, serialSupport } = useSerial();
-  const { user, logout } = useAuth();
+  const { user, logout, classMode } = useAuth();
   const lab = getLabBySlug(location.pathname.replace('/', ''));
 
   const accountAvatar = (
@@ -39,6 +39,7 @@ export default function Header() {
       </label>
 
       <div className="header-actions">
+        {classMode && <Link to="/classes" className="header-class-link">Lớp học</Link>}
         <Link to="/" className="header-icon-action header-route-action" aria-label="Trang chủ" title="Trang chủ">
           <HomeIcon size={17} />
         </Link>

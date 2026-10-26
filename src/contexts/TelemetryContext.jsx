@@ -6,7 +6,6 @@ import { useSerial } from './serial-api';
 import { TelemetryContext } from './telemetry-api';
 import { adaptWebSocketMessage, demoFrame } from '../telemetry/adapters';
 import { createPracticeDecoder } from '../telemetry/practice';
-import { getLessonForLab } from '../data/curriculum';
 import { createTelemetryStore, currentReadings, telemetryStatus } from '../telemetry/store';
 import { startTelemetrySocket, telemetrySocketUrl } from '../telemetry/socket';
 
@@ -14,9 +13,8 @@ import { startTelemetrySocket, telemetrySocketUrl } from '../telemetry/socket';
 
 export function TelemetryProvider({ children }) {
   const route = useLocation();
-  const labId = Number(/^\/lab(\d+)$/.exec(route.pathname)?.[1] ?? 0);
-  const lesson = getLessonForLab(labId, new URLSearchParams(route.search).get('lesson'));
-  const exerciseId = lesson.type === 'practice' ? lesson.id : '';
+  const requestedLesson = new URLSearchParams(route.search).get('lesson') || '';
+  const exerciseId = /^Lab[1-8]-/.test(requestedLesson) ? requestedLesson : '';
   const { user } = useAuth();
   const { subscribe, isConnected, isConnecting, sessionId } = useSerial();
   const serialConnected = useRef(isConnected);

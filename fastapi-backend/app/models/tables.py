@@ -6,6 +6,7 @@ from enum import Enum
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -19,11 +20,36 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+from app.models import curriculum as curriculum_models  # noqa: F401
+from app.models import learning as learning_models  # noqa: F401
+from app.models import quiz as quiz_models  # noqa: F401
 
 
 class UserRole(str, Enum):
     admin = "admin"
+    teacher = "teacher"
     user = "user"
+
+
+class AccountStatus(str, Enum):
+    active = "active"
+    locked = "locked"
+
+
+class ClassStatus(str, Enum):
+    draft = "draft"
+    active = "active"
+    archived = "archived"
+
+
+class MembershipRole(str, Enum):
+    teacher = "teacher"
+    student = "student"
+
+
+class MembershipStatus(str, Enum):
+    active = "active"
+    removed = "removed"
 
 
 class DeviceStatus(str, Enum):
@@ -71,6 +97,11 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[UserRole] = mapped_column(
         SAEnum(UserRole, name="user_role"), nullable=False, server_default=text("'user'")
+    )
+    status: Mapped[AccountStatus] = mapped_column(
+        SAEnum(AccountStatus, name="account_status"),
+        nullable=False,
+        server_default=text("'active'"),
     )
 
     devices: Mapped[list[Device]] = relationship(back_populates="user")
@@ -231,3 +262,57 @@ class RevokedToken(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )
+
+
+class Classroom(Base):
+    __tablename__ = "classes"
+    __table_args__ = (
+        CheckConstraint("lms_mode IN ('enabled','read_only','off')", name="ck_class_lms_mode"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    code: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    term: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[ClassStatus] = mapped_column(
+        SAEnum(ClassStatus, name="class_status"), nullable=False, server_default=text("'draft'")
+    )
+    # Per-class pilot switch under the global LMS_CLASS_MODE gate (see Docs/DECISIONS.md).
+    lms_mode: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'enabled'"))
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ClassMembership(Base):
+    __tablename__ = "class_memberships"
+    __table_args__ = (
+        UniqueConstraint("class_id", "user_id", name="uq_class_membership"),
+        Index("idx_membership_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("classes.id", ondelete="RESTRICT"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    role: Mapped[MembershipRole] = mapped_column(SAEnum(MembershipRole, name="membership_role"))
+    status: Mapped[MembershipStatus] = mapped_column(
+        SAEnum(MembershipStatus, name="membership_status"), server_default=text("'active'")
+    )
+    added_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    actor: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    action: Mapped[str] = mapped_column(Text)
+    target: Mapped[str] = mapped_column(Text)
+    before: Mapped[dict | None] = mapped_column(JSONB)
+    after: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

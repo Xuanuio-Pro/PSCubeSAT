@@ -8,8 +8,9 @@ import { getAuthToken } from '../../contexts/auth-storage';
 import { downloadFile } from '../editor/blockly-project';
 import TelemetryControls from '../groundstation/TelemetryControls';
 import PracticeVisualization from '../visualization/PracticeVisualization';
-import { getLessonsForLab, getLessonForLab, LESSON_TYPE_LABELS } from '../../data/curriculum';
-import { lessonReadingContent } from '../../data/lesson-reading';
+import { useLmsResource } from '../classes/use-lms-resource';
+
+const LESSON_TYPE_LABELS = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', summary: 'Tổng hợp', components: 'Thành phần' };
 
 function LabStateTitle({ lab, lesson, position }) {
   return <header className="lab-state-title lab-state-title--compact">
@@ -19,14 +20,22 @@ function LabStateTitle({ lab, lesson, position }) {
   </header>;
 }
 
-export default function LabLayout({ lab, editorPanel, visualizationPanel = null, practiceActions = null, practiceVariant = 'split' }) {
+export default function LabLayout(props) {
+  const { data, error, loading } = useLmsResource('/api/curriculum/legacy');
+  if (loading) return <p role="status">Đang tải giáo trình…</p>;
+  if (error) return <p role="alert">{error}</p>;
+  const lab = data.find(item => item.id === props.lab.id);
+  return <LoadedLabLayout {...props} lab={lab} catalog={data} />;
+}
+
+function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null, practiceActions = null, practiceVariant = 'split' }) {
   const mainRef = useRef(null);
   const [downloadError, setDownloadError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, markVideoWatched, markDocViewed } = useAuth();
-  const lessons = getLessonsForLab(lab?.id ?? 0);
-  const lesson = getLessonForLab(lab?.id ?? 0, searchParams.get('lesson'));
+  const lessons = lab.lessons;
+  const lesson = lessons.find(item => item.id === searchParams.get('lesson')) || lessons[0];
   const lessonIndex = lessons.indexOf(lesson);
   const firstPractice = lessons.find(item => item.type === 'practice');
   const videoUrl = lab?.id === 0 ? lab.videoUrl : lesson.videoUrl;
@@ -57,7 +66,7 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel = null,
   }) : editorPanel;
 
   return <div className="player-layout">
-    <CourseSidebar currentLabId={lab.id} activeLesson={lesson.id} onSelectLesson={selectLesson} />
+    <CourseSidebar labs={catalog} currentLabId={lab.id} activeLesson={lesson.id} onSelectLesson={selectLesson} />
     <div className="player-main" ref={mainRef}>
       <TelemetryControls />
       {lab.id === 0 ? <nav className="lab-mobile-lessons" aria-label="Nội dung Lab 0">
@@ -80,7 +89,7 @@ export default function LabLayout({ lab, editorPanel, visualizationPanel = null,
         </>}
         {lesson.type === 'document' && <section className="lab-workspace lab-doc-workspace" aria-label={`${lesson.label}: ${lesson.title}`}>
           <span className="lab-workspace-badge" aria-hidden="true">▤</span>
-          <div className="lab-doc-surface"><DocViewer key={lesson.id} docPath={lab.id === 0 ? lab.docPath : undefined} content={lab.id === 0 ? '' : lessonReadingContent(lab, lesson)} /></div>
+          <div className="lab-doc-surface"><DocViewer key={lesson.id} docPath={lab.id === 0 ? lab.docPath : undefined} content={lesson.reading} /></div>
         </section>}
         {lesson.type === 'components' && <section className="lab-workspace lab-components-workspace" aria-label="Khám phá các phân hệ CubeSat">{visualizationPanel}</section>}
         {lesson.type === 'practice' && <>
