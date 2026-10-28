@@ -13,6 +13,12 @@ const PRESET_COMMANDS = [
   { cmd: 'resume', label: '▶️ Resume', desc: 'Tiếp tục Telemetry' },
   { cmd: 'ls', label: '📁 LS', desc: 'Liệt kê file' },
   { cmd: 'pwd', label: '📂 PWD', desc: 'Thư mục hiện tại' },
+  { cmd: 'mkdir demo', label: '➕ mkdir demo', desc: 'Tạo thư mục demo' },
+  { cmd: 'cd demo', label: '➡️ cd demo', desc: 'Vào thư mục demo' },
+  { cmd: 'cd ..', label: '⬆️ cd ..', desc: 'Lên thư mục cha' },
+  { cmd: 'touch note.txt', label: '📝 touch note.txt', desc: 'Tạo file note.txt' },
+  { cmd: 'rm note.txt', label: '🗑️ rm note.txt', desc: 'Xóa file note.txt' },
+  { cmd: 'rm demo', label: '🗑️ rm demo', desc: 'Xóa thư mục demo' },
   { cmd: 'reboot', label: '🔄 Reboot', desc: 'Khởi động lại' },
   { cmd: 'help', label: '❓ Help', desc: 'Danh sách lệnh' },
 ];

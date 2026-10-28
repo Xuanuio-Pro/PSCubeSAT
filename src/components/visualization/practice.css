@@ -29,3 +29,17 @@
 .lab1-connection-notice { margin: 0; padding: 14px 16px; border: 1px solid var(--border-primary); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-primary); line-height: 1.6; overflow-wrap: anywhere; }
 .lab1-connection-notice a { color: var(--accent-cyan); text-decoration: underline; text-underline-offset: 3px; }
 .lab1-connection-notice.is-error { border-color: var(--accent-red); }
+.radio-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; margin-bottom: 12px; }
+.radio-log { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; font-size: 12px; }
+.radio-log li { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-primary); min-width: 0; }
+.radio-log time { white-space: nowrap; color: var(--text-secondary); }
+.radio-log code { overflow-wrap: anywhere; min-width: 0; }
+.radio-kind { flex-shrink: 0; min-width: 34px; text-align: center; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; color: #fff; background: #8b949e; }
+.radio-kind.is-tx { background: #1986b0; }
+.radio-kind.is-rx { background: #169c78; }
+.radio-kind.is-error { background: #c94a4a; }
+.anomaly-status { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border-primary); }
+.anomaly-status strong { font-size: 15px; }
+.anomaly-status p { margin: 2px 0 0; font: 12px/1.5 var(--font-mono); color: var(--text-secondary); overflow-wrap: anywhere; }
+.anomaly-status.is-error { border-color: #c94a4a; background: rgba(201, 74, 74, .12); }
+.anomaly-status.is-ok { border-color: #169c78; background: rgba(22, 156, 120, .1); }
