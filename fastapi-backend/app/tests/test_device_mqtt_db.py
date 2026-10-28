@@ -72,6 +72,7 @@ class DeviceMqttTests(unittest.IsolatedAsyncioTestCase):
                     f"sensors/{uid}/telemetry",
                     f"sensors/{uid}/status",
                     f"sensors/{uid}/ack",
+                    f"sensors/{uid}/image",
                     f"cmd/{uid}/#",
                 },
             )

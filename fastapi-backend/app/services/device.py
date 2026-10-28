@@ -80,6 +80,13 @@ class DeviceService:
                     action="publish",
                     topic=f"sensors/{generated_uid}/ack",
                 ),
+                # Cho phép gửi ảnh JPEG chụp từ camera
+                MQTTACL(
+                    device_id=created_device.id,
+                    permission="allow",
+                    action="publish",
+                    topic=f"sensors/{generated_uid}/image",
+                ),
             ]
             await self.mqtt_acl_repo.create(default_acls)
 

@@ -48,7 +48,7 @@ EMQX hỗ trợ query theo schema/view tùy chỉnh; authentication lấy passwo
 
 ## Hợp đồng topic
 
-Thiết bị chỉ publish `sensors/<uid>/telemetry`, `sensors/<uid>/status`, `sensors/<uid>/ack`; chỉ subscribe `cmd/<uid>/#`. Các topic khác bị deny. Thiết bị cũ giữ ACL cũ để không thay đổi firmware đang dùng ngoài yêu cầu.
+Thiết bị chỉ publish `sensors/<uid>/telemetry`, `sensors/<uid>/status`, `sensors/<uid>/ack`, `sensors/<uid>/image` (ảnh JPEG; migration 0011 bổ sung cho thiết bị cũ); chỉ subscribe `cmd/<uid>/#`. Các topic khác bị deny. Thiết bị cũ giữ ACL cũ để không thay đổi firmware đang dùng ngoài yêu cầu.
 
 Telemetry phải chứa device_id trùng UID, số đo đúng schema hiện có. LWT có thể dùng status topic; việc xử lý status/ACK/command hoàn chỉnh ở BE là công việc riêng chưa hoàn tất trong thay đổi này.
 

@@ -1,10 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useTelemetry } from '../../contexts/telemetry-api';
+import { authorizedFetch } from '../../contexts/auth-api';
+
+const POLL_MS = 4000;
+
+/** Images the backend received from the device over MQTT (`sensors/{uid}/image`), fetched as blob URLs because <img> cannot send the bearer token. */
+function useDeviceImages(enabled, deviceId, generation) {
+  const [urls, setUrls] = useState([]);
+  useEffect(() => {
+    setUrls([]);
+    if (!enabled) return undefined;
+    const abort = new AbortController();
+    const known = new Map();
+    const poll = async () => {
+      try {
+        const list = await authorizedFetch(`/api/telemetry/images/${encodeURIComponent(deviceId)}`, { signal: abort.signal });
+        if (!list.ok) return;
+        const { images } = await list.json();
+        for (const id of images.filter(image => !known.has(image)).reverse()) {
+          const response = await authorizedFetch(`/api/telemetry/images/${encodeURIComponent(deviceId)}/${id}`, { signal: abort.signal });
+          if (response.ok) known.set(id, URL.createObjectURL(await response.blob()));
+        }
+        setUrls([...known.values()].slice(-10));
+      } catch { /* Offline or aborted: the next poll retries. */ }
+    };
+    poll();
+    const timer = setInterval(poll, POLL_MS);
+    return () => { abort.abort(); clearInterval(timer); known.forEach(url => URL.revokeObjectURL(url)); };
+  }, [enabled, deviceId, generation]);
+  return urls;
+}
 
 export default function CameraViewer() {
-  const { history, generation, activity } = useTelemetry();
+  const { history, generation, activity, mode, deviceId } = useTelemetry();
+  const deviceImages = useDeviceImages(mode !== 'serial' && mode !== 'demo', deviceId, generation);
   const capture = activity.subsystems.camera;
-  const images = [...new Set(history.filter(frame => frame.imageData).map(frame => frame.imageData))].slice(-10).reverse();
+  const images = [...new Set([...history.filter(frame => frame.imageData).map(frame => frame.imageData), ...deviceImages])].slice(-10).reverse();
   const [selected, setSelected] = useState(null);
   const [failed, setFailed] = useState([]);
   useEffect(() => { setSelected(null); setFailed([]); }, [generation]);
@@ -21,7 +52,7 @@ export default function CameraViewer() {
       </div>
       <div className="card-body" style={{ textAlign: 'center' }}>
         {failed.length > 0 && <p role="status" className="practice-note">Đã bỏ qua ảnh không giải mã được. Kiểm tra JPEG/PNG và dữ liệu truyền qua Serial.</p>}
-        {capture && <p className="practice-note">{capture.text} · {new Date(capture.at).toLocaleTimeString()}{capture.phase === 'saved' && ' · Đã lưu tại thiết bị; chưa nhận dữ liệu ảnh về trình duyệt.'}</p>}
+        {capture && <p className="practice-note">{capture.text} · {new Date(capture.at).toLocaleTimeString()}{capture.phase === 'saved' && gallery.length === 0 && ' · Đã lưu tại thiết bị; chưa nhận dữ liệu ảnh về trình duyệt.'}</p>}
         {currentImage ? (
           <img
             src={currentImage}

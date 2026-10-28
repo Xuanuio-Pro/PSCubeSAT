@@ -20,6 +20,7 @@ def make_firmware_snippet(device_uid: str, device_secret: str, username: str | N
             f"const char* MQTT_CLIENT_ID = {json.dumps(username)};",
             f"const char* DEVICE_UID = {json.dumps(device_uid)};",
             f"const char* TOPIC_PUB = {json.dumps(f'sensors/{device_uid}/telemetry')};",
+            f"const char* TOPIC_IMAGE = {json.dumps(f'sensors/{device_uid}/image')};",
             f"const char* TOPIC_CMD = {json.dumps(f'cmd/{device_uid}/#')};",
             "// TLS: use WiFiClientSecure with the broker trusted root CA or a CA bundle.",
             "// ESP32 does not inherit the desktop OS CA store. Do not use WiFiClient on a TLS port.",

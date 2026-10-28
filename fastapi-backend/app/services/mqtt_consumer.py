@@ -13,6 +13,7 @@ from app.core.mqtt_transport import mqtt_error_detail, mqtt_tls_context
 from app.db.database import get_session_maker
 from app.models.telemetry import TelemetryPayload
 from app.repository.device import DeviceRepository
+from app.services import device_images
 from app.websocket.ws_manager import ws_manager
 
 # In-memory latest telemetry per device
@@ -28,6 +29,7 @@ def clear_device_state(device_uid: str) -> None:
     """Drop cached telemetry and persistence throttles for a revoked device."""
     _latest_state.pop(device_uid, None)
     _last_position_write.pop(device_uid, None)
+    device_images.clear_images(device_uid)
 
 
 # Ghi vị trí xuống DB tối đa 1 lần / khoảng thời gian này cho mỗi thiết bị — tránh
@@ -36,6 +38,7 @@ def clear_device_state(device_uid: str) -> None:
 _MIN_POSITION_WRITE_INTERVAL_S = 3.0
 _last_position_write: dict[str, float] = {}
 _TELEMETRY_TOPIC = re.compile(r"^sensors/([A-Za-z0-9_-]{1,64})/telemetry$")
+_IMAGE_TOPIC = re.compile(r"^sensors/([A-Za-z0-9_-]{1,64})/image$")
 _MAX_PAYLOAD_BYTES = 65536
 
 
@@ -63,8 +66,32 @@ async def _persist_position(device_uid: str, lat: float, lon: float, alt: float 
     _last_position_write[device_uid] = now
 
 
+async def _handle_image(topic_uid: str, payload: bytes) -> None:
+    if len(payload) > device_images.MAX_IMAGE_BYTES or not device_images.is_jpeg(payload):
+        logger.bind(action="device_image_rejected", device_id=topic_uid).warning(
+            "[MQTT] Rejected oversized or non-JPEG image."
+        )
+        return
+    async with get_session_maker()() as db:
+        device = await DeviceRepository(db).get_by_uid(topic_uid)
+    if not device or not device.enabled or device.user_id is None:
+        logger.warning("[MQTT] Rejected image from unknown, disabled or unowned device.")
+        return
+    image_id = await asyncio.to_thread(device_images.save_image, topic_uid, payload)
+    logger.bind(
+        action="device_image_saved", device_id=topic_uid, image_id=image_id, size=len(payload)
+    ).info("[MQTT] Device image saved")
+
+
 async def _handle_message(message: aiomqtt.Message) -> None:
     topic = str(message.topic)
+    image_match = _IMAGE_TOPIC.fullmatch(topic)
+    if image_match and isinstance(message.payload, bytes):
+        try:
+            await _handle_image(image_match.group(1), message.payload)
+        except Exception:
+            logger.exception("[MQTT] Failed to store device image")
+        return
     match = _TELEMETRY_TOPIC.fullmatch(topic)
     if (
         not match

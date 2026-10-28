@@ -66,7 +66,7 @@ class EmqxPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(rows[0]["is_superuser"])
             self.assertTrue(verify_password(item["device_secret"], rows[0]["password_hash"]))
             rules = await authz()
-            self.assertEqual(len(rules), 5)
+            self.assertEqual(len(rules), 6)
             self.assertEqual(
                 (rules[-1]["permission"], rules[-1]["action"], rules[-1]["topic"]),
                 ("deny", "all", "#"),
