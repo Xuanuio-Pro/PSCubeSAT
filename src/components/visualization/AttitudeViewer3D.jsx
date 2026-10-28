@@ -4,6 +4,9 @@ import { OrbitControls, Grid, Text } from '@react-three/drei';
 import { useTelemetry } from '../../contexts/telemetry-api';
 import * as THREE from 'three';
 
+// Bundled Inter subset (ASCII, Vietnamese, arrows): troika would otherwise fetch fonts from a CDN at runtime.
+const LABEL_FONT = '/fonts/inter-3d-labels.ttf';
+
 function CubeSatModel({ quaternion }) {
   return (
     <group quaternion={quaternion}>
@@ -56,7 +59,7 @@ function CubeSatModel({ quaternion }) {
       </mesh>
 
       {/* Labels */}
-      <Text position={[0, -0.55, 0.51]} fontSize={0.08} color="#e2e8f0" anchorX="center">
+      <Text font={LABEL_FONT} position={[0, -0.55, 0.51]} fontSize={0.08} color="#e2e8f0" anchorX="center">
         PTIT CubeSat
       </Text>
     </group>
@@ -85,21 +88,21 @@ function AxisHelper() {
         <cylinderGeometry args={[0.01, 0.01, 3, 4]} />
         <meshBasicMaterial color="#f85149" />
       </mesh>
-      <Text position={[3.2, 0, 0]} fontSize={0.15} color="#f85149">X</Text>
+      <Text font={LABEL_FONT} position={[3.2, 0, 0]} fontSize={0.15} color="#f85149">X</Text>
 
       {/* Y axis - Green */}
       <mesh position={[0, 1.5, 0]}>
         <cylinderGeometry args={[0.01, 0.01, 3, 4]} />
         <meshBasicMaterial color="#3fb950" />
       </mesh>
-      <Text position={[0, 3.2, 0]} fontSize={0.15} color="#3fb950">Lên ↑</Text>
+      <Text font={LABEL_FONT} position={[0, 3.2, 0]} fontSize={0.15} color="#3fb950">Lên ↑</Text>
 
       {/* Z axis - Blue */}
       <mesh position={[0, 0, 1.5]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.01, 0.01, 3, 4]} />
         <meshBasicMaterial color="#388bfd" />
       </mesh>
-      <Text position={[0, 0, 3.2]} fontSize={0.15} color="#388bfd">Z</Text>
+      <Text font={LABEL_FONT} position={[0, 0, 3.2]} fontSize={0.15} color="#388bfd">Z</Text>
     </group>
   );
 }
