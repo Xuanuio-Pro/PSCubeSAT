@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_console_encoding
+from app.core.rate_limit import RateLimitMiddleware
 from app.lifespan import lifespan
 from app.routers import (
     admin,
@@ -50,12 +51,19 @@ API_ROUTERS = (
 def create_app() -> FastAPI:
     """Build the ASGI app without opening database, Redis or MQTT connections."""
     configure_console_encoding()
+    # The API schema maps every endpoint; publish it only outside production.
+    public_docs = get_settings().app_env != "production"
     app = FastAPI(
         title="CubeSat Ground Station API",
         description="Backend cho hệ thống Ground Station CubeSat PTIT-STEM",
         version="2.0.0",
         lifespan=lifespan,
+        docs_url="/docs" if public_docs else None,
+        redoc_url="/redoc" if public_docs else None,
+        openapi_url="/openapi.json" if public_docs else None,
     )
+    # Added before CORS so CORS stays outermost and 429 responses still carry CORS headers.
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().allowed_origins_list,

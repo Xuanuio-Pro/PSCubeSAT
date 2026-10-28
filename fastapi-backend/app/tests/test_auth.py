@@ -19,6 +19,7 @@ from app.db import get_db
 from app.models.db_models import Base, GoogleIdentity, RevokedToken, User
 from app.routers import compiler, curriculum, health
 from app.routers.auth import router
+from app.services.auth import LOGIN_FAILURES, PAIR_FAILURES
 
 
 class AuthTests(unittest.IsolatedAsyncioTestCase):
@@ -47,6 +48,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.redis_patch = patch("app.services.auth.get_redis", return_value=None)
         self.redis_patch.start()
         self.client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+        LOGIN_FAILURES.clear()
 
     async def asyncTearDown(self):
         await self.client.aclose()
@@ -70,6 +72,34 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         }
         with patch("app.routers.auth.verify_google_credential", AsyncMock(return_value=claims)):
             return await self.client.post("/api/auth/google", json={"credential": "test-token"})
+
+    async def login(self, password, email="student@gmail.com"):
+        return await self.client.post(
+            "/api/auth/login", json={"email": email, "password": password}
+        )
+
+    async def test_repeated_wrong_passwords_lock_the_email_and_address_pair(self):
+        await self.register()
+        for _ in range(PAIR_FAILURES):
+            self.assertEqual((await self.login("wrong-pass")).status_code, 401)
+        locked = await self.login("secret123")
+        self.assertEqual(locked.status_code, 429, locked.text)
+        self.assertEqual(locked.json()["code"], "LOGIN_LOCKED")
+        self.assertGreater(locked.json()["details"]["retry_after"], 0)
+        # Another account from the same address is not affected.
+        await self.register("other@gmail.com")
+        self.assertEqual((await self.login("secret123", "other@gmail.com")).status_code, 200)
+
+    async def test_successful_login_clears_failures_and_unknown_email_still_runs_bcrypt(self):
+        await self.register()
+        for _ in range(PAIR_FAILURES - 1):
+            await self.login("wrong-pass")
+        self.assertEqual((await self.login("secret123")).status_code, 200)
+        self.assertEqual((await self.login("wrong-pass")).status_code, 401)
+        self.assertEqual((await self.login("secret123")).status_code, 200)
+        with patch("app.services.auth.verify_password", return_value=False) as verify:
+            self.assertEqual((await self.login("x", "nobody@gmail.com")).status_code, 401)
+        verify.assert_called_once()
 
     async def test_register_login_and_me(self):
         registered = await self.register("Student@gmail.com")

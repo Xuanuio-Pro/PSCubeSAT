@@ -8,13 +8,14 @@ Authentication API Endpoints:
   POST /api/auth/logout   — Đăng xuất (thu hồi token vào PostgreSQL, cache trên Redis)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.google_auth import verify_google_credential
+from app.core.rate_limit import client_ip
 from app.db import get_db
 from app.models.tables import User
 from app.schemas.auth import (
@@ -56,11 +57,11 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Đăng nhập với email và mật khẩu."""
     logger.info(f"[Auth] Attempting login for email: {req.email.strip().lower()}")
     try:
-        return await AuthService(db).login_user(req)
+        return await AuthService(db).login_user(req, client_ip(request.scope))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 

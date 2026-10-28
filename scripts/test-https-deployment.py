@@ -59,6 +59,7 @@ def main():
                '-v', f'{folder.as_posix()}:/fixtures:ro', 'python:3.12-slim', 'python', '/fixtures/backend.py')
         docker('run', '-d', '--name', names[1], '--network', prefix, '--network-alias', 'frontend',
                '-v', f'{(ROOT / "nginx.conf").as_posix()}:/etc/nginx/conf.d/default.conf:ro',
+               '-v', f'{(ROOT / "nginx-security-headers.conf").as_posix()}:/etc/nginx/snippets/security-headers.conf:ro',
                '-v', f'{(folder / "index.html").as_posix()}:/usr/share/nginx/html/index.html:ro',
                'nginx:1.25-alpine')
         docker('run', '-d', '--name', names[2], '--network', prefix, '-e', 'SITE_DOMAIN=localhost',
