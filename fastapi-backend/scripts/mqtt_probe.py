@@ -25,10 +25,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import aiomqtt
-from aiomqtt.exceptions import MqttConnectError
 
 from app.core.config import Settings, get_settings
-from app.core.mqtt_transport import mqtt_tls_context
+from app.core.mqtt_transport import mqtt_error_detail, mqtt_tls_context, redact_mqtt_secrets
 
 TIMEOUT = 5.0
 PROBE_TOPIC = "test/codex/probe"
@@ -55,31 +54,6 @@ class Report:
     phase1_ready: bool = False
     tls_verified: bool = False
     steps: list[Step] = field(default_factory=list)
-
-
-def redact(text: str, settings: Settings) -> str:
-    for value in (settings.mqtt_password, settings.mqtt_admin_password):
-        if value:
-            text = text.replace(value, "[REDACTED]")
-    # Broker strings are data: prevent multiline/terminal control injection.
-    return "".join(c if c.isprintable() else " " for c in text)[:1000]
-
-
-def error_detail(exc: Exception, settings: Settings) -> str:
-    code = getattr(exc, "rc", None)
-    detail = f"{type(exc).__name__}: {exc}"
-    if code is not None:
-        detail += f" (CONNACK/reason={code})"
-    if isinstance(exc, MqttConnectError) and isinstance(code, int):
-        # aiomqtt 2.3's generic error_string is not a CONNACK lookup.
-        detail += "; " + {
-            1: "Incorrect protocol version",
-            2: "Invalid client identifier",
-            3: "Server unavailable",
-            4: "Bad username or password",
-            5: "Not authorized",
-        }.get(code, "Unknown CONNACK")
-    return redact(detail, settings)
 
 
 def tls_context(settings: Settings) -> ssl.SSLContext | None:
@@ -123,7 +97,7 @@ async def probe(settings: Settings) -> Report:
             report.steps.append(Step(name, "PASS", "OK"))
             return True, result
         except Exception as exc:
-            report.steps.append(Step(name, failure, error_detail(exc, settings)))
+            report.steps.append(Step(name, failure, mqtt_error_detail(exc, settings)))
             return False, None
 
     ok, addresses = await step(
@@ -227,7 +201,7 @@ async def probe(settings: Settings) -> Report:
             await subscribe(mqtt, "$SYS/broker/version")
             raw = await receive(mqtt, "$SYS/broker/version", lambda _: True)
             value = bytes(raw).decode("utf-8", errors="replace")
-            report.version = redact(value, settings)
+            report.version = redact_mqtt_secrets(value, settings)
             lower = value.lower()
             report.broker = next(
                 (name for name in ("mosquitto", "emqx", "hivemq") if name in lower), "unknown"
