@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.google_auth import verify_google_credential
+from app.core.logging import mask_email
 from app.core.rate_limit import client_ip
 from app.db import get_db
 from app.models.tables import User
@@ -49,7 +50,7 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
 @router.post("/register", response_model=AuthTokenResponse, status_code=201)
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Đăng ký tài khoản người dùng mới."""
-    logger.info(f"[Auth] Attempting to register new user with email: {req.email.strip().lower()}")
+    logger.info(f"[Auth] Attempting to register new user with email: {mask_email(req.email)}")
     try:
         return await AuthService(db).register_user(req)
     except ValueError as e:
@@ -59,7 +60,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=AuthTokenResponse)
 async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Đăng nhập với email và mật khẩu."""
-    logger.info(f"[Auth] Attempting login for email: {req.email.strip().lower()}")
+    logger.info(f"[Auth] Attempting login for email: {mask_email(req.email)}")
     try:
         return await AuthService(db).login_user(req, client_ip(request.scope))
     except ValueError as e:

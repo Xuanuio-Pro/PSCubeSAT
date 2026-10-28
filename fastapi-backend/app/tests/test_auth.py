@@ -7,13 +7,14 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from loguru import logger
 from sqlalchemy import Integer, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.google_auth import verify_google_credential
-from app.core.logging import configure_console_encoding
+from app.core.logging import configure_console_encoding, mask_email
 from app.core.security import create_access_token
 from app.db import get_db
 from app.models.db_models import Base, GoogleIdentity, RevokedToken, User
@@ -100,6 +101,21 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         with patch("app.services.auth.verify_password", return_value=False) as verify:
             self.assertEqual((await self.login("x", "nobody@gmail.com")).status_code, 401)
         verify.assert_called_once()
+
+    async def test_auth_logs_mask_email_addresses(self):
+        self.assertEqual(mask_email(" Student@Gmail.com "), "st***@gmail.com")
+        self.assertEqual(mask_email("not-an-email"), "***")
+        lines: list[str] = []
+        sink = logger.add(lines.append, format="{message} {extra}")
+        try:
+            await self.register()
+            await self.login("secret123")
+            await self.login("wrong-pass")
+        finally:
+            logger.remove(sink)
+        text = "".join(lines)
+        self.assertIn("st***@gmail.com", text)
+        self.assertNotIn("student@gmail.com", text)
 
     async def test_register_login_and_me(self):
         registered = await self.register("Student@gmail.com")

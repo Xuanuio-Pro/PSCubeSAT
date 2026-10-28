@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.lms_errors import LMSError
+from app.core.logging import mask_email
 from app.core.rate_limit import FixedWindowLimiter
 from app.core.redis import get_redis
 from app.core.security import (
@@ -115,7 +116,7 @@ class AuthService:
 
         if await self.user_repo.check_email_exists(email_clean):
             logger.warning(
-                f"[AuthService] ❌ Attempt to register with existing email: {email_clean}"
+                f"[AuthService] ❌ Attempt to register with existing email: {mask_email(email_clean)}"
             )
             raise ValueError("Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.")
 
@@ -141,7 +142,7 @@ class AuthService:
         await self.db_session.refresh(created_user)
 
         logger.success(
-            f"[AuthService] ✅ New user registered: {created_user.email} (ID: {created_user.id})"
+            f"[AuthService] ✅ New user registered: {mask_email(created_user.email)} (ID: {created_user.id})"
         )
 
         token = create_access_token(
@@ -186,7 +187,7 @@ class AuthService:
         if not user or not valid:
             LOGIN_FAILURES.hit(pair_key, PAIR_FAILURES, PAIR_WINDOW_S)
             if LOGIN_FAILURES.hit(email_key, EMAIL_FAILURES, EMAIL_WINDOW_S):
-                logger.bind(action="login_email_locked").warning(
+                logger.bind(action="login_email_locked", email=mask_email(email_clean)).warning(
                     "Login failures from many addresses locked an account email"
                 )
             raise ValueError("Email hoặc mật khẩu không chính xác.")
@@ -195,7 +196,7 @@ class AuthService:
         if user.status != AccountStatus.active:
             raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.")
 
-        logger.info(f"[AuthService] 🔑 User logged in: {user.email}")
+        logger.info(f"[AuthService] 🔑 User logged in: {mask_email(user.email)}")
 
         token = create_access_token(
             {

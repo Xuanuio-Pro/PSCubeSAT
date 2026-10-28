@@ -31,3 +31,9 @@ def configure_logging() -> None:
         enqueue=True,
         encoding="utf-8",
     )
+
+
+def mask_email(email: str) -> str:
+    """Keep logs useful for tracing without storing full addresses: "student@x.vn" -> "st***@x.vn"."""
+    local, _, domain = email.strip().lower().partition("@")
+    return f"{local[:2]}***@{domain}" if domain else "***"
