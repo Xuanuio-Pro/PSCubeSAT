@@ -38,7 +38,7 @@ Bước 1–2 bên dưới vẫn là hướng dài hạn cho telemetry cảm bi�
 ## 4. Việc cần làm theo thứ tự
 
 1. **Bật nguồn PostgreSQL trên EMQX server** và kiểm tra đăng nhập bằng credential thiết bị thật (chặn mọi bước sau; BE đã tạo `dev_<uid>` + ACL trong DB, xem EMQX_POSTGRES_SETUP.md).
-2. **Firmware nhận cấu hình broker cho toàn bộ lab** (ví dụ camera đã dán hằng số thủ công): compiler cấp macro `MQTT_HOST/PORT/USER/PASS` cho thư viện CDH, client ID theo `device_uid`, reconnect có backoff, kiểm tra kết quả publish. Sửa topic Lab7-03 từ `cubesat/telemetry/...` sang `sensors/{uid}/telemetry`.
+2. **Firmware nhận cấu hình broker cho toàn bộ lab** (ví dụ camera đã dán hằng số thủ công): compiler cấp macro `MQTT_HOST/PORT/USER/PASS` cho thư viện CDH, client ID theo `device_uid`, reconnect có backoff, kiểm tra kết quả publish. (Lab7-03 đã publish đúng `sensors/<DEVICE_UID>/telemetry` với `device_id` khớp; mục "lệch topic" trong báo cáo 16/10 không còn đúng.)
 3. **Lab sensor qua MQTT**: bổ sung bản MQTT cho 4.1/4.2/4.3/4.5 (cùng sketch, thêm publish JSON). Kiểm tra đầu-cuối: ESP32 → broker → BE → trình duyệt.
 4. **Camera 4.4 qua MQTT**: firmware đọc file từ SD theo khối (đệm ≤ 4 KiB) và publish một message JPEG. Cần kiểm tra giới hạn message của broker/ESP32 (ví dụ dùng `beginPublish` streaming nên không cần buffer lớn) trước khi chốt 2 MiB.
 5. **TLS thật** (CA + xác minh tên miền), thay `setInsecure()`.
