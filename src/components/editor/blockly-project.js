@@ -1,12 +1,10 @@
 import * as Blockly from 'blockly';
 import { allowedBlockTypes, registerCustomBlocks } from './blockly-toolbox.js';
 
-const exerciseSuffix = exerciseId => exerciseId ? `:exercise:${encodeURIComponent(exerciseId)}` : '';
-export const projectKey = (labId, exerciseId = '', scope = '') => `ptit:blockly:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
-export const sourceKey = (labId, exerciseId = '', scope = '') => `ptit:source:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
+export { DEFAULT_ARDUINO_CODE, downloadFile, projectKey, sourceKey } from './project-files.js';
+
 export const emptyWorkspace = () => ({ blocks: { languageVersion: 0, blocks: [] } });
 export const defaultWorkspace = () => starterWorkspace(1, true);
-export const DEFAULT_ARDUINO_CODE = '#include <Arduino.h>\n#include <math.h>\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  delay(1000);\n}\n';
 const value = (type, fields = {}) => ({ block: { type, fields } });
 const chain = items => items.reduceRight((next, item) => ({ ...item, ...(next ? { next: { block: next } } : {}) }), null);
 
@@ -69,11 +67,4 @@ export function decodeProject(json, labId) {
   try { Blockly.serialization.workspaces.load(state, candidate); }
   finally { candidate.dispose(); }
   return state;
-}
-
-export function downloadFile(name, contents, mime = 'application/json') {
-  const url = URL.createObjectURL(new Blob([contents], { type: mime }));
-  const link = document.createElement('a');
-  link.href = url; link.download = name; link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

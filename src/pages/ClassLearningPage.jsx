@@ -6,7 +6,7 @@ import { Notice } from '../components/classes/LmsCommon';
 import DocViewer from '../components/common/DocViewer';
 import VideoPlayer from '../components/common/VideoPlayer';
 import TelemetryControls from '../components/groundstation/TelemetryControls';
-import { downloadFile } from '../components/editor/blockly-project';
+import { downloadFile } from '../components/editor/project-files';
 
 const QuizPanel = lazy(() => import('../components/classes/QuizPanel'));
 const IDEPanel = lazy(() => import('../components/editor/IDEPanel'));
