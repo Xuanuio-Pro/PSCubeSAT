@@ -7,6 +7,8 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PSCUBESAT_PLAYWRIGHT || 'playwright');
 const fixtures = JSON.parse(await readFile(new URL('../tests/fixtures/practice-serial.json', import.meta.url), 'utf8'));
+// The legacy (non-class) curriculum the backend serves from the same seed snapshot.
+const legacyCurriculum = JSON.parse(await readFile(new URL('../fastapi-backend/app/firmware/curriculum/seed.json', import.meta.url), 'utf8')).legacy;
 const base = process.env.PSCUBESAT_WEB_URL || 'http://localhost:5175';
 const output = path.resolve('build_cache/practice-browser');
 await mkdir(output, { recursive: true });
@@ -32,6 +34,8 @@ await page.route('**/api/**', async intercepted => {
   if (pathname === '/api/auth/me') return reply(mockUser);
   if (pathname === '/api/auth/logout') { revoke = true; return reply({ message: 'Logged out' }); }
   if (pathname === '/api/devices') return reply([]);
+  if (pathname === '/api/lms/config') return reply({ class_mode: false, legacy_allowed: true });
+  if (pathname === '/api/curriculum/legacy') return reply(legacyCurriculum);
   if (pathname.startsWith('/api/progress')) return reply({});
   if (pathname.endsWith('/source')) {
     sourceAuthorized = true;
