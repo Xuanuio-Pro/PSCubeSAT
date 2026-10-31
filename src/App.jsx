@@ -95,6 +95,7 @@ function ServiceLayout() {
   const isClassRoute = /^\/classes(?:\/\d+(?:\/(?:curriculum|learn|path|progress|report|labs\/[0-8]\/questions))?)?$/.test(normalizedPath) || ['/admin/users', '/admin/dashboard'].includes(normalizedPath) || normalizedPath === '/preview';
   const isNotFoundRoute = !isAuthRoute && !isClassRoute && !APP_ROUTES.includes(normalizedPath);
   const isLabRoute = /^\/lab[0-8]$/.test(normalizedPath);
+  const isClassLearningRoute = /^\/classes\/\d+\/learn$/.test(normalizedPath);
 
   return (
     <>
@@ -102,7 +103,7 @@ function ServiceLayout() {
         <div className="app-container">
           {!isAuthRoute && !isNotFoundRoute && <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>}
           {!isAuthRoute && !isNotFoundRoute && <Header />}
-          <main id="main-content" className={isAuthRoute || isNotFoundRoute ? '' : `main-content${isLabRoute ? ' is-lab-route' : ''}`}>
+          <main id="main-content" className={isAuthRoute || isNotFoundRoute ? '' : `main-content${isLabRoute || isClassLearningRoute ? ' is-lab-route' : ''}`}>
             {!isAuthRoute && !isNotFoundRoute && !isLabRoute && !isClassRoute && <TelemetryControls />}
             <Outlet />
           </main>

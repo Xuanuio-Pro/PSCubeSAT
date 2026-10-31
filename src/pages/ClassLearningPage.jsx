@@ -7,6 +7,7 @@ import DocViewer from '../components/common/DocViewer';
 import VideoPlayer from '../components/common/VideoPlayer';
 import TelemetryControls from '../components/groundstation/TelemetryControls';
 import { downloadFile } from '../components/editor/blockly-project';
+import ClassCourseSidebar from '../components/classes/ClassCourseSidebar';
 
 const QuizPanel = lazy(() => import('../components/classes/QuizPanel'));
 const IDEPanel = lazy(() => import('../components/editor/IDEPanel'));
@@ -127,20 +128,47 @@ export default function ClassLearningPage({ experience = false }) {
     || (data?.labs.find(lab => lab.lessons.length) ? { lab: data.labs.find(lab => lab.lessons.length), lesson: data.labs.find(lab => lab.lessons.length).lessons[0] } : null);
   if (loading && !data) return <p role="status">Đang tải chương trình học…</p>;
   if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
-  return <>
-    <header className="lms-heading"><div><h1>{experience ? 'Trải nghiệm CubeSAT' : preview ? 'Xem như sinh viên' : 'Chương trình học của lớp'}</h1><p>{preview ? 'Chế độ xem thử không ghi tiến độ hoặc điểm.' : 'Nội dung được giảng viên xuất bản cho lớp.'}</p></div><Link to={experience ? '/classes' : `/classes/${classId}`}>Về lớp học</Link></header>
-    {!experience && <Link to={`/classes/${classId}/path`}>Lộ trình và tiến độ học tập</Link>}
-    {!selected ? <p>Chưa có bài học được bật.</p> : <div className="curriculum-player">
-      <nav aria-label="Chọn bài học" className="curriculum-outline">{data.labs.map(lab => <details key={lab.id} open={selected.lab.id === lab.id}><summary>{lab.access === 'locked' ? '🔒 ' : ''}Lab {lab.id}: {lab.title}</summary>{lab.lessons.map(lesson => {
-        const locked = lesson.access === 'locked' || !lesson.content;
-        const completed = ['completed', 'waived'].includes(lesson.progress?.status);
-        return <button key={lesson.id} type="button" disabled={locked} aria-current={selected.lesson.id === lesson.id ? 'page' : undefined} aria-label={locked ? `${lesson.title}. Bạn cần hoàn thành bài học trước để mở khóa bài này.` : lesson.title} onClick={() => { const next = new URLSearchParams(search); next.set('lesson', lesson.id); setSearch(next); }}>
-          <small>{locked ? '🔒 Chưa mở' : completed ? '✓ Đã hoàn thành' : types[lesson.type]}{lesson.progress?.status === 'pending_review' ? ' · Chờ chấm' : ''}</small>{lesson.title}
-        </button>;
-      })}</details>)}</nav>
-      <article className="curriculum-content" key={`${classId}:${selected.lesson.id}`}><small>Lab {selected.lab.id} · {types[selected.lesson.type]}</small><h2>{selected.lesson.title}</h2>
-        {!selected.lesson.content ? <section className="lms-notice"><h3>🔒 Bài học đang khóa</h3><p>Bạn cần hoàn thành bài học trước để mở khóa bài này.</p>{(selected.lesson.reason || selected.lab.reason) && <small>{selected.lesson.reason || selected.lab.reason}</small>}</section> : <LessonContent lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || !data.learning_path} onRefresh={reload} />}
-      </article>
-    </div>}
-  </>;
+  const activeLessons = selected?.lab?.lessons || [];
+  const lessonIndex = selected ? activeLessons.findIndex(lesson => lesson.id === selected.lesson.id) : -1;
+  const selectLesson = lessonId => {
+    const target = data?.labs.flatMap(lab => lab.lessons).find(lesson => lesson.id === lessonId);
+    if (!target || target.access === 'locked' || !target.content) return;
+    const next = new URLSearchParams(search);
+    next.set('lesson', lessonId);
+    setSearch(next);
+  };
+  return <div className="player-layout class-player-layout">
+    <ClassCourseSidebar labs={data?.labs || []} classId={classId} homePath={experience ? '/' : `/classes/${classId}`} activeLesson={selected?.lesson.id} onSelectLesson={selectLesson} />
+    <div className="player-main">
+      <TelemetryControls />
+      {selected && <div className="lab-mobile-lessons lab-mobile-lessons--curriculum">
+        <label htmlFor={`class-${classId}-lesson`}>Nội dung Lab {selected.lab.id} · {activeLessons.length} phần</label>
+        <select id={`class-${classId}-lesson`} value={selected.lesson.id} onChange={event => selectLesson(event.target.value)}>
+          {activeLessons.map((lesson, index) => <option key={lesson.id} value={lesson.id} disabled={lesson.access === 'locked' || !lesson.content}>{index + 1}. {types[lesson.type]} · {lesson.title}</option>)}
+        </select>
+      </div>}
+      <div className="lab-course-view animate-fadeInUp">
+        {!selected ? <><header className="class-learning-heading"><div><small>{experience ? 'Trải nghiệm CubeSAT' : 'Chương trình học của lớp'}</small><h1>Chương trình học của lớp</h1></div><Link to={experience ? '/classes' : `/classes/${classId}`}>Về lớp học</Link></header><p>Chưa có bài học được bật.</p></> : <>
+          <header className="lab-state-title lab-state-title--compact">
+            <div className="lab-state-meta"><span className="lab-state-number">Lab {selected.lab.id} · Phần {lessonIndex + 1}</span><span className="lab-state-section">{types[selected.lesson.type]}</span></div>
+            <h1 className="lab-state-copy">{selected.lesson.title}</h1>
+          </header>
+          <section className="lesson-progress-panel" aria-label="Tiến độ Lab">
+            <div className="lesson-progress-heading"><div><strong>Tiến độ Lab {selected.lab.id}</strong><small>{selected.lab.percent || 0}% tiến độ đã hoàn thành</small></div><b>{selected.lab.percent || 0}%</b></div>
+            <div className="lesson-progress-track"><span style={{ width: `${selected.lab.percent || 0}%` }} /></div>
+          </section>
+          <article className="class-learning-content" key={`${classId}:${selected.lesson.id}`}>
+            <small>Lab {selected.lab.id} · {types[selected.lesson.type]}</small>
+            {!selected.lesson.content ? <section className="lms-notice"><h3>🔒 Bài học đang khóa</h3><p>Bạn cần hoàn thành bài học trước để mở khóa bài này.</p>{(selected.lesson.reason || selected.lab.reason) && <small>{selected.lesson.reason || selected.lab.reason}</small>}</section> : <LessonContent lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || !data.learning_path} onRefresh={reload} />}
+          </article>
+          <nav className="lesson-pagination" aria-label="Chuyển phần học">
+            <button type="button" disabled={lessonIndex <= 0} onClick={() => selectLesson(activeLessons[lessonIndex - 1]?.id)}>← Phần trước</button>
+            <span>{lessonIndex + 1} / {activeLessons.length} · {types[selected.lesson.type]}</span>
+            <button type="button" disabled={lessonIndex < 0 || lessonIndex >= activeLessons.length - 1} onClick={() => selectLesson(activeLessons[lessonIndex + 1]?.id)}>Phần tiếp theo →</button>
+          </nav>
+          {!experience && <Link className="class-learning-path-link" to={`/classes/${classId}/path`}>Lộ trình và tiến độ học tập</Link>}
+        </>}
+      </div>
+    </div>
+  </div>;
 }

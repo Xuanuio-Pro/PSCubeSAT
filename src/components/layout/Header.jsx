@@ -18,6 +18,8 @@ export default function Header() {
   const { isConnected, connect, disconnect, serialSupport } = useSerial();
   const { user, logout, classMode } = useAuth();
   const lab = getLabBySlug(location.pathname.replace('/', ''));
+  const isClassLearningRoute = /^\/classes\/\d+\/learn$/.test(location.pathname);
+  const isLearningRoute = Boolean(lab || isClassLearningRoute);
 
   const accountAvatar = (
     <span className="header-avatar" aria-hidden="true">
@@ -26,7 +28,7 @@ export default function Header() {
   );
 
   return (
-    <header className={`header${lab ? ' is-lab-route' : ''}`}>
+    <header className={`header${isLearningRoute ? ' is-lab-route' : ''}`}>
       <Link to="/" className="header-logo" aria-label="PTIT CubeSat LMS — Trang chủ">
         <img src={logoSvg} alt="" />
         <span className="header-wordmark"><strong>CubeSAT</strong><small>PTIT LMS</small></span>
@@ -63,7 +65,7 @@ export default function Header() {
             </button>
           </span>
         )}
-        {!lab && (
+        {!isLearningRoute && (
           <button
             type="button"
             className={`header-icon-action header-serial-action ${isConnected ? 'is-connected' : ''}`}
@@ -77,7 +79,7 @@ export default function Header() {
         )}
 
         {user ? (
-          lab ? (
+          isLearningRoute ? (
             <details className="header-account-menu">
               <summary className="header-user">
                 {accountAvatar}

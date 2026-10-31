@@ -522,6 +522,79 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   min-width: 0; min-height: 100%; padding: 36px clamp(24px, 4vw, 72px) 80px;
   background: transparent;
 }
+.class-learning-heading {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+  margin-bottom: 24px;
+}
+.class-learning-heading small, .class-learning-content > small {
+  color: #2d88b6; font-size: 0.78rem; font-weight: 600;
+}
+.class-learning-heading h1 {
+  margin: 8px 0 0; color: var(--cubesat-ink); font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+.class-learning-heading a, .class-learning-path-link {
+  color: var(--cubesat-navy); font-size: 0.86rem; font-weight: 600;
+}
+.class-learning-path-link { display: inline-block; margin-bottom: 18px; }
+.class-learning-content {
+  min-width: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--cubesat-ink);
+}
+.class-learning-content > small { display: block; margin-bottom: 10px; }
+.class-learning-content .video-player,
+.class-learning-content .doc-viewer { margin-top: 18px; }
+.class-learning-content .lms-panel {
+  width: 100%; margin: 18px 0 0; color: var(--cubesat-ink);
+  background: rgba(255, 255, 255, 0.9); border-color: #c9deeb;
+}
+.class-learning-content .lms-panel h2,
+.class-learning-content .lms-panel h3,
+.class-learning-content .submission-panel h3 { color: var(--cubesat-ink); }
+.class-learning-content .lms-panel p,
+.class-learning-content .submission-panel p { color: #31536d; }
+.class-learning-content > .lms-notice { color: #214766; background: rgba(255, 255, 255, 0.72); }
+.is-learning-shell .player-sidebar button.accordion-header,
+.is-learning-shell .player-sidebar button.sub-lesson-item {
+  min-height: 0; padding: 8px 12px; border: 0; border-radius: 10px;
+  background: transparent; color: #e8f3fa; font: inherit; text-align: left;
+  opacity: 1;
+}
+.is-learning-shell .player-sidebar button.accordion-header {
+  width: 100%; padding: 13px 14px 13px 16px; color: #fff;
+}
+.is-learning-shell .player-sidebar button.accordion-header:hover,
+.is-learning-shell .player-sidebar button.sub-lesson-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1); color: #fff;
+}
+.is-learning-shell .player-sidebar button.accordion-header:disabled,
+.is-learning-shell .player-sidebar button.sub-lesson-item:disabled {
+  opacity: 1; cursor: not-allowed;
+}
+.is-learning-shell .player-sidebar .accordion-section.is-locked .accordion-header,
+.is-learning-shell .player-sidebar .sub-lesson-item.is-locked {
+  color: #9fb6c6;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item small {
+  display: block; margin-bottom: 3px; color: #9bc5dd; font-size: 0.66rem;
+  font-weight: 700; line-height: 1.25;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-completed {
+  color: #a7f3c8;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-completed small {
+  color: #75d9a5;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.active,
+.is-learning-shell .player-sidebar .sub-lesson-item.active:hover {
+  background: #fff; color: var(--cubesat-navy); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.active small {
+  color: #2d6d96;
+}
+.is-learning-shell .player-sidebar .accordion-meta { color: #b7d0e0; }
+.is-learning-shell .player-sidebar .curriculum-status-label { color: #dcecf5; }
+.is-learning-shell .player-sidebar .accordion-section.is-in-progress .curriculum-status-label { color: #ffd98f; }
+.is-learning-shell .player-sidebar .accordion-section.is-completed .curriculum-status-label { color: #a7f3c8; }
 .lab-workspace {
   position: relative; width: min(100%, 1320px); min-height: 440px; margin: 8px auto 0;
   padding: 34px;
@@ -1208,6 +1281,9 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   .lab-mobile-lessons--curriculum label { font-size: 11px; font-weight: 600; color: #526b80; }
   .lab-mobile-lessons--curriculum select { min-width: 0; width: 100%; padding: 10px; border: 1px solid #c9dce9; border-radius: 8px; background: #fff; color: #23425c; font: inherit; font-size: 12px; }
   .lab-course-view { padding: 28px 22px 64px; }
+  .class-learning-heading { align-items: flex-start; gap: 14px; }
+  .class-learning-heading h1 { font-size: clamp(1.35rem, 5vw, 2rem); }
+  .class-learning-content { padding: 22px; }
   .lab-workspace { min-height: 410px; padding: 26px; }
   .lab-video-workspace { min-height: 0; }
   .lab-doc-surface { min-height: 380px; }
@@ -1241,6 +1317,8 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   .lab-mobile-lessons button { padding-inline: 5px; font-size: 0.68rem; }
   .lab-mobile-lessons button span { display: none; }
   .lab-course-view { padding: 22px 12px 48px; }
+  .class-learning-heading { flex-direction: column; gap: 8px; }
+  .class-learning-content { padding: 16px; border-radius: 14px; }
   .lab-workspace { min-height: 360px; margin-top: 22px; padding: 18px 12px 12px; border-radius: 20px; }
   .lab-workspace-badge { top: -20px; left: 18px; width: 44px; height: 44px; border-radius: 13px; font-size: 1.15rem; }
   .lab-video-surface, .lab-doc-surface { border-radius: 14px; }
@@ -1351,4 +1429,106 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
 }
 .sub-lesson-item.is-completed:not(.active) .sub-lesson-copy code {
   color: #b9f4d2;
+}
+/* ===== Sub-lesson: kiểu gốc (nền trong suốt, mục đang chọn nền trắng) ===== */
+.is-learning-shell .player-sidebar .accordion-content {
+  padding: 6px 10px 10px;
+  gap: 4px;
+}
+
+.is-learning-shell .player-sidebar button.sub-lesson-item {
+  background: transparent;
+  color: #e8f3fa;
+  box-shadow: none;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.is-learning-shell .player-sidebar button.sub-lesson-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Dòng nhỏ phía trên tiêu đề (Video 1.1, Doc 1.1...) */
+.is-learning-shell .player-sidebar .sub-lesson-item small,
+.is-learning-shell .player-sidebar .sub-lesson-copy small {
+  color: #9bc5dd;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+/* Đang chọn: thẻ trắng, chữ xanh navy */
+.is-learning-shell .player-sidebar button.sub-lesson-item.active,
+.is-learning-shell .player-sidebar button.sub-lesson-item.active:hover {
+  background: #fff;
+  color: var(--cubesat-navy);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.active .sub-lesson-copy small {
+  color: #2d6d96;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.active .sub-lesson-icon {
+  color: var(--cubesat-navy);
+  border-color: var(--cubesat-navy);
+  background: rgba(10, 65, 116, 0.08);
+}
+
+/* Đã hoàn thành (chưa chọn): xanh lá */
+.is-learning-shell .player-sidebar button.sub-lesson-item.is-completed:not(.active) {
+  color: #b9f4d2;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-completed:not(.active) .sub-lesson-copy small {
+  color: #8ff0bd;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-completed:not(.active) .sub-lesson-icon {
+  color: #72e9ab;
+  border-color: rgba(114, 233, 171, 0.75);
+  background: rgba(114, 233, 171, 0.12);
+}
+
+/* Đang học (chưa chọn): vàng */
+.is-learning-shell .player-sidebar button.sub-lesson-item.is-in-progress:not(.active) {
+  color: #ffe2aa;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-in-progress:not(.active) .sub-lesson-copy small {
+  color: #ffd98f;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-in-progress:not(.active) .sub-lesson-icon {
+  color: #ffda8f;
+  border-color: rgba(255, 220, 150, 0.8);
+}
+
+/* Bị khóa */
+.is-learning-shell .player-sidebar button.sub-lesson-item.is-locked,
+.is-learning-shell .player-sidebar button.sub-lesson-item.is-locked:hover {
+  background: transparent;
+  color: #c1d0db;
+}
+.is-learning-shell .player-sidebar .sub-lesson-item.is-locked .sub-lesson-icon {
+  color: #b4c5d1;
+  border-color: rgba(180, 197, 209, 0.6);
+}
+/* ===== Sub-lesson: thu nhỏ chữ tiêu đề ===== */
+.is-learning-shell .player-sidebar button.sub-lesson-item {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Tiêu đề nằm trong span/strong/div con (nếu có) */
+.is-learning-shell .player-sidebar .sub-lesson-item > span:not(.sub-lesson-icon),
+.is-learning-shell .player-sidebar .sub-lesson-item strong,
+.is-learning-shell .player-sidebar .sub-lesson-item b,
+.is-learning-shell .player-sidebar .sub-lesson-item h4,
+.is-learning-shell .player-sidebar .sub-lesson-item p {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Nhãn nhỏ bên trái (Video, Tài liệu, Thực hành, Lab test) */
+.is-learning-shell .player-sidebar .sub-lesson-item small {
+  font-size: 0.66rem;
+  font-weight: 700;
 }
