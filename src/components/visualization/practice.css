@@ -1,0 +1,31 @@
+.practice-note { margin: 0 0 12px; line-height: 1.6; color: var(--text-primary); background: var(--bg-secondary); border-left: 3px solid #1986b0; padding: 10px 12px; border-radius: 4px; }
+.practice-source { color: var(--text-secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; margin-bottom: 18px; }
+.practice-stream { color: var(--text-secondary); font-size: 12px; }
+.practice-stream.is-live { color: #147d63; }
+.practice-task-grid, .practice-evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.practice-task, .practice-evidence { display: flex; flex-direction: column; gap: 9px; padding: 14px; border: 1px solid var(--border-primary); border-radius: 10px; min-width: 0; }
+.practice-task > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.practice-task strong, .practice-evidence strong { font-size: 13px; }
+.practice-task > b { font-size: 26px; color: #167eac; font-variant-numeric: tabular-nums; }
+.practice-task small, .practice-task > span, .practice-evidence > span { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+.practice-live-dot, .practice-muted-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: #169c78; }
+.practice-muted-dot { background: #a4b3bf; }
+.practice-evidence-grid { margin-top: 16px; }
+.practice-evidence p { margin: 0; font: 12px/1.6 var(--font-mono); overflow-wrap: anywhere; max-height: 90px; overflow-y: auto; }
+.practice-evidence--error { border-color: #dc7979; }
+.practice-events { margin-top: 16px; font-size: 12px; }
+.practice-events summary { cursor: pointer; color: var(--text-secondary); }
+.practice-events ol { list-style: none; padding: 0; max-height: 220px; overflow: auto; }
+.practice-events li { display: flex; gap: 10px; padding: 6px 0; line-height: 1.5; overflow-wrap: anywhere; border-bottom: 1px solid var(--border-primary); }
+.practice-events time { white-space: nowrap; color: var(--text-secondary); }
+.lesson-example-links { display: flex; flex-direction: column; gap: 10px; max-width: 300px; }
+.lesson-example-links small { font-size: 12px; font-weight: 400; line-height: 1.6; color: var(--text-secondary); }
+.practice-panel { min-width: 0; }
+.practice-panel-hint { font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin: 8px 0 0; padding: 0 10px; }
+.practice-report-list { padding-left: 1.2rem; max-height: 260px; overflow: auto; }
+.practice-report-list li { margin-bottom: .6rem; overflow-wrap: anywhere; }
+.practice-report-list time { color: var(--text-muted); font-size: .75rem; }
+.practice-led-state { font-size: 1.2rem; font-weight: 600; }
+.lab1-connection-notice { margin: 0; padding: 14px 16px; border: 1px solid var(--border-primary); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-primary); line-height: 1.6; overflow-wrap: anywhere; }
+.lab1-connection-notice a { color: var(--accent-cyan); text-decoration: underline; text-underline-offset: 3px; }
+.lab1-connection-notice.is-error { border-color: var(--accent-red); }

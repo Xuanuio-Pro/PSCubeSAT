@@ -1,4 +1,4 @@
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from './Chart';
 import { useTelemetry } from '../../contexts/telemetry-api';
 
 const MAX_POINTS = 60;
@@ -44,7 +44,8 @@ function makeSparkOption({ title, unit, color, data, min = undefined, max = unde
       data: data.map(d => d.value),
       type: 'line',
       smooth: true,
-      symbol: 'none',
+      symbol: data.length === 1 ? 'circle' : 'none',
+      symbolSize: 6,
       lineStyle: { color, width: 2 },
       areaStyle: {
         color: {
@@ -85,6 +86,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
   const pres = series('pressureHpa');
   const latest = { temp: frame?.temperatureC, hum: frame?.humidityPct, pres: frame?.pressureHpa };
   const display = value => value == null ? '—' : value.toFixed(1);
+  const fresh = status === 'live' && [latest.temp, latest.hum, latest.pres].some(value => value != null);
 
   const charts = [
     {
@@ -139,7 +141,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
   ];
 
   return (
-    <div className="card environment-panel" style={{ opacity: status === 'live' ? 1 : 0.65 }}>
+    <div className="card environment-panel" style={{ opacity: fresh ? 1 : 0.65 }}>
       {/* Header */}
       <div className="card-header">
         <h3>🌍 Cảm biến Môi trường</h3>
@@ -151,6 +153,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
           ))}
         </div>
       </div>
+      {!fresh && <p className="telemetry-empty">Chờ mẫu môi trường mới</p>}
 
       {/* Badge row */}
       <div className="environment-readings">
@@ -179,7 +182,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
 
       {/* Sparkline charts */}
       <div className="environment-charts">
-        {charts.map(({ key, opts }) => (
+        {charts.filter(chart => chart.key !== 'hum' || chart.data.length > 0).map(({ key, opts }) => (
           <ReactECharts
             key={key}
             option={opts}

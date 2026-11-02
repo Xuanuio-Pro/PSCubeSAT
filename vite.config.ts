@@ -10,13 +10,30 @@ export default defineConfig(({ mode }) => {
   const key = env.DEV_HTTPS_KEY
   if (Boolean(cert) !== Boolean(key)) throw new Error('Set both DEV_HTTPS_CERT and DEV_HTTPS_KEY')
   return {
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: 'curriculum-privacy',
+    generateBundle() {
+      const restricted = [...this.getModuleIds()].filter(id => /[\\/]src[\\/]data[\\/](curriculum|labs|lesson-reading)\.js(?:\?|$)/.test(id));
+      if (restricted.length) this.error('Restricted curriculum seed files must not be bundled into the browser.');
+    },
+  }],
   define: {
     global: 'window',
     'process.env': {},
   },
   worker: {
     format: 'es',
+  },
+  // Prebundle lazy lab dependencies before opening USB: discovering them later
+  // can trigger a full-page reload and tear down an active Serial connection.
+  optimizeDeps: {
+    include: [
+      '@monaco-editor/react', 'blockly', 'blockly/blocks', 'blockly/msg/vi',
+      'esptool-js', 'react-markdown', 'remark-gfm', 'spark-md5',
+      'echarts-for-react/esm/core', 'echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers',
+      'three', '@react-three/fiber', '@react-three/drei',
+      'leaflet', 'react-leaflet', 'react-grid-layout/legacy',
+    ],
   },
   build: {
     target: 'esnext',

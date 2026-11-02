@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { loginDestination } from '../contexts/auth-session';
 import AuthLayout from '../components/common/AuthLayout';
 import { EyeIcon } from '../components/common/AuthIcons';
 import GoogleSignIn from '../components/common/GoogleSignIn';
@@ -9,6 +10,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,10 +35,13 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
-      await login(email.trim().toLowerCase(), password, remember);
-      navigate('/');
+      const currentUser = await login(email.trim().toLowerCase(), password, remember);
+      if (currentUser?.role === 'admin') {
+        throw new Error('Tài khoản quản trị chỉ được đăng nhập từ trang quản trị.');
+      }
+      navigate(loginDestination(location.state?.from), { replace: true });
     } catch (err) {
-      setErrors({ password: err.message });
+      setErrors({ password: err.message || 'Đăng nhập không thành công.' });
     } finally {
       setSubmitting(false);
     }
@@ -104,7 +109,7 @@ export default function LoginPage() {
       </form>
 
       <p className="auth-footer-text">
-        Bạn là người dùng mới? <Link to="/signup">Tạo tài khoản mới ngay</Link>
+        Bạn là người dùng mới? <Link to="/signup" state={location.state}>Tạo tài khoản mới ngay</Link>
       </p>
     </AuthLayout>
   );

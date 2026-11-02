@@ -1,0 +1,15 @@
+# Existing PostgreSQL container: attach API and migration runner to its network.
+# Add after docker-compose.server.yml (and docker-compose.proxy.yml if needed).
+services:
+  fastapi:
+    networks:
+      cubesat_net:
+      database:
+  migrate:
+    networks:
+      cubesat_net:
+      database:
+networks:
+  database:
+    external: true
+    name: ${DATABASE_NETWORK:?Set DATABASE_NETWORK to the existing PostgreSQL Docker network}

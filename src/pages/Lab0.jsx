@@ -1,4 +1,4 @@
-import { getLabById } from '../data/labs';
+import { getLabById } from '../data/lab-metadata';
 import LabLayout from '../components/layout/LabLayout';
 import ComponentViewer from '../components/interactive/ComponentViewer';
 

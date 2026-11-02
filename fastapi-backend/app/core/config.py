@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,8 +14,16 @@ class Settings(BaseSettings):
     )
 
     # Server
+    app_env: str = "development"
     port: int = 8000
     compiler_image: str = "pscubesat-compiler:1"
+    lms_class_mode: bool = False
+    quiz_ai_provider: str = ""
+    quiz_ai_key: str = Field(default="", repr=False)
+    quiz_ai_model: str = ""
+    quiz_ai_endpoint: str = ""
+    quiz_ai_max_call_usd: str = ""
+    quiz_ai_daily_usd: str = ""
 
     # MQTT (Mosquitto)
     mqtt_host: str = "localhost"
@@ -33,7 +41,29 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
 
     # PostgreSQL
-    database_url: str = ""
+    database_url: str = Field(default="", repr=False)
+    # Optional structured connection for Compose-managed PostgreSQL. A complete
+    # DATABASE_URL takes precedence for existing/external databases.
+    database_host: str = ""
+    database_port: int = Field(default=5432, ge=1, le=65535)
+    database_name: str = "cubesat"
+    database_user: str = "cubesat"
+    database_password: str = Field(default="", repr=False)
+
+    @model_validator(mode="after")
+    def resolve_database_url(self):
+        if not self.database_url and self.database_host:
+            from sqlalchemy.engine import URL
+
+            self.database_url = URL.create(
+                "postgresql+asyncpg",
+                username=self.database_user,
+                password=self.database_password,
+                host=self.database_host,
+                port=self.database_port,
+                database=self.database_name,
+            ).render_as_string(hide_password=False)
+        return self
 
     @property
     def async_database_url(self) -> str:
@@ -52,7 +82,7 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
     # JWT
-    jwt_secret: str = "change_me"
+    jwt_secret: str = Field(default="change_me", repr=False)
     jwt_expire_minutes: int = 1440
     google_client_id: str = ""
 
@@ -60,3 +90,39 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_production(settings: Settings) -> None:
+    """Fail before starting services; errors name variables without leaking values."""
+    if settings.app_env != "production":
+        return
+    from urllib.parse import urlsplit
+
+    if len(settings.jwt_secret) < 32 or any(
+        marker in settings.jwt_secret.lower() for marker in ("change", "replace", "your_", "<")
+    ):
+        raise RuntimeError(
+            "JWT_SECRET must be a unique production secret of at least 32 characters."
+        )
+    if (
+        "<" in settings.database_url
+        or not settings.database_url.startswith(
+            ("postgresql://", "postgres://", "postgresql+asyncpg://")
+        )
+        or not urlsplit(settings.database_url).hostname
+    ):
+        raise RuntimeError("DATABASE_URL must point to the production PostgreSQL database.")
+    origins = settings.allowed_origins_list
+    if not origins or any(
+        urlsplit(origin).scheme != "https"
+        or not urlsplit(origin).hostname
+        or urlsplit(origin).path
+        or urlsplit(origin).query
+        or urlsplit(origin).fragment
+        or urlsplit(origin).username
+        or "*" in urlsplit(origin).netloc
+        for origin in origins
+    ):
+        raise RuntimeError("ALLOWED_ORIGINS must contain exact HTTPS origins without paths.")
+    if not settings.mqtt_password or settings.mqtt_password.startswith(("<", "replace_")):
+        raise RuntimeError("MQTT_PASSWORD must be configured for the backend service account.")

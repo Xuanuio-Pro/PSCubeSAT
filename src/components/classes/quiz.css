@@ -1,0 +1,26 @@
+.quiz-panel { max-width: 780px; margin: 1.5rem auto; }
+.quiz-status { display: flex; justify-content: space-between; gap: 1rem; background: #f8fafc; border-block: 1px solid #e2e8f0; padding: 1rem; position: sticky; top: 0; z-index: 3; }
+.quiz-status p { margin: .3rem 0 0; font-size: .875rem; }
+.quiz-clock, .quiz-score { font-size: 1.8rem; font-variant-numeric: tabular-nums; color: #0a4174; }
+.quiz-question { border: 0; padding: 1.5rem 0; margin: 0; min-width: 0; border-bottom: 1px solid #e2e8f0; }
+.quiz-question legend { padding: 1.5rem 0 .7rem; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.quiz-question legend span { display: block; font-size: .8rem; color: #475569; }
+.lms-shell .quiz-choice { display: flex; flex-direction: row; align-items: center; gap: .8rem; border: 1px solid #cbd5e1; padding: .9rem 1rem; margin: .6rem 0; border-radius: 6px; cursor: pointer; line-height: 1.5; }
+.quiz-choice.selected { border-color: #0a4174; background: #eff6ff; }
+.quiz-choice input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; accent-color: #0a4174; }
+.quiz-choice span { flex: 1; overflow-wrap: anywhere; }
+.quiz-choice strong { font-size: .8rem; }
+.quiz-explanation { background: #f8fafc; padding: 1rem; color: #334155; }
+.quiz-footer { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-top: 1rem; }
+.bank-workspace { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); gap: 1.5rem; align-items: start; margin-block: 1.5rem; }
+.bank-list { max-height: 680px; overflow-y: auto; }
+.bank-list button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #e2e8f0; border-radius: 0; padding: .9rem; line-height: 1.5; overflow-wrap: anywhere; }
+.bank-list button[aria-current="true"] { background: #eff6ff; border-left: 3px solid #0a4174; }
+.bank-list small { display: block; color: #475569; }
+.bank-editor { display: grid; gap: 1rem; }
+.bank-choice { display: grid; grid-template-columns: auto 1fr; gap: .5rem; align-items: start; }
+.bank-choice > input { margin-top: 2.4rem; width: 1.2rem; height: 1.2rem; }
+.bank-source-list { display: grid; gap: .5rem; margin-block: 1rem; }
+.lms-shell .bank-source-list label { display: flex; flex-direction: row; gap: .5rem; align-items: center; }
+.bank-source-list input { width: auto; }
+@media (max-width: 700px) { .bank-workspace { grid-template-columns: 1fr; } .bank-list { max-height: 240px; } .quiz-footer { flex-wrap: wrap; } .quiz-choice strong { max-width: 5rem; } }

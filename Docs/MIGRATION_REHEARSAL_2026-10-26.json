@@ -1,0 +1,115 @@
+{
+  "started": "20261026-111358",
+  "backup_bytes": 43309,
+  "backup_verify": {
+    "matches": true,
+    "differences": {},
+    "counts": {
+      "users": 5,
+      "lab_progress": 11
+    }
+  },
+  "revision_before": "0005_emqx_postgres",
+  "mapping": {
+    "database": {
+      "dialect": "postgresql",
+      "alembic_revision": "0010_class_lms_mode"
+    },
+    "lesson_ids": {
+      "course_version_id": "cubesat-e570df5f5316f5a1",
+      "legacy_total": 84,
+      "mapped": 84,
+      "missing": []
+    },
+    "classes": {
+      "total": 0
+    },
+    "lab_progress_rows": 11,
+    "users_total": 5
+  },
+  "after_upgrade_differences": {
+    "classes": {
+      "source": null,
+      "restored": 0
+    },
+    "class_memberships": {
+      "source": null,
+      "restored": 0
+    },
+    "lesson_progress": {
+      "source": null,
+      "restored": 0
+    },
+    "progress_events": {
+      "source": null,
+      "restored": 0
+    },
+    "completion_overrides": {
+      "source": null,
+      "restored": 0
+    },
+    "practice_submissions": {
+      "source": null,
+      "restored": 0
+    },
+    "question_versions": {
+      "source": null,
+      "restored": 0
+    },
+    "quiz_attempts": {
+      "source": null,
+      "restored": 0
+    },
+    "quiz_answers": {
+      "source": null,
+      "restored": 0
+    },
+    "audit_logs": {
+      "source": null,
+      "restored": 0
+    }
+  },
+  "after_downgrade_upgrade_differences": {
+    "classes": {
+      "source": null,
+      "restored": 0
+    },
+    "class_memberships": {
+      "source": null,
+      "restored": 0
+    },
+    "lesson_progress": {
+      "source": null,
+      "restored": 0
+    },
+    "progress_events": {
+      "source": null,
+      "restored": 0
+    },
+    "completion_overrides": {
+      "source": null,
+      "restored": 0
+    },
+    "practice_submissions": {
+      "source": null,
+      "restored": 0
+    },
+    "question_versions": {
+      "source": null,
+      "restored": 0
+    },
+    "quiz_attempts": {
+      "source": null,
+      "restored": 0
+    },
+    "quiz_answers": {
+      "source": null,
+      "restored": 0
+    },
+    "audit_logs": {
+      "source": null,
+      "restored": 0
+    }
+  },
+  "revision_after": "0010_class_lms_mode"
+}

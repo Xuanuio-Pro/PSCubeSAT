@@ -17,3 +17,12 @@ fastapi-backend/venv
 fastapi-backend/data
 fastapi-backend/logs
 *.tmp
+build_cache
+scratch
+tmp
+logs
+fastapi-backend
+scripts
+tests
+deploy
+*.tsbuildinfo

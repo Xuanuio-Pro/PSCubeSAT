@@ -7,13 +7,38 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_console_encoding
 from app.lifespan import lifespan
-from app.routers import auth, compiler, devices, health, progress, root, simulations, telemetry
+from app.routers import (
+    admin,
+    auth,
+    class_curriculum,
+    classes,
+    compiler,
+    curriculum,
+    devices,
+    health,
+    learning,
+    progress,
+    quizzes,
+    reports,
+    root,
+    simulations,
+    telemetry,
+)
 from app.websocket.routes import router as websocket_router
 
 API_ROUTERS = (
+    admin.router,
+    classes.router,
+    classes.config_router,
+    class_curriculum.router,
+    class_curriculum.public_router,
     health.router,
+    learning.router,
+    quizzes.router,
+    reports.router,
     auth.router,
     compiler.router,
+    curriculum.router,
     telemetry.router,
     devices.router,
     simulations.router,
@@ -40,6 +65,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     register_exception_handlers(app)
+
+    @app.middleware("http")
+    async def private_curriculum(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith(("/api/curriculum", "/api/classes", "/api/attempts")):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     for router in API_ROUTERS:
         app.include_router(router)
     return app

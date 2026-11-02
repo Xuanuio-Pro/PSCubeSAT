@@ -2,6 +2,7 @@
 
 import io
 import unittest
+from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI
@@ -13,8 +14,11 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.google_auth import verify_google_credential
 from app.core.logging import configure_console_encoding
+from app.core.security import create_access_token
 from app.db import get_db
 from app.models.db_models import Base, GoogleIdentity, RevokedToken, User
+from app.routers import compiler, curriculum, health
+from app.routers.admin import router as admin_router
 from app.routers.auth import router
 
 
@@ -32,6 +36,9 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
         app = FastAPI()
         app.include_router(router)
+        app.include_router(admin_router)
+        for service_router in [compiler.router, curriculum.router, health.router]:
+            app.include_router(service_router)
         register_exception_handlers(app)
 
         async def test_db():
@@ -81,6 +88,29 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(me.status_code, 200)
         self.assertEqual(me.json()["full_name"], "Nguyễn Văn A")
+    async def test_admin_login_requires_admin_route(self):
+        signup = await self.client.post(
+            "/api/admin/signup",
+            json={
+                "email": "admin@ptit.edu.vn",
+                "password": "secret123",
+                "full_name": "Administrator",
+            },
+        )
+        self.assertEqual(signup.status_code, 201, signup.text)
+        self.assertEqual(signup.json()["user"]["role"], "admin")
+
+        response = await self.client.post(
+            "/api/auth/login", json={"email": "admin@ptit.edu.vn", "password": "secret123"}
+        )
+        self.assertEqual(response.status_code, 401, response.text)
+        self.assertIn("quản trị", response.json()["message"].lower())
+
+        admin_login = await self.client.post(
+            "/api/admin/login", json={"email": "admin@ptit.edu.vn", "password": "secret123"}
+        )
+        self.assertEqual(admin_login.status_code, 200, admin_login.text)
+        self.assertEqual(admin_login.json()["user"]["role"], "admin")
 
     async def test_duplicate_and_deleted_email(self):
         await self.register()
@@ -211,6 +241,54 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             (await self.client.get("/api/auth/me", headers=new_headers)).status_code, 200
         )
+
+    async def test_services_reject_guests_invalid_expired_and_revoked_sessions(self):
+        registered = (await self.register()).json()
+        token = registered["access_token"]
+        expired = create_access_token(
+            {"sub": str(registered["user"]["id"])}, expires_delta=timedelta(seconds=-5)
+        )
+        urls = [
+            "/api/boards",
+            "/api/labs/1/template",
+            "/api/health",
+            "/api/curriculum/exercises",
+            "/api/curriculum/exercises/Lab1-01_Blink_LED/source",
+            "/api/artifacts/missing",
+            "/api/artifacts/missing/files/firmware.bin",
+        ]
+        with patch("app.services.compiler_svc.compile_code", AsyncMock()) as worker:
+            for headers in [
+                {},
+                {"Authorization": "Bearer invalid"},
+                {"Authorization": "Bearer " + expired},
+            ]:
+                for url in urls:
+                    self.assertEqual(
+                        (await self.client.get(url, headers=headers)).status_code, 401, url
+                    )
+                self.assertEqual(
+                    (
+                        await self.client.post(
+                            "/api/compile", json={"code": "void loop() {}"}, headers=headers
+                        )
+                    ).status_code,
+                    401,
+                )
+            headers = {"Authorization": "Bearer " + token}
+            self.assertEqual(
+                (await self.client.get("/api/boards", headers=headers)).status_code, 200
+            )
+            self.assertEqual(
+                (await self.client.get("/api/curriculum/exercises", headers=headers)).status_code,
+                200,
+            )
+            await self.client.post("/api/auth/logout", headers=headers)
+            for url in urls:
+                self.assertEqual(
+                    (await self.client.get(url, headers=headers)).status_code, 401, url
+                )
+            worker.assert_not_awaited()
 
 
 class GoogleVerificationTests(unittest.IsolatedAsyncioTestCase):

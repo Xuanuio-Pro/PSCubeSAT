@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { LABS } from '../data/labs';
+import { LABS } from '../data/lab-metadata';
 
 export default function HomePage() {
   return (

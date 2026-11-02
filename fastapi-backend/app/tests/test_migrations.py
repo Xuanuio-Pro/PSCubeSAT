@@ -301,7 +301,10 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertEqual(len(rows), 1)
                 self.assertTrue(rows[0].video_watched and rows[0].doc_viewed)
-                self.assertIsNotNone(rows[0].completed_at)
+                if lab == 0:
+                    self.assertIsNotNone(rows[0].completed_at)
+                else:
+                    self.assertIsNone(rows[0].completed_at)
                 before = rows[0].completed_at
             await asyncio.gather(*(mark(lab, action) for action in actions))
             async with sessions() as db:

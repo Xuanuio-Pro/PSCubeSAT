@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { loginDestination } from '../contexts/auth-session';
 import AuthLayout from '../components/common/AuthLayout';
 import { EyeIcon } from '../components/common/AuthIcons';
 import { useAuth } from '../contexts/auth-api';
@@ -9,6 +10,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -38,7 +40,7 @@ export default function SignUpPage() {
     setSubmitting(true);
     try {
       await register(email.trim().toLowerCase(), password, fullName.trim());
-      navigate('/');
+      navigate(loginDestination(location.state?.from), { replace: true });
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
@@ -131,7 +133,7 @@ export default function SignUpPage() {
       </form>
 
       <p className="auth-footer-text">
-        Đã có tài khoản? <Link to="/login">Đăng nhập ngay</Link>
+        Đã có tài khoản? <Link to="/login" state={location.state}>Đăng nhập ngay</Link>
       </p>
     </AuthLayout>
   );

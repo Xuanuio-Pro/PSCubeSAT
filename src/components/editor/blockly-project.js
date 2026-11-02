@@ -2,8 +2,8 @@ import * as Blockly from 'blockly';
 import { allowedBlockTypes, registerCustomBlocks } from './blockly-toolbox.js';
 
 const exerciseSuffix = exerciseId => exerciseId ? `:exercise:${encodeURIComponent(exerciseId)}` : '';
-export const projectKey = (labId, exerciseId = '') => `ptit:blockly:v1:lab:${labId}${exerciseSuffix(exerciseId)}`;
-export const sourceKey = (labId, exerciseId = '') => `ptit:source:v1:lab:${labId}${exerciseSuffix(exerciseId)}`;
+export const projectKey = (labId, exerciseId = '', scope = '') => `ptit:blockly:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
+export const sourceKey = (labId, exerciseId = '', scope = '') => `ptit:source:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
 export const emptyWorkspace = () => ({ blocks: { languageVersion: 0, blocks: [] } });
 export const defaultWorkspace = () => starterWorkspace(1, true);
 export const DEFAULT_ARDUINO_CODE = '#include <Arduino.h>\n#include <math.h>\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  delay(1000);\n}\n';

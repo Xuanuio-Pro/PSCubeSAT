@@ -1,0 +1,5 @@
+# SITE_DOMAIN must be a public DNS name pointing at this server.
+# Caddy obtains/renews the certificate and redirects HTTP to HTTPS.
+{$SITE_DOMAIN} {
+	reverse_proxy frontend:80
+}

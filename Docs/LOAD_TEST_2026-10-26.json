@@ -1,0 +1,127 @@
+{
+  "generated_at": "2026-10-26T04:12:46.112551+00:00",
+  "machine": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "cpu_count": 12,
+    "python": "3.11.15",
+    "uvicorn_workers": 1
+  },
+  "students": 300,
+  "phases": [
+    {
+      "phase": "progress_event_document_read",
+      "requests": 300,
+      "wall_seconds": 7.1,
+      "throughput_rps": 42.3,
+      "p50_ms": 4379,
+      "p95_ms": 6521,
+      "p99_ms": 6737,
+      "max_ms": 6788,
+      "statuses": {
+        "200": 300
+      }
+    },
+    {
+      "phase": "learning_path_read",
+      "requests": 300,
+      "wall_seconds": 6.08,
+      "throughput_rps": 49.4,
+      "p50_ms": 3571,
+      "p95_ms": 5589,
+      "p99_ms": 5751,
+      "max_ms": 5846,
+      "statuses": {
+        "200": 300
+      }
+    },
+    {
+      "phase": "attempt_start_x2",
+      "requests": 600,
+      "wall_seconds": 15.61,
+      "throughput_rps": 38.4,
+      "p50_ms": 9059,
+      "p95_ms": 14358,
+      "p99_ms": 14798,
+      "max_ms": 14896,
+      "statuses": {
+        "200": 600
+      }
+    },
+    {
+      "phase": "answers_save",
+      "requests": 300,
+      "wall_seconds": 8.91,
+      "throughput_rps": 33.7,
+      "p50_ms": 5210,
+      "p95_ms": 8113,
+      "p99_ms": 8369,
+      "max_ms": 8453,
+      "statuses": {
+        "200": 300
+      }
+    },
+    {
+      "phase": "attempt_submit_x2",
+      "requests": 600,
+      "wall_seconds": 14.96,
+      "throughput_rps": 40.1,
+      "p50_ms": 8360,
+      "p95_ms": 13708,
+      "p99_ms": 14134,
+      "max_ms": 14235,
+      "statuses": {
+        "200": 600
+      }
+    },
+    {
+      "phase": "attempt_result_refresh",
+      "requests": 300,
+      "wall_seconds": 7.1,
+      "throughput_rps": 42.3,
+      "p50_ms": 4178,
+      "p95_ms": 6505,
+      "p99_ms": 6687,
+      "max_ms": 6732,
+      "statuses": {
+        "200": 300
+      }
+    },
+    {
+      "phase": "class_report",
+      "requests": 20,
+      "wall_seconds": 3.7,
+      "throughput_rps": 5.4,
+      "p50_ms": 3348,
+      "p95_ms": 3689,
+      "p99_ms": 3689,
+      "max_ms": 3689,
+      "statuses": {
+        "200": 20
+      }
+    },
+    {
+      "phase": "admin_dashboard",
+      "requests": 10,
+      "wall_seconds": 1.18,
+      "throughput_rps": 8.5,
+      "p50_ms": 931,
+      "p95_ms": 1176,
+      "p99_ms": 1176,
+      "max_ms": 1176,
+      "statuses": {
+        "200": 10
+      }
+    }
+  ],
+  "invariants": {
+    "students": 300,
+    "attempts": 300,
+    "students_with_attempt": 300,
+    "attempt_items": 1500,
+    "graded_events": 300,
+    "labtest_completed": 300,
+    "scores_5": 300,
+    "postgres": "16.15",
+    "ok": true
+  }
+}

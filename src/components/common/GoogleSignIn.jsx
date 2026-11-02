@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { loginDestination } from '../../contexts/auth-session';
 import { request, useAuth } from '../../contexts/auth-api';
 
 let scriptPromise;
@@ -26,6 +27,8 @@ export default function GoogleSignIn({ signup = false, remember = false }) {
   const container = useRef(null);
   const { loginGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const destination = loginDestination(location.state?.from);
   const [status, setStatus] = useState('Đang tải Google...');
   const [error, setError] = useState('');
 
@@ -48,7 +51,7 @@ export default function GoogleSignIn({ signup = false, remember = false }) {
           setStatus('Đang xác thực Google...');
           try {
             await loginGoogle(credential, remember);
-            if (active) navigate('/');
+            if (active) navigate(destination, { replace: true });
           } catch (err) {
             if (active) setError(err.message);
           } finally {
@@ -72,7 +75,7 @@ export default function GoogleSignIn({ signup = false, remember = false }) {
     return () => {
       active = false;
     };
-  }, [loginGoogle, navigate, signup, remember]);
+  }, [loginGoogle, navigate, signup, remember, destination]);
 
   return (
     <div>

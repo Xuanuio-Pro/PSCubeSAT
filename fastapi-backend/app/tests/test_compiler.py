@@ -174,7 +174,7 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         self.user = SimpleNamespace(id=2)
         self.assertEqual((await self.client.get(image["download_url"])).status_code, 404)
         self.user = None
-        self.assertEqual((await self.client.get(artifact["manifest_url"])).status_code, 404)
+        self.assertEqual((await self.client.get(artifact["manifest_url"])).status_code, 401)
 
     async def test_same_board_parallel_builds_keep_sources_and_artifacts_separate(self):
         with patch.object(compiler_svc, "_run_build", side_effect=self.build):
@@ -238,6 +238,13 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(invalid.status_code, 401)
         self.assertEqual(invalid.headers["www-authenticate"], "Bearer")
+        with patch.object(compiler_svc, "_run_build", AsyncMock()) as worker:
+            for path in ["/api/boards", "/api/labs/1/template"]:
+                self.assertEqual((await self.client.get(path)).status_code, 401)
+            guest = await self.client.post("/api/compile", json={"code": "x"})
+            self.assertEqual(guest.status_code, 401)
+            worker.assert_not_awaited()
+        self.user = SimpleNamespace(id=1)
         with patch.object(compiler_svc, "_run_build", side_effect=self.build):
             response = await self.client.post(
                 "/api/compile", json={"code": "x", "include_binary": False}

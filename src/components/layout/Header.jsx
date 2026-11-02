@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSerial } from '../../contexts/serial-api';
 import { useAuth } from '../../contexts/auth-api';
-import { getLabBySlug } from '../../data/labs';
+import { getLabBySlug } from '../../data/lab-metadata';
 import logoSvg from '../../assets/logo.svg';
 import {
   HomeIcon,
@@ -15,9 +15,11 @@ import {
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isConnected, connect, disconnect } = useSerial();
-  const { user, logout } = useAuth();
+  const { isConnected, connect, disconnect, serialSupport } = useSerial();
+  const { user, logout, classMode } = useAuth();
   const lab = getLabBySlug(location.pathname.replace('/', ''));
+  const isClassLearningRoute = /^\/classes\/\d+\/learn$/.test(location.pathname);
+  const isLearningRoute = Boolean(lab || isClassLearningRoute);
 
   const accountAvatar = (
     <span className="header-avatar" aria-hidden="true">
@@ -26,7 +28,7 @@ export default function Header() {
   );
 
   return (
-    <header className={`header${lab ? ' is-lab-route' : ''}`}>
+    <header className={`header${isLearningRoute ? ' is-lab-route' : ''}`}>
       <Link to="/" className="header-logo" aria-label="PTIT CubeSat LMS — Trang chủ">
         <img src={logoSvg} alt="" />
         <span className="header-wordmark"><strong>CubeSAT</strong><small>PTIT LMS</small></span>
@@ -39,6 +41,7 @@ export default function Header() {
       </label>
 
       <div className="header-actions">
+        {classMode && <Link to="/classes" className="header-class-link">Lớp học</Link>}
         <Link to="/" className="header-icon-action header-route-action" aria-label="Trang chủ" title="Trang chủ">
           <HomeIcon size={17} />
         </Link>
@@ -54,27 +57,29 @@ export default function Header() {
               className={`header-icon-action header-lab-message ${isConnected ? 'is-connected' : ''}`}
               onClick={() => isConnected ? disconnect() : connect()}
               aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-              title={isConnected ? 'Serial đã kết nối' : 'Kết nối Web Serial'}
+              disabled={!isConnected && !serialSupport.available}
+              title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
             >
               <MessageIcon size={18} />
               <span className="header-serial-indicator" aria-hidden="true" />
             </button>
           </span>
         )}
-        {!lab && (
+        {!isLearningRoute && (
           <button
             type="button"
             className={`header-icon-action header-serial-action ${isConnected ? 'is-connected' : ''}`}
             onClick={() => isConnected ? disconnect() : connect()}
             aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-            title={isConnected ? 'Serial đã kết nối' : 'Kết nối Web Serial'}
+            disabled={!isConnected && !serialSupport.available}
+            title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
           >
             <span className="header-serial-dot" />
           </button>
         )}
 
         {user ? (
-          lab ? (
+          isLearningRoute ? (
             <details className="header-account-menu">
               <summary className="header-user">
                 {accountAvatar}

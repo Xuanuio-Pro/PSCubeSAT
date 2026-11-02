@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 from app.core.config import get_settings
+from app.db.connection import CONNECT_TIMEOUT, connect_database
 from app.models.tables import Base
 
 config = context.config
@@ -29,10 +30,16 @@ def run_migrations(connection):
 
 
 async def run_online():
-    engine = create_async_engine(get_settings().async_database_url, poolclass=pool.NullPool)
-    async with engine.connect() as connection:
-        await connection.run_sync(run_migrations)
-    await engine.dispose()
+    engine = create_async_engine(
+        get_settings().async_database_url,
+        poolclass=pool.NullPool,
+        connect_args={"timeout": CONNECT_TIMEOUT},
+    )
+    try:
+        async with connect_database(engine) as connection:
+            await connection.run_sync(run_migrations)
+    finally:
+        await engine.dispose()
 
 
 if context.is_offline_mode():

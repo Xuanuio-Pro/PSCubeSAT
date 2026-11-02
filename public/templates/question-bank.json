@@ -1,0 +1,30 @@
+{
+  "questions": [
+    {
+      "prompt": "",
+      "choices": [
+        {
+          "id": "a",
+          "text": ""
+        },
+        {
+          "id": "b",
+          "text": ""
+        },
+        {
+          "id": "c",
+          "text": ""
+        },
+        {
+          "id": "d",
+          "text": ""
+        }
+      ],
+      "correct_choice_id": "",
+      "explanation": "",
+      "objective": "",
+      "difficulty": "medium",
+      "source_reference": ""
+    }
+  ]
+}

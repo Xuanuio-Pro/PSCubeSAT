@@ -12,7 +12,7 @@ const theme = Blockly.Theme.defineTheme('ptit', {
   fontStyle: { family: 'system-ui, sans-serif', weight: '500', size: 12 },
 });
 
-export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallback = false, onCodeChange, active = true, workspaceUpdate = null }) {
+export default function BlocklyEditor({ labId = 1, exerciseId = '', storageScope = '', legacyFallback = false, onCodeChange, active = true, workspaceUpdate = null }) {
   const containerRef = useRef(null), workspaceRef = useRef(null), callbackRef = useRef(onCodeChange), inputRef = useRef(null);
   const [report, setReport] = useState({ issues: [], blockCount: 0 });
   const [saveState, setSaveState] = useState('Đang mở bài…');
@@ -36,7 +36,7 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
     let previousWarnings = new Map();
     const persistWorkspace = () => {
       if (!saveAllowed) return;
-      try { localStorage.setItem(projectKey(labId, exerciseId), encodeProject(workspace, labId)); setSaveState('Đã lưu trên máy'); }
+      try { localStorage.setItem(projectKey(labId, exerciseId, storageScope), encodeProject(workspace, labId)); setSaveState('Đã lưu trên máy'); }
       catch { setSaveState('Chưa lưu được · hãy xuất bài'); }
     };
     const refresh = (persist = true, reason = 'blocks') => {
@@ -64,7 +64,7 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
     refreshRef.current = reason => { saveAllowed = true; refresh(true, reason); };
     Blockly.Events.disable();
     try {
-      const saved = localStorage.getItem(projectKey(labId, exerciseId)) || (legacyFallback ? localStorage.getItem(projectKey(labId)) : null);
+      const saved = localStorage.getItem(projectKey(labId, exerciseId, storageScope));
       Blockly.serialization.workspaces.load(saved ? decodeProject(saved, labId) : defaultWorkspace(), workspace);
       setNotice(saved ? 'Đã mở bài lưu trên máy. Chọn Bài mới nếu muốn tự kéo thả lại từ đầu.' : '');
     } catch {
@@ -99,7 +99,7 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
       workspaceRef.current = null;
       refreshRef.current = null;
     };
-  }, [labId, exerciseId, legacyFallback]);
+  }, [labId, exerciseId, storageScope]);
 
   useEffect(() => {
     if (!active) return;
@@ -138,6 +138,16 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
       if (workspaceRef.current === workspace) setNotice(`Không nhập được: ${error.message}`);
     }
   };
+  const restoreLegacy = () => {
+    try {
+      const saved = localStorage.getItem(projectKey(labId, exerciseId)) || localStorage.getItem(projectKey(labId));
+      if (!saved) throw new Error('Không tìm thấy bài Blockly cũ phù hợp.');
+      const state = decodeProject(saved, labId);
+      downloadFile(`${fileStem}-truoc-khoi-phuc.json`, encodeProject(workspaceRef.current, labId));
+      replace(state);
+      setNotice('Đã khôi phục Blockly cũ vào bài hiện tại. Bản lưu cũ được giữ lại.');
+    } catch (error) { setNotice(error.message); }
+  };
 
   return <div className="blockly-editor">
     <div className="blockly-toolbar" role="toolbar" aria-label="Công cụ Blockly">
@@ -148,6 +158,7 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
       </div>
       <div className="blockly-toolbar-group">
         <button type="button" onClick={() => setReplacement(true)}>Bài mới</button>
+        {(storageScope || legacyFallback) && <button type="button" onClick={restoreLegacy}>Khôi phục Blockly cũ</button>}
         <button type="button" onClick={() => inputRef.current.click()}>Nhập</button>
         <button type="button" onClick={() => downloadFile(`${fileStem}.json`, encodeProject(workspaceRef.current, labId))}>Xuất bài</button>
         <input ref={inputRef} type="file" accept=".json,application/json" hidden onChange={importFile} aria-label="File bài Blockly" />
@@ -159,7 +170,6 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', legacyFallba
       <button onClick={() => setReplacement(false)}>Hủy</button>
     </div>}
     {notice && <div className="blockly-notice" role="status"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo">Đóng</button></div>}
-    <div className="blockly-guide">Tự nối lệnh vào <strong>Khởi tạo</strong> hoặc <strong>Lặp liên tục</strong>. C++ và Blockly đồng bộ hai chiều. Hai khối rỗng dùng Serial 115200 và chu kỳ chờ 1000 ms mặc định.</div>
     <div ref={containerRef} className="blockly-canvas" aria-label={`Vùng kéo thả Blockly Lab ${labId}`} />
     <div className={`blockly-status ${report.issues.length ? 'has-errors' : ''}`} role="status">
       <span>{report.issues.length ? `${report.issues.length} lỗi cần sửa` : 'Sẵn sàng sinh C++'} · {report.blockCount} block</span><span>{saveState}</span>

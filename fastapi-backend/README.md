@@ -2,6 +2,8 @@
 
 ASGI entrypoint: `app.main:app`. Runtime settings are read from this directory's `.env`.
 
+Production template: `.env.production.example`. `APP_ENV=production` validates JWT, DB configuration, exact HTTPS origins and the MQTT service password before startup. Run `python server_preflight.py` to check settings without printing secrets; add `--live` after migrations to verify DB head, Redis and compiler image availability. Server Compose runs migrations before starting one API worker. See [server migration guide](../Docs/SERVER_MIGRATION_CUBESAT.md).
+
 ## Layout and responsibilities
 
 ```text

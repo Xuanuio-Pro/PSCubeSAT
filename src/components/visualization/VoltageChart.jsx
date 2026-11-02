@@ -1,8 +1,9 @@
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from './Chart';
 import { useTelemetry } from '../../contexts/telemetry-api';
 
 export default function VoltageChart({ maxPoints = 60 }) {
-  const { history, status } = useTelemetry();
+  const { latest, history, status } = useTelemetry();
+  const fresh = status === 'live' && latest?.voltageV != null;
   const data = history.filter(frame => frame.voltageV !== null).slice(-maxPoints)
     .map(frame => ({ time: new Date(frame.received_at * 1000).toLocaleTimeString(), value: frame.voltageV }));
 
@@ -35,8 +36,8 @@ export default function VoltageChart({ maxPoints = 60 }) {
     },
     yAxis: {
       type: 'value',
-      min: (v) => Math.floor((v.min - 0.2) * 10) / 10,
-      max: (v) => Math.ceil((v.max + 0.2) * 10) / 10,
+      min: (v) => Number.isFinite(v.min) ? Math.floor((v.min - 0.2) * 10) / 10 : 0,
+      max: (v) => Number.isFinite(v.max) ? Math.ceil((v.max + 0.2) * 10) / 10 : 5,
       axisLine: { lineStyle: { color: '#30363d' } },
       axisLabel: { color: '#8b949e', fontSize: 10, formatter: '{value} V' },
       splitLine: { lineStyle: { color: '#1a1f2e' } },
@@ -45,7 +46,8 @@ export default function VoltageChart({ maxPoints = 60 }) {
       data: data.map(d => d.value),
       type: 'line',
       smooth: true,
-      symbol: 'none',
+      symbol: data.length === 1 ? 'circle' : 'none',
+      symbolSize: 6,
       lineStyle: { color: '#3fb950', width: 2 },
       areaStyle: {
         color: {
@@ -74,8 +76,9 @@ export default function VoltageChart({ maxPoints = 60 }) {
   };
 
   return (
-    <div className="card" style={{ opacity: status === 'live' ? 1 : 0.65 }}>
-      {data.length === 0 && <p className="telemetry-empty">Chờ điện áp từ nguồn đã chọn</p>}
+    <div className="card" style={{ opacity: fresh ? 1 : 0.65 }}>
+      <div className="card-header"><h3>Điện áp pin</h3><strong>{fresh ? `${latest.voltageV.toFixed(2)} V` : '— · chờ mẫu điện áp mới'}</strong></div>
+      {!fresh && data.length > 0 && <p className="practice-source" style={{ padding: '0 16px' }}>Chờ mẫu điện áp mới</p>}
       <ReactECharts option={option} style={{ height: '300px' }} notMerge={true} />
     </div>
   );

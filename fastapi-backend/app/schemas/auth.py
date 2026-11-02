@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class EmailRequest(BaseModel):
@@ -20,6 +20,7 @@ class PasswordRequest(EmailRequest):
 
 
 class RegisterRequest(PasswordRequest):
+    model_config = ConfigDict(extra="forbid")
     email: EmailStr
     password: str = Field(..., min_length=6, description="Mật khẩu tối thiểu 6 ký tự")
     full_name: Optional[str] = Field(default=None, max_length=200)

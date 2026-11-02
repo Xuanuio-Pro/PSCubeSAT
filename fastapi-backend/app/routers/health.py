@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.services import compiler_sandbox, compiler_svc, mqtt_consumer
+from app.services.auth import get_required_user
 from app.services.simulation.mqtt_publisher import simulation_mqtt_publisher
 
-router = APIRouter(prefix="/api", tags=["health"])
+router = APIRouter(prefix="/api", tags=["health"], dependencies=[Depends(get_required_user)])
 
 
 @router.get("/health")
