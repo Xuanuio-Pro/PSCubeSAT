@@ -59,6 +59,11 @@ def serialize_progress(row):
         "status": row.status,
         "last_position": row.last_position,
         "watched_seconds": watched_seconds(row.watched_segments),
+        "started_at": row.started_at.isoformat() if row.started_at else None,
+        "remaining_seconds": max(
+            0,
+            60 - int((datetime.now(timezone.utc) - row.started_at).total_seconds()),
+        ) if row.started_at else 60,
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
     }
 
@@ -265,13 +270,53 @@ async def record_event(db, access, lesson_id, request):
     ):
         raise LMSError(422, "CONFIG_INVALID", "Sự kiện không phù hợp loại bài học.")
     row = await progress_row(db, config, member, lesson_id)
+    if row.started_at is None:
+        row.started_at = datetime.now(timezone.utc)
     completed = False
     if request.kind == "document_read":
-        completed = True
+        pass
+    elif request.kind == "complete":
+        elapsed = (datetime.now(timezone.utc) - row.started_at).total_seconds()
+        if elapsed < 60:
+            raise LMSError(
+                422,
+                "MINIMUM_LEARNING_TIME",
+                "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
+                {"remaining_seconds": max(1, int(60 - elapsed))},
+            )
+        if lesson["type"] not in {"document", "video", "practice"}:
+            raise LMSError(422, "CONFIG_INVALID", "Loại bài học này có quy trình hoàn thành riêng.")
+        if lesson["type"] == "practice" and lesson["content"].get("mode") != "exploration":
+            raise LMSError(
+                422,
+                "PREREQUISITE_NOT_MET",
+                "Bài thực hành cần được nộp và giảng viên duyệt trước khi hoàn thành.",
+            )
+        if lesson["type"] == "video":
+            content = lesson["content"]
+            if content.get("confirmation_allowed", False):
+                completed = True
+            elif video_complete(
+                row.watched_segments,
+                content.get("duration_seconds", 0),
+                content.get("watch_ratio", lesson["completion_rule"].get("ratio", 0.9)),
+            ):
+                completed = True
+            else:
+                raise LMSError(422, "PREREQUISITE_NOT_MET", "Bạn cần xem đủ tỷ lệ video trước khi hoàn thành.")
+        else:
+            completed = True
     elif request.kind == "video_confirmed":
         if not lesson["content"].get("confirmation_allowed", False):
             raise LMSError(
                 403, "CONFIG_INVALID", "Giảng viên chưa bật xác nhận đã xem cho nguồn video này."
+            )
+        if (datetime.now(timezone.utc) - row.started_at).total_seconds() < 60:
+            raise LMSError(
+                422,
+                "MINIMUM_LEARNING_TIME",
+                "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
+                {"remaining_seconds": max(1, int(60 - (datetime.now(timezone.utc) - row.started_at).total_seconds()))},
             )
         completed = True
     elif request.kind == "video_segment":
@@ -293,6 +338,8 @@ async def record_event(db, access, lesson_id, request):
             duration,
             content.get("watch_ratio", lesson["completion_rule"].get("ratio", 0.9)),
         )
+        if completed and row.started_at:
+            completed = (datetime.now(timezone.utc) - row.started_at).total_seconds() >= 60
     if not satisfies(row.status):
         if completed:
             row.status = "completed"

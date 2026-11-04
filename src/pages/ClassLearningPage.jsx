@@ -67,8 +67,10 @@ function SubmissionPanel({ classId, lessonId, code, rubric, onRefresh }) {
   </section>;
 }
 
-function LessonContent({ lesson, labId, classId, preview, onRefresh }) {
+function LessonContent({ lesson, labId, classId, preview, onRefresh, pagination }) {
   const [notice, setNotice] = useState({});
+  const [startedAt, setStartedAt] = useState(lesson.progress?.started_at || null);
+  const [remainingSeconds, setRemainingSeconds] = useState(lesson.progress?.remaining_seconds ?? 60);
   const openedKey = useRef(crypto.randomUUID());
   const queue = useRef(Promise.resolve());
   const [busy, setBusy] = useState(false);
@@ -76,13 +78,25 @@ function LessonContent({ lesson, labId, classId, preview, onRefresh }) {
     const body = JSON.stringify({ idempotency_key: key, kind, ...values });
     // Retrying the exact key is safe if a response is lost after the server commits.
     for (let attempt = 0; attempt < 2; attempt++) {
-      try { return await request(`/api/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/events`, { method: 'POST', body }); }
+      try {
+        const response = await request(`/api/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/events`, { method: 'POST', body });
+        if (response.started_at) setStartedAt(response.started_at);
+        if (typeof response.remaining_seconds === 'number') setRemainingSeconds(response.remaining_seconds);
+        return response;
+      }
       catch (failure) { if (failure.status || attempt) throw failure; }
     }
   }, [classId, lesson.id]);
   useEffect(() => {
     if (!preview && lesson.type !== 'labtest') event('opened', {}, openedKey.current).catch(failure => setNotice({ error: failure.message }));
   }, [preview, event, lesson.type]);
+  useEffect(() => {
+    if (!startedAt || ['completed', 'waived'].includes(lesson.progress?.status)) return undefined;
+    const update = () => setRemainingSeconds(Math.max(0, 60 - Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt, lesson.progress?.status]);
   async function confirm(kind) {
     setBusy(true); setNotice({});
     try { await event(kind); onRefresh(); setNotice({ message: 'Đã ghi nhận hoàn thành bài học.' }); }
@@ -99,15 +113,28 @@ function LessonContent({ lesson, labId, classId, preview, onRefresh }) {
     });
   }
   const completed = ['completed', 'waived'].includes(lesson.progress?.status);
+  const completionLocked = busy || completed || remainingSeconds > 0;
+  const elapsedSeconds = Math.max(0, 60 - remainingSeconds);
+  const completionLabel = completed
+    ? '✓ Đã hoàn thành bài học'
+    : remainingSeconds > 0
+      ? `Đã học ${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')} · còn ${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, '0')}`
+      : 'Hoàn thành bài học';
   return <><Notice {...notice} />
     {completed && <p className="lesson-achieved" role="status">✓ {lesson.progress.status === 'waived' ? 'Đã được miễn yêu cầu' : 'Đã hoàn thành'}</p>}
     {lesson.type === 'video' && <><VideoPlayer url={lesson.content.url} initialPosition={lesson.progress?.last_position || 0} onSegment={preview ? undefined : segment} trackingMode={lesson.content.tracking_mode || 'native'} />
-      {!preview && lesson.content.confirmation_allowed && <button disabled={busy || completed} onClick={() => confirm('video_confirmed')}>{completed ? 'Đã hoàn thành bài học' : 'Hoàn thành bài học'}</button>}
       {!preview && !lesson.content.confirmation_allowed && !/\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(lesson.content.url) && <p>Nguồn video này chưa hỗ trợ đo đoạn xem. Giảng viên cần bật chế độ xác nhận hoặc cung cấp video đo được.</p>}
     </>}
-    {lesson.type === 'document' && <><DocViewer content={lesson.content.markdown || '# Tài liệu đang được cập nhật'} docPath={undefined} />{!preview && <button className="lms-primary" disabled={busy || completed} onClick={() => confirm('document_read')}>{completed ? 'Đã hoàn thành bài học' : 'Hoàn thành bài học'}</button>}</>}
+    {lesson.type === 'document' && <DocViewer content={lesson.content.markdown || '# Tài liệu đang được cập nhật'} docPath={undefined} />}
     {lesson.type === 'practice' && <Practice lesson={lesson} labId={labId} classId={classId} preview={preview} onRefresh={onRefresh} />}
     {lesson.type === 'labtest' && (preview ? <p>Chế độ xem thử không tạo lượt thi. Mỗi đề gồm 5 câu từ ngân hàng được duyệt.</p> : <Suspense fallback={<p>Đang tải bài kiểm tra…</p>}><QuizPanel classId={classId} labId={labId} policySummary={lesson.content} onRefresh={onRefresh} /></Suspense>)}
+    {pagination}
+    {!preview && lesson.type !== 'labtest' && <section className="lesson-completion" aria-label="Hoàn thành bài học">
+      <button type="button" className="btn btn-primary" disabled={completionLocked || (lesson.type === 'practice' && lesson.content.mode !== 'exploration')} onClick={() => confirm('complete')}>
+        {lesson.type === 'practice' && lesson.content.mode !== 'exploration' && !completed ? 'Nộp bài để hoàn thành' : completionLabel}
+      </button>
+      {lesson.type === 'practice' && lesson.content.mode !== 'exploration' && !completed && <p>Bài thực hành sẽ hoàn thành sau khi bạn nộp bài và được giảng viên duyệt.</p>}
+    </section>}
   </>;
 }
 
@@ -121,6 +148,7 @@ async function fetchSource(lessonId, classId) {
 export default function ClassLearningPage({ experience = false }) {
   const { classId } = useParams();
   const [search, setSearch] = useSearchParams();
+  const [navigationNotice, setNavigationNotice] = useState('');
   const preview = experience || search.get('preview') === 'true';
   const path = experience ? '/api/curriculum/preview' : `/api/classes/${classId}/curriculum${preview ? '?draft=true&student_view=true' : '?student_view=true'}`;
   const { data, loading, error, reload } = useLmsResource(path, true);
@@ -131,8 +159,17 @@ export default function ClassLearningPage({ experience = false }) {
   const activeLessons = selected?.lab?.lessons || [];
   const lessonIndex = selected ? activeLessons.findIndex(lesson => lesson.id === selected.lesson.id) : -1;
   const selectLesson = lessonId => {
-    const target = data?.labs.flatMap(lab => lab.lessons).find(lesson => lesson.id === lessonId);
+    const targetItem = data?.labs.flatMap(lab => lab.lessons.map(lesson => ({ lab, lesson }))).find(item => item.lesson.id === lessonId);
+    const target = targetItem?.lesson;
     if (!target || target.access === 'locked' || !target.content) return;
+    const targetCompleted = ['completed', 'waived'].includes(target.progress?.status);
+    const sameLab = selected?.lab.id === targetItem.lab.id;
+    const targetIsEarlier = sameLab && targetItem.lab.lessons.findIndex(lesson => lesson.id === target.id) < lessonIndex;
+    if (selected && target.id !== selected.lesson.id && !preview && !targetCompleted && !targetIsEarlier && !['completed', 'waived'].includes(selected.lesson.progress?.status)) {
+      setNavigationNotice('Hãy hoàn thành bài học hiện tại trước khi chuyển sang phần tiếp theo.');
+      return;
+    }
+    setNavigationNotice('');
     const next = new URLSearchParams(search);
     next.set('lesson', lessonId);
     setSearch(next);
@@ -148,6 +185,7 @@ export default function ClassLearningPage({ experience = false }) {
         </select>
       </div>}
       <div className="lab-course-view animate-fadeInUp">
+        {navigationNotice && <Notice error={navigationNotice} />}
         {!selected ? <><header className="class-learning-heading"><div><small>{experience ? 'Trải nghiệm CubeSAT' : 'Chương trình học của lớp'}</small><h1>Chương trình học của lớp</h1></div><Link to={experience ? '/classes' : `/classes/${classId}`}>Về lớp học</Link></header><p>Chưa có bài học được bật.</p></> : <>
           <header className="lab-state-title lab-state-title--compact">
             <div className="lab-state-meta"><span className="lab-state-number">Lab {selected.lab.id} · Phần {lessonIndex + 1}</span><span className="lab-state-section">{types[selected.lesson.type]}</span></div>
@@ -159,13 +197,12 @@ export default function ClassLearningPage({ experience = false }) {
           </section>
           <article className="class-learning-content" key={`${classId}:${selected.lesson.id}`}>
             <small>Lab {selected.lab.id} · {types[selected.lesson.type]}</small>
-            {!selected.lesson.content ? <section className="lms-notice"><h3>🔒 Bài học đang khóa</h3><p>Bạn cần hoàn thành bài học trước để mở khóa bài này.</p>{(selected.lesson.reason || selected.lab.reason) && <small>{selected.lesson.reason || selected.lab.reason}</small>}</section> : <LessonContent lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || !data.learning_path} onRefresh={reload} />}
+            {!selected.lesson.content ? <section className="lms-notice"><h3>🔒 Bài học đang khóa</h3><p>Bạn cần hoàn thành bài học trước để mở khóa bài này.</p>{(selected.lesson.reason || selected.lab.reason) && <small>{selected.lesson.reason || selected.lab.reason}</small>}</section> : <LessonContent lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || !data.learning_path} onRefresh={reload} pagination={<nav className="lesson-pagination" aria-label="Chuyển phần học">
+              <button type="button" disabled={lessonIndex <= 0} onClick={() => selectLesson(activeLessons[lessonIndex - 1]?.id)}>← Phần trước</button>
+              <span>{lessonIndex + 1} / {activeLessons.length} · {types[selected.lesson.type]}</span>
+              <button type="button" disabled={lessonIndex < 0 || lessonIndex >= activeLessons.length - 1} onClick={() => selectLesson(activeLessons[lessonIndex + 1]?.id)}>Phần tiếp theo →</button>
+            </nav>} />}
           </article>
-          <nav className="lesson-pagination" aria-label="Chuyển phần học">
-            <button type="button" disabled={lessonIndex <= 0} onClick={() => selectLesson(activeLessons[lessonIndex - 1]?.id)}>← Phần trước</button>
-            <span>{lessonIndex + 1} / {activeLessons.length} · {types[selected.lesson.type]}</span>
-            <button type="button" disabled={lessonIndex < 0 || lessonIndex >= activeLessons.length - 1} onClick={() => selectLesson(activeLessons[lessonIndex + 1]?.id)}>Phần tiếp theo →</button>
-          </nav>
           {!experience && <Link className="class-learning-path-link" to={`/classes/${classId}/path`}>Lộ trình và tiến độ học tập</Link>}
         </>}
       </div>

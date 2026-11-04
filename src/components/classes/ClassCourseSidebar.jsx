@@ -45,7 +45,9 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
 
   return <aside className={`player-sidebar ${collapsed ? 'is-collapsed' : ''}`}>
     <div className="course-rail">
-      <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
+      <Link to="/" className="course-rail-logo-link" aria-label="Về trang chủ" title="Về trang chủ">
+        <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
+      </Link>
       <nav className="course-rail-nav" aria-label="Chọn Lab trong lớp">
         {labs.map(lab => {
           const state = stateFor(lab);
@@ -67,7 +69,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
     </div>
     <div className="course-menu" id="class-course-curriculum" inert={collapsed}>
       <div className="course-menu-header">
-        <div className="course-menu-brand"><strong>CubeSAT</strong><span>PTIT LMS</span></div>
+        <Link to="/" className="course-menu-brand" aria-label="Về trang chủ" title="Về trang chủ"><strong>CubeSAT</strong><span>PTIT LMS</span></Link>
         <button type="button" className="course-collapse-button" onClick={() => setCollapsed(true)} aria-expanded={!collapsed} aria-controls="class-course-curriculum" aria-label="Thu gọn thanh điều hướng"><ChevronLeftIcon size={18} /></button>
       </div>
       <div className="curriculum-list">
