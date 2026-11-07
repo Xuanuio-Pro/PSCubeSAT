@@ -1,0 +1,10 @@
+﻿Câu hỏi,Mã đề thi,,,,,,,,,,
+,0001,0002,0003,0004,0005,0006,0007,0008,0009,,"*Lưu ý: Mã đề phải có 4 chữ số. Ví dụ: 0001, 0010, 0100, 1000"
+1,C,C,D,A,B,D,C,A,B,,Mỗi mã đề tối đa 120 câu
+2,B,C,B,D,A,C,D,B,C,,Nhập Tự Luận nếu Thầy/Cô muốn thêm câu tự luận
+3,D,D,C,D,A,D,B,C,A,,"Loại câu hỏi đúng sai nhập các kí tự là Đ,S hoặc T, F. Ví dụ: ĐSĐS hoặc TTFF"
+4,B,A,B,C,B,A,D,B,C,,Loại câu điền từ: Chỉ được nhập kí tự là số và tối đa 4 kí tự. Ví dụ: -1.5 hoặc 1234 hoặc 10.5
+5,C,D,A,A,D,C,A,B,C,,"Để nhập đúng định dạng đáp án, thầy/cô vui lòng tham khảo bảng đáp án bên cạnh"
+6,A|B|D,B|C,A|D,A|B|C,B|D,A|C,A|B|D,B|C|D,A|D,,Câu nhiều đáp án đúng ngăn cách bằng dấu |
+7,ĐĐSĐ,SSĐĐ,ĐĐSS,ĐSSS,ĐSSĐ,SSSĐ,ĐĐĐS,SSĐS,ĐĐSĐ,,Câu đúng sai 4 mệnh đề a-b-c-d
+8,10,31,-1.5,12.5,1234,-9,8.23,11.6,-120,,Câu trả lời ngắn

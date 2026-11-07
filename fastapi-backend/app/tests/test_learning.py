@@ -294,8 +294,23 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def complete(self, lab):
-        result = await self.event("document" if lab == 0 else f"summary-{lab}")
+        from sqlalchemy import update
+
+        from app.models.learning import LessonProgress
+
+        lesson = "document" if lab == 0 else f"summary-{lab}"
+        result = await self.event(lesson)
         self.assertEqual(result.status_code, 200, result.text)
+        if result.json().get("status") != "completed":
+            async with self.sessions() as db:
+                await db.execute(
+                    update(LessonProgress)
+                    .where(LessonProgress.lesson_id == lesson)
+                    .values(started_at=datetime.now(timezone.utc) - timedelta(seconds=65))
+                )
+                await db.commit()
+            result = await self.event(lesson, "complete")
+            self.assertEqual(result.status_code, 200, result.text)
 
     async def path(self):
         result = await self.call(4, "GET", self.base + "/learning-path")

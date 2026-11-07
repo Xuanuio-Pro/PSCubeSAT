@@ -52,7 +52,14 @@ async def student_member(db, access, *, lock=False, membership_id=None):
     return member
 
 
+def utc(value):
+    if value is None:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
 def serialize_progress(row):
+    started_at = utc(row.started_at)
     return {
         "lesson_id": row.lesson_id,
         "lesson_version": row.lesson_version,
@@ -62,8 +69,10 @@ def serialize_progress(row):
         "started_at": row.started_at.isoformat() if row.started_at else None,
         "remaining_seconds": max(
             0,
-            60 - int((datetime.now(timezone.utc) - row.started_at).total_seconds()),
-        ) if row.started_at else 60,
+            60 - int((datetime.now(timezone.utc) - started_at).total_seconds()),
+        )
+        if started_at
+        else 60,
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
     }
 
@@ -272,11 +281,12 @@ async def record_event(db, access, lesson_id, request):
     row = await progress_row(db, config, member, lesson_id)
     if row.started_at is None:
         row.started_at = datetime.now(timezone.utc)
+    started_at = utc(row.started_at)
     completed = False
     if request.kind == "document_read":
         pass
     elif request.kind == "complete":
-        elapsed = (datetime.now(timezone.utc) - row.started_at).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
         if elapsed < 60:
             raise LMSError(
                 422,
@@ -311,12 +321,12 @@ async def record_event(db, access, lesson_id, request):
             raise LMSError(
                 403, "CONFIG_INVALID", "Giảng viên chưa bật xác nhận đã xem cho nguồn video này."
             )
-        if (datetime.now(timezone.utc) - row.started_at).total_seconds() < 60:
+        if (datetime.now(timezone.utc) - started_at).total_seconds() < 60:
             raise LMSError(
                 422,
                 "MINIMUM_LEARNING_TIME",
                 "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
-                {"remaining_seconds": max(1, int(60 - (datetime.now(timezone.utc) - row.started_at).total_seconds()))},
+                {"remaining_seconds": max(1, int(60 - (datetime.now(timezone.utc) - started_at).total_seconds()))},
             )
         completed = True
     elif request.kind == "video_segment":
@@ -338,8 +348,8 @@ async def record_event(db, access, lesson_id, request):
             duration,
             content.get("watch_ratio", lesson["completion_rule"].get("ratio", 0.9)),
         )
-        if completed and row.started_at:
-            completed = (datetime.now(timezone.utc) - row.started_at).total_seconds() >= 60
+        if completed and started_at:
+            completed = (datetime.now(timezone.utc) - started_at).total_seconds() >= 60
     if not satisfies(row.status):
         if completed:
             row.status = "completed"

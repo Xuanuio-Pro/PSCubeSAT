@@ -400,6 +400,94 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(changed.status_code, 422)
 
+    async def test_four_question_types_import_and_student_attempt_grading(self):
+        from app.services.exam_import import SAMPLE_EXAM_TEXT
+
+        bank = await self.bank()
+        imported = await self.call(
+            2,
+            "POST",
+            self.bank_url + "/import",
+            {
+                "expected_revision": bank["revision"],
+                "format": "text",
+                "content": SAMPLE_EXAM_TEXT,
+            },
+        )
+        self.assertEqual(imported.status_code, 200, imported.text)
+        bank = imported.json()
+        self.assertEqual(len(bank["questions"]), 8)
+
+        # Fill remaining 12 questions across all 4 types to reach 20 approved questions
+        extra = [
+            {
+                **question(i),
+                "question_type": "multiple_choice",
+                "correct_choice_id": "a|c",
+            }
+            if i % 3 == 0
+            else (
+                {
+                    **question(i),
+                    "question_type": "true_false",
+                    "choices": [
+                        {"id": "a", "text": f"[1, NB] Ý a {i}"},
+                        {"id": "b", "text": f"[1, NB] Ý b {i}"},
+                        {"id": "c", "text": f"[0, TH] Ý c {i}"},
+                        {"id": "d", "text": f"[2, VD] Ý d {i}"},
+                    ],
+                    "correct_choice_id": "ĐSSĐ",
+                }
+                if i % 3 == 1
+                else {
+                    **question(i),
+                    "question_type": "short_answer",
+                    "choices": [],
+                    "correct_choice_id": str(10 + i),
+                }
+            )
+            for i in range(12)
+        ]
+        imported2 = await self.call(
+            2,
+            "POST",
+            self.bank_url + "/import",
+            {
+                "expected_revision": bank["revision"],
+                "format": "json",
+                "content": json.dumps({"questions": extra}),
+            },
+        )
+        self.assertEqual(imported2.status_code, 200, imported2.text)
+        bank = imported2.json()
+        for q in bank["questions"]:
+            reviewed = await self.call(
+                2,
+                "POST",
+                self.bank_url + f"/questions/{q['id']}/review",
+                {"expected_revision": bank["revision"], "status": "approved"},
+            )
+            self.assertEqual(reviewed.status_code, 200, reviewed.text)
+            bank = reviewed.json()
+        published = await self.call(
+            2, "POST", self.bank_url + "/publish", {"expected_revision": bank["revision"]}
+        )
+        self.assertEqual(published.status_code, 200, published.text)
+        body = deepcopy(self.learning.body)
+        for item in body["lessons"]:
+            if item["lesson_id"] == "labtest-0":
+                item.update(enabled=True, required=True)
+        await self.learning.apply(body)
+        await self.learning.complete(0)
+        attempt = (await self.start()).json()
+        for item in attempt["items"]:
+            for choice in item["choices"]:
+                self.assertFalse(choice["text"].startswith("["))
+        await self.correct(attempt)
+        submitted = await self.call(4, "POST", f"/api/attempts/{attempt['id']}/submit")
+        self.assertEqual(submitted.status_code, 200, submitted.text)
+        self.assertEqual(submitted.json()["score"], 5)
+
 
 class QuizValidationTests(unittest.TestCase):
     def test_bad_choices_answers_and_near_duplicates(self):
@@ -409,3 +497,53 @@ class QuizValidationTests(unittest.TestCase):
                 QuestionInput.model_validate({**value, **mutation})
         with self.assertRaises(Exception):
             validate_distinct([value], [{**value, "prompt": value["prompt"] + "!"}])
+
+    def test_four_question_types_exam_parser_and_tf_prefix_shuffle(self):
+        import base64
+        import random
+
+        from app.services.exam_import import (
+            SAMPLE_EXAM_TEXT,
+            parse_exam_text,
+             parse_xlsx_questions,
+            sample_question_bank_xlsx,
+            shuffle_true_false_choices,
+        )
+
+        # 1. Parse sample 4-part exam text
+        parsed_text = [QuestionInput.model_validate(q).model_dump() for q in parse_exam_text(SAMPLE_EXAM_TEXT)]
+        self.assertEqual(len(parsed_text), 8)
+        self.assertEqual(parsed_text[0]["question_type"], "single_choice")
+        self.assertEqual(parsed_text[0]["correct_choice_id"], "d")
+        self.assertEqual(parsed_text[1]["question_type"], "multiple_choice")
+        self.assertEqual(parsed_text[1]["correct_choice_id"], "a|b|d")
+        self.assertEqual(parsed_text[4]["question_type"], "true_false")
+        self.assertEqual(parsed_text[4]["correct_choice_id"], "a:Đ|b:S|c:S|d:Đ")
+        self.assertEqual(parsed_text[6]["question_type"], "short_answer")
+        self.assertEqual(parsed_text[6]["correct_choice_id"], "10")
+
+        # 2. Parse sample Excel (.xlsx) with all 4 question types
+        xlsx_b64 = base64.b64encode(sample_question_bank_xlsx()).decode()
+        parsed_xlsx = [QuestionInput.model_validate(q).model_dump() for q in parse_xlsx_questions(xlsx_b64)]
+        self.assertEqual(len(parsed_xlsx), 4)
+        self.assertEqual(
+            [q["question_type"] for q in parsed_xlsx],
+            ["single_choice", "multiple_choice", "true_false", "short_answer"],
+        )
+
+        # 3. Verify True/False prefix shuffling rules [0, 1, 2, ...]
+        tf_choices = [
+            {"id": "a", "text": "[1, NB] Ý 1a"},
+            {"id": "b", "text": "[1, NB] Ý 1b"},
+            {"id": "c", "text": "[0, TH] Ý 0 tự do"},
+            {"id": "d", "text": "[2, VD] Ý 2"},
+        ]
+        rng = random.Random(42)
+        for _ in range(30):
+            shuffled = shuffle_true_false_choices(rng, tf_choices)
+            ids = [c["id"] for c in shuffled]
+            # Order 1 items ('a' and 'b') must stay adjacent when 'c' (order 0) is removed,
+            # and in the actual list 'a' and 'b' are in the same contiguous block and before 'd' (order 2).
+            pos_a, pos_b, pos_d = ids.index("a"), ids.index("b"), ids.index("d")
+            self.assertEqual(abs(pos_a - pos_b), 1)
+            self.assertLess(max(pos_a, pos_b), pos_d)

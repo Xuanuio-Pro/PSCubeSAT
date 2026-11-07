@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { Notice } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
+import { InlineQuestionBank } from './QuestionBankPage';
 
 const labels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', labtest: 'Lab test' };
 const fields = {
@@ -12,13 +13,17 @@ const fields = {
   labtest: [['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'], ['max_attempts', 'Số lượt làm tối đa', 'number'], ['pass_score', 'Số câu đúng để đạt (trên 5)', 'number']],
 };
 
-function LessonSettings({ lesson, onChange, disabled }) {
+function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }) {
+  const [showBank, setShowBank] = useState(false);
   function param(key, value) {
     const params = { ...lesson.params };
     if (value === '') delete params[key]; else params[key] = value;
     onChange({ ...lesson, params });
   }
-  return <details className="curriculum-lesson">
+  const todos = (lesson.content.todos || []).filter(
+    todo => !(lesson.type === 'labtest' && lesson.content.bank_ready && todo.includes('ngân hàng'))
+  );
+  return <details className="curriculum-lesson" open={lesson.type === 'labtest'}>
     <summary><span><small>{labels[lesson.type]}</small><strong>{lesson.title}</strong><code>{lesson.id}</code></span><span>{lesson.enabled ? lesson.required ? 'Bắt buộc' : 'Tùy chọn' : 'Đã tắt'}</span></summary>
     <fieldset disabled={disabled}>
       <legend className="sr-only">Cấu hình {lesson.title}</legend>
@@ -27,7 +32,10 @@ function LessonSettings({ lesson, onChange, disabled }) {
         <label><input type="checkbox" checked={lesson.required} onChange={event => onChange({ ...lesson, required: event.target.checked })} />Bắt buộc</label>
         <label>Thứ tự<input type="number" min={0} max={1000} value={lesson.order_no} onChange={event => onChange({ ...lesson, order_no: Number(event.target.value) })} /></label>
       </div>
-      {lesson.content.todos?.length > 0 && <div className="curriculum-todo">{lesson.content.todos.map(todo => <p key={todo}>{todo}</p>)}</div>}
+      {todos.length > 0 && <div className="curriculum-todo">{todos.map(todo => <p key={todo}>{todo}</p>)}</div>}
+      {lesson.type === 'labtest' && lesson.content.bank_ready && (
+        <p className="lesson-achieved">✓ Ngân hàng 20 câu hỏi của Lab {labId} đã được duyệt và xuất bản.</p>
+      )}
       <div className="lms-form-grid">{[...fields[lesson.type], ['estimated_minutes', 'Thời lượng dự kiến (phút)', 'number']].map(([key, label, kind]) => {
         const value = lesson.params[key] ?? lesson.content[key] ?? '';
         return <label key={key} className={kind === 'textarea' ? 'lms-wide' : ''}>{label}
@@ -39,6 +47,32 @@ function LessonSettings({ lesson, onChange, disabled }) {
         </label>;
       })}</div>
     </fieldset>
+    {lesson.type === 'labtest' && (
+      <div className="lms-import-box" style={{ marginTop: '16px' }}>
+        <div className="lms-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <strong>Câu hỏi & Đáp án (Lab Test {labId})</strong>
+            <span className="lms-secondary">
+              Đề mẫu tham khảo:{' '}
+              <a href="/templates/labtest-sample-exam.txt" download>Đề mẫu 4 phần (.txt)</a> ·{' '}
+              <a href="/templates/question-bank.xlsx" download>Mẫu Excel (.xlsx)</a> ·{' '}
+              <a href="/templates/answer-sheet-sample.csv" download>Bảng đáp án mã đề (.csv)</a>
+            </span>
+          </div>
+          <div className="lms-actions">
+            <button type="button" className="lms-primary" onClick={() => setShowBank(current => !current)}>
+              {showBank ? 'Thu gọn trình soạn câu hỏi' : 'Thêm / Soạn câu hỏi & đáp án'}
+            </button>
+            <Link to={`/classes/${classId}/labs/${labId}/questions`}>Mở trang riêng</Link>
+          </div>
+        </div>
+        {showBank && (
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+            <InlineQuestionBank classId={classId} labId={labId} onPublished={onReload} />
+          </div>
+        )}
+      </div>
+    )}
   </details>;
 }
 
@@ -92,7 +126,7 @@ function Editor({ initial, classId, onReload }) {
       <p><Link to={`/classes/${classId}/labs/${lab.id}/questions`}>Soạn ngân hàng và quản lý Lab Test</Link></p><p>{lab.objectives}</p><p><strong>Nhóm nội dung:</strong> {lab.groups.join(' → ') || 'Tổng quan'}</p><p><strong>Minh chứng đầu ra:</strong> {lab.evidence}</p>
       <fieldset disabled={busy}><legend>Cấu hình Lab {lab.id}</legend><div className="curriculum-switches"><label><input type="checkbox" checked={lab.enabled} onChange={event => updateLab(lab.id, value => ({ ...value, enabled: event.target.checked }))} />Bật lab</label>
         <label>Lab tiên quyết (giữ Ctrl để chọn nhiều)<select multiple value={lab.prerequisites.map(String)} onChange={event => updateLab(lab.id, value => ({ ...value, prerequisites: [...event.target.selectedOptions].map(option => Number(option.value)) }))}>{config.labs.filter(item => item.id !== lab.id).map(item => <option value={item.id} key={item.id}>Lab {item.id}: {item.title}</option>)}</select></label></div></fieldset>
-      {lab.lessons.map(lesson => <LessonSettings key={lesson.id} lesson={lesson} disabled={busy} onChange={next => updateLab(lab.id, value => ({ ...value, lessons: value.lessons.map(item => item.id === next.id ? next : item) }))} />)}
+      {lab.lessons.map(lesson => <LessonSettings key={lesson.id} lesson={lesson} labId={lab.id} classId={classId} onReload={onReload} disabled={busy} onChange={next => updateLab(lab.id, value => ({ ...value, lessons: value.lessons.map(item => item.id === next.id ? next : item) }))} />)}
     </details>)}
   </>;
 }

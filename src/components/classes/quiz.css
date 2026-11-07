@@ -20,6 +20,11 @@
 .bank-editor { display: grid; gap: 1rem; }
 .bank-choice { display: grid; grid-template-columns: auto 1fr; gap: .5rem; align-items: start; }
 .bank-choice > input { margin-top: 2.4rem; width: 1.2rem; height: 1.2rem; }
+.bank-choice-tf > select { margin-top: 1.7rem; min-width: 110px; }
+.quiz-tf-row { justify-content: space-between; flex-wrap: wrap; }
+.quiz-tf-options { display: flex; gap: 1rem; align-items: center; }
+.lms-shell .quiz-tf-options label { flex-direction: row; align-items: center; gap: .35rem; font-weight: 500; cursor: pointer; }
+.quiz-short-answer { margin: .6rem 0; }
 .bank-source-list { display: grid; gap: .5rem; margin-block: 1rem; }
 .lms-shell .bank-source-list label { display: flex; flex-direction: row; gap: .5rem; align-items: center; }
 .bank-source-list input { width: auto; }

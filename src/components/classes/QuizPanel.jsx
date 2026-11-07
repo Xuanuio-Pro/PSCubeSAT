@@ -150,14 +150,93 @@ export default function QuizPanel({ classId, labId, onRefresh, policySummary }) 
       </div>
       {conflict && <div className="lms-confirm"><p>Giữ lựa chọn vừa sửa trên thiết bị này hay tải lựa chọn đã lưu từ tab khác?</p><div className="lms-actions"><button disabled={busy} onClick={() => resolve(true)}>Giữ lựa chọn trên thiết bị</button><button disabled={busy} onClick={() => resolve(false)}>Dùng bản đã lưu trên server</button></div></div>}
       {!active && <p>{attempt.status === 'expired' ? 'Hết thời gian làm bài. ' : ''}{attempt.revealed ? 'Đáp án được công bố theo cấu hình của giảng viên.' : 'Đáp án và giải thích chưa được công bố.'}</p>}
-      {attempt.items.map((item, index) => <fieldset className="quiz-question" key={item.id} disabled={!active || busy || conflict || seconds === 0}>
-        <legend><span>Câu {index + 1}</span> {item.prompt}</legend>
-        {item.choices.map(choice => <label className={`quiz-choice${selections[item.id] === choice.id ? ' selected' : ''}`} key={choice.id}>
-          <input type="radio" name={item.id} checked={selections[item.id] === choice.id} onChange={() => choose(item.id, choice.id)} />
-          <span>{choice.text}</span>{item.correct_choice_id === choice.id && <strong>Đáp án đúng</strong>}
-        </label>)}
-        {item.explanation && <div className="quiz-explanation"><p>{item.explanation}</p><small>Nguồn: {item.source_reference}</small></div>}
-      </fieldset>)}
+      {attempt.items.map((item, index) => {
+        const qType = item.question_type || 'single_choice';
+        const currentAns = selections[item.id] || '';
+        const multiSelected = new Set(qType === 'multiple_choice' ? currentAns.split('|').filter(Boolean) : []);
+        const tfSelected = {};
+        if (qType === 'true_false' && currentAns) {
+          currentAns.split('|').forEach(pair => {
+            const [k, v] = pair.split(':');
+            if (k && v) tfSelected[k] = v;
+          });
+        }
+        return <fieldset className="quiz-question" key={item.id} disabled={!active || busy || conflict || seconds === 0}>
+          <legend><span>Câu {index + 1}</span> {item.prompt}</legend>
+          {qType === 'single_choice' && item.choices.map(choice => <label className={`quiz-choice${currentAns === choice.id ? ' selected' : ''}`} key={choice.id}>
+            <input type="radio" name={item.id} checked={currentAns === choice.id} onChange={() => choose(item.id, choice.id)} />
+            <span>{choice.text}</span>{item.correct_choice_id === choice.id && <strong>Đáp án đúng</strong>}
+          </label>)}
+          {qType === 'multiple_choice' && <>
+            <small className="lms-secondary">Chọn tất cả các phương án đúng:</small>
+            {item.choices.map(choice => {
+              const isChecked = multiSelected.has(choice.id);
+              const isCorrectChoice = item.correct_choice_id?.split('|').includes(choice.id);
+              return <label className={`quiz-choice${isChecked ? ' selected' : ''}`} key={choice.id}>
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={event => {
+                    const next = new Set(multiSelected);
+                    if (event.target.checked) next.add(choice.id);
+                    else next.delete(choice.id);
+                    const sorted = [...next].sort().join('|');
+                    if (sorted) choose(item.id, sorted);
+                  }}
+                />
+                <span>{choice.text}</span>{isCorrectChoice && <strong>Đáp án đúng</strong>}
+              </label>;
+            })}
+          </>}
+          {qType === 'true_false' && <>
+            <small className="lms-secondary">Chọn Đúng hoặc Sai cho từng mệnh đề:</small>
+            {item.choices.map((choice, cIdx) => {
+              const letter = String.fromCharCode(97 + cIdx);
+              const val = tfSelected[choice.id] || '';
+              return <div className="quiz-choice quiz-tf-row" key={choice.id}>
+                <span><strong>{letter})</strong> {choice.text}</span>
+                <div className="quiz-tf-options">
+                  {['Đ', 'S'].map(opt => (
+                    <label key={opt}>
+                      <input
+                        type="radio"
+                        name={`${item.id}-${choice.id}`}
+                        checked={val === opt}
+                        onChange={() => {
+                          const next = { ...tfSelected, [choice.id]: opt };
+                          const encoded = Object.keys(next).sort().map(k => `${k}:${next[k]}`).join('|');
+                          choose(item.id, encoded);
+                        }}
+                      />
+                      {opt === 'Đ' ? 'Đúng' : 'Sai'}
+                    </label>
+                  ))}
+                </div>
+              </div>;
+            })}
+            {item.correct_choice_id && <p className="lms-secondary"><strong>Đáp án đúng:</strong> {item.correct_choice_id}</p>}
+          </>}
+          {qType === 'short_answer' && (
+            <div className="quiz-short-answer">
+              <label>
+                Câu trả lời của bạn
+                <input
+                  type="text"
+                  maxLength={64}
+                  value={currentAns}
+                  placeholder="Nhập kết quả (VD: 10 hoặc -1.5)"
+                  onChange={event => {
+                    const val = event.target.value;
+                    if (val.trim()) choose(item.id, val);
+                  }}
+                />
+              </label>
+              {item.correct_choice_id && <p className="lms-secondary"><strong>Đáp án đúng:</strong> {item.correct_choice_id}</p>}
+            </div>
+          )}
+          {item.explanation && <div className="quiz-explanation"><p>{item.explanation}</p><small>Nguồn: {item.source_reference}</small></div>}
+        </fieldset>;
+      })}
       {active ? <div className="quiz-footer"><p>Đã chọn {Object.keys(selections).length}/5 câu. Hết giờ, server chấm phần đã lưu.</p><button className="lms-primary" disabled={busy || conflict || seconds === 0} onClick={submit}>{busy ? 'Đang nộp…' : 'Nộp bài'}</button></div>
         : <div className="lms-actions"><button disabled={busy} onClick={() => resolve(false)}>Cập nhật kết quả</button>{attempt.remaining_attempts > 0 && !attempt.revealed && <button onClick={start} disabled={busy}>Làm lượt tiếp theo</button>}</div>}
     </>}
