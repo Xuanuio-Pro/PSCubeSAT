@@ -220,6 +220,8 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             "/api/auth/login",
             "/api/auth/google",
             "/api/auth/google/config",
+            "/api/admin/signup",
+            "/api/admin/login",
             "/api/curriculum/preview",
         }
         tested = []
