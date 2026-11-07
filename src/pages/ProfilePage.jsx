@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/lab-metadata';
-import { getLessonsForLab } from '../data/curriculum';
+
 import DeviceManager from '../components/profile/DeviceManager';
 
 const ROLE_LABEL = { admin: 'Quản trị viên', user: 'Học viên' };
@@ -112,16 +112,22 @@ function LearningProgress({ user }) {
   const { user: authUser } = useAuth();
   const currentUser = user || authUser;
   const [progressByLab, setProgressByLab] = useState({});
+  const [lessonsByLab, setLessonsByLab] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    request('/api/progress')
-      .then((rows) => {
+    Promise.all([
+      request('/api/progress').catch(() => []),
+      request('/api/curriculum/legacy').catch(() => []),
+    ])
+      .then(([rows, catalog]) => {
         const map = {};
-        rows.forEach((r) => { map[r.lab_id] = r; });
+        (rows || []).forEach((r) => { map[r.lab_id] = r; });
         setProgressByLab(map);
+        const lessonMap = {};
+        (catalog || []).forEach((lab) => { lessonMap[lab.id] = lab.lessons || []; });
+        setLessonsByLab(lessonMap);
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -159,7 +165,7 @@ function LearningProgress({ user }) {
               if (done) {
                 percent = 100;
               } else if (!isLocked) {
-                const lessons = getLessonsForLab(lab.id);
+                const lessons = lessonsByLab[lab.id] || [];
                 let completedLessonsCount = 0;
                 if (lab.id === 0) {
                   if (p?.video_watched || p?.lessons?.['overview']?.completed) completedLessonsCount++;

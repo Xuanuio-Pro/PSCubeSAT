@@ -1,5 +1,11 @@
 # Nhật ký quyết định
 
+## 07/11/2026 — Nhập danh sách sinh viên hàng loạt từ Excel/CSV (CLASS-02)
+
+- Giữ nguyên chức năng thêm từng sinh viên bằng email (`POST /api/classes/{class_id}/members`) và bổ sung `POST /api/classes/{class_id}/members/import` (cùng mẫu tải về `/templates/class-students.xlsx`, `/templates/class-students.csv` và `GET /api/classes/templates/students?format=xlsx|csv`).
+- Cấu trúc mẫu gồm cột `email` (bắt buộc) và `full_name` (tùy chọn để giảng viên đối chiếu, không tự ý ghi đè họ tên tài khoản đã đăng ký). Hỗ trợ cả `.xlsx` và `.csv` (tối đa 1 MB, 500 dòng/lần, kiểm tra chống XML entity/zip bomb).
+- Xử lý theo từng dòng hợp lệ (theo lựa chọn của người yêu cầu): thêm mới hoặc khôi phục membership `student` cho các email đã có tài khoản `active` (kèm `audit_logs`), giữ nguyên sinh viên đang active, và trả về danh sách chi tiết các dòng bị bỏ qua (`NOT_REGISTERED`, `ACCOUNT_LOCKED`, `IS_TEACHER`, `INVALID_EMAIL`, `DUPLICATE_IN_FILE`, `EMPTY_EMAIL`).
+
 ## 26/10/2026 — Dashboard, migration, pilot (Sprint 5)
 
 - Cờ theo lớp (người yêu cầu chọn): `LMS_CLASS_MODE` vẫn là công tắc tổng; mỗi lớp có `lms_mode` = `enabled` | `read_only` | `off`, chỉ Admin đổi, bắt buộc lý do, có audit. Lớp mới và lớp có trước migration 0010 mặc định `enabled` để giữ hành vi đã chạy dưới cờ tổng.
