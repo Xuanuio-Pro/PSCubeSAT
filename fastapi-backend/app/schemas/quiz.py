@@ -134,8 +134,10 @@ class BankFork(RevisionInput):
 
 
 class ImportInput(RevisionInput):
-    format: Literal["json", "csv", "xlsx", "text"]
+    format: Literal["json", "csv", "xlsx", "text", "docx"]
     content: str = Field(min_length=2, max_length=1500000)
+    answer_format: Literal["xlsx", "csv", "text", "docx"] | None = None
+    answer_content: str | None = Field(default=None, max_length=1500000)
 
 
 class PolicyInput(RevisionInput):

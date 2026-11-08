@@ -14,7 +14,6 @@ const fields = {
 };
 
 function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }) {
-  const [showBank, setShowBank] = useState(false);
   function param(key, value) {
     const params = { ...lesson.params };
     if (value === '') delete params[key]; else params[key] = value;
@@ -49,28 +48,7 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
     </fieldset>
     {lesson.type === 'labtest' && (
       <div className="lms-import-box" style={{ marginTop: '16px' }}>
-        <div className="lms-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong>Câu hỏi & Đáp án (Lab Test {labId})</strong>
-            <span className="lms-secondary">
-              Đề mẫu tham khảo:{' '}
-              <a href="/templates/labtest-sample-exam.txt" download>Đề mẫu 4 phần (.txt)</a> ·{' '}
-              <a href="/templates/question-bank.xlsx" download>Mẫu Excel (.xlsx)</a> ·{' '}
-              <a href="/templates/answer-sheet-sample.csv" download>Bảng đáp án mã đề (.csv)</a>
-            </span>
-          </div>
-          <div className="lms-actions">
-            <button type="button" className="lms-primary" onClick={() => setShowBank(current => !current)}>
-              {showBank ? 'Thu gọn trình soạn câu hỏi' : 'Thêm / Soạn câu hỏi & đáp án'}
-            </button>
-            <Link to={`/classes/${classId}/labs/${labId}/questions`}>Mở trang riêng</Link>
-          </div>
-        </div>
-        {showBank && (
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
-            <InlineQuestionBank classId={classId} labId={labId} onPublished={onReload} />
-          </div>
-        )}
+        <InlineQuestionBank classId={classId} labId={labId} onPublished={onReload} />
       </div>
     )}
   </details>;

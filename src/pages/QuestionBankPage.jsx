@@ -22,6 +22,22 @@ function toBase64(buffer) {
   return btoa(binary);
 }
 
+async function readImportFile(targetFile) {
+  const lower = targetFile.name.toLowerCase();
+  const format = lower.endsWith('.docx')
+    ? 'docx'
+    : lower.endsWith('.xlsx')
+    ? 'xlsx'
+    : lower.endsWith('.csv')
+    ? 'csv'
+    : lower.endsWith('.txt') || lower.endsWith('.md')
+    ? 'text'
+    : 'json';
+  const binary = format === 'xlsx' || format === 'docx';
+  const content = binary ? toBase64(await targetFile.arrayBuffer()) : await targetFile.text();
+  return { format, content };
+}
+
 function defaultChoices(type = 'single_choice') {
   if (type === 'short_answer') {
     return ['a', 'b', 'c', 'd'].map(id => ({ id, text: `Trả lời ngắn (${id})` }));
@@ -95,8 +111,8 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState('');
   const [retire, setRetire] = useState('');
-  const [file, setFile] = useState(null);
-  const [examText, setExamText] = useState('');
+  const [questionFile, setQuestionFile] = useState(null);
+  const [answerFile, setAnswerFile] = useState(null);
   const guard = useRef(false);
   const base = `/api/classes/${classId}/labs/${labId}`;
   const url = base + '/question-bank';
@@ -182,25 +198,30 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
 
   async function importFile(event) {
     event.preventDefault();
-    if (!file || file.size > 1000000) { setNotice({ error: 'Chọn tệp tối đa 1 MB (.xlsx, .csv, .txt, .json).' }); return; }
-    const lower = file.name.toLowerCase();
-    const format = lower.endsWith('.xlsx')
-      ? 'xlsx'
-      : lower.endsWith('.csv')
-      ? 'csv'
-      : lower.endsWith('.txt') || lower.endsWith('.md')
-      ? 'text'
-      : 'json';
-    const content = format === 'xlsx' ? toBase64(await file.arrayBuffer()) : await file.text();
-    const result = await mutate(url + '/import', { expected_revision: bank.revision, format, content });
-    if (result) setFile(null);
-  }
-
-  async function importTextSample(event) {
-    event.preventDefault();
-    if (!examText.trim()) return;
-    const result = await mutate(url + '/import', { expected_revision: bank.revision, format: 'text', content: examText });
-    if (result) setExamText('');
+    if (!questionFile || questionFile.size > 1000000) {
+      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.docx, .txt, .xlsx, .csv, .json).' });
+      return;
+    }
+    if (answerFile && answerFile.size > 1000000) {
+      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.xlsx, .csv, .txt, .docx).' });
+      return;
+    }
+    const qPayload = await readImportFile(questionFile);
+    const body = {
+      expected_revision: bank.revision,
+      format: qPayload.format,
+      content: qPayload.content,
+    };
+    if (answerFile) {
+      const aPayload = await readImportFile(answerFile);
+      body.answer_format = aPayload.format;
+      body.answer_content = aPayload.content;
+    }
+    const result = await mutate(url + '/import', body);
+    if (result) {
+      setQuestionFile(null);
+      setAnswerFile(null);
+    }
   }
 
   const multiSet = parseMultiSelected(question.correct_choice_id);
@@ -358,36 +379,27 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
     </div>
 
     {draft && <section className="lms-panel">
-      <h2>Đề mẫu tham khảo & Nhập nhanh câu hỏi</h2>
+      <h2>Nhập từ File câu hỏi & File đáp án tách riêng</h2>
       <p className="lms-import-head">
-        Tải mẫu tham khảo cho giáo viên:{' '}
-        <a href="/templates/labtest-sample-exam.txt" download>Đề mẫu 4 phần (.txt)</a> ·{' '}
-        <a href="/templates/question-bank.xlsx" download>Mẫu Excel 4 dạng (.xlsx)</a> ·{' '}
-        <a href="/templates/question-bank.csv" download>Mẫu CSV (.csv)</a> ·{' '}
-        <a href="/templates/answer-sheet-sample.csv" download>Mẫu bảng đáp án mã đề (.csv)</a> ·{' '}
-        <a href="/templates/question-bank.json" download>Mẫu JSON (.json)</a> ·{' '}
-        <a href="/templates/question-bank-guide.md" download>Hướng dẫn chi tiết (.md)</a>
+        <strong>Mẫu File câu hỏi:</strong>{' '}
+        <a href="/templates/question-template.docx" download>File câu hỏi mẫu (.docx)</a> ·{' '}
+        <a href="/templates/question-template.txt" download>File câu hỏi mẫu (.txt)</a>
+        {' | '}
+        <strong>Mẫu File đáp án (tách riêng):</strong>{' '}
+        <a href="/templates/answer-template.xlsx" download>File đáp án mẫu (.xlsx)</a> ·{' '}
+        <a href="/templates/answer-template.csv" download>File đáp án mẫu (.csv)</a>
       </p>
       <form className="lms-filters" onSubmit={importFile}>
-        <label>Nhập từ tệp (.xlsx, .csv, .txt, .json)<input type="file" accept=".xlsx,.csv,.txt,.md,.json" onChange={event => setFile(event.target.files?.[0] || null)} required /></label>
-        <button disabled={busy || !file}>Kiểm tra và nhập câu hỏi</button>
+        <label>
+          1. File câu hỏi (.docx, .txt, .xlsx, .csv, .json)
+          <input type="file" accept=".docx,.txt,.md,.xlsx,.csv,.json" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
+        </label>
+        <label>
+          2. File đáp án (.xlsx, .csv, .txt, .docx)
+          <input type="file" accept=".xlsx,.csv,.txt,.docx" onChange={event => setAnswerFile(event.target.files?.[0] || null)} />
+        </label>
+        <button className="lms-primary" disabled={busy || !questionFile}>Kiểm tra và nhập câu hỏi</button>
       </form>
-      <details style={{ marginTop: '12px' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--cubesat-navy)' }}>Hoặc dán trực tiếp nội dung đề mẫu văn bản (Phần I, II, III, IV + bảng đáp án)</summary>
-        <form onSubmit={importTextSample} style={{ marginTop: '10px' }}>
-          <label>
-            Nội dung đề thi theo mẫu
-            <textarea rows={8} value={examText} onChange={event => setExamText(event.target.value)} placeholder="Dán nội dung đề mẫu có PHẦN I, PHẦN II, PHẦN III, PHẦN IV và bảng đáp án sau dòng ---HẾT---..." />
-          </label>
-          <div className="lms-actions" style={{ marginTop: '8px' }}>
-            <button className="lms-primary" disabled={busy || !examText.trim()}>Tách câu hỏi & nhập vào ngân hàng</button>
-            <button type="button" disabled={busy} onClick={async () => {
-              const res = await fetch('/templates/labtest-sample-exam.txt');
-              if (res.ok) setExamText(await res.text());
-            }}>Chèn nội dung đề mẫu để thử</button>
-          </div>
-        </form>
-      </details>
     </section>}
     {!inline && <>
       <PolicyForm key={bank.policy.revision} initial={bank.policy} busy={busy} onSave={value => mutate(base + '/quiz-policy', value, 'PUT')} />
@@ -445,20 +457,159 @@ function TeacherResults({ base }) {
 }
 
 export function InlineQuestionBank({ classId, labId, onPublished = null }) {
-  const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}/labs/${labId}/question-bank`);
+  const url = `/api/classes/${classId}/labs/${labId}/question-bank`;
+  const { data: bank, loading, error, reload } = useLmsResource(url);
+  const [questionFile, setQuestionFile] = useState(null);
+  const [answerFile, setAnswerFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState({});
+
   if (loading) return <p role="status">Đang tải ngân hàng câu hỏi Lab {labId}…</p>;
   if (error) return <><Notice error={error} /><button type="button" onClick={reload}>Thử lại</button></>;
-  return <BankEditor
-    key={`${classId}:${labId}:${data.revision}`}
-    initial={data}
-    classId={classId}
-    labId={labId}
-    reload={reload}
-    inline
-    onBankChange={next => {
-      if (next.status === 'published' && onPublished) onPublished();
-    }}
-  />;
+
+  const draft = bank.status === 'draft';
+  const draftCount = bank.questions.filter(q => q.status === 'draft').length;
+
+  async function handleImport(event) {
+    event.preventDefault();
+    if (!questionFile || questionFile.size > 1000000) {
+      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.docx, .txt, .xlsx, .csv, .json).' });
+      return;
+    }
+    if (answerFile && answerFile.size > 1000000) {
+      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.xlsx, .csv, .txt, .docx).' });
+      return;
+    }
+    setBusy(true);
+    setNotice({});
+    try {
+      const qPayload = await readImportFile(questionFile);
+      const body = {
+        expected_revision: bank.revision,
+        format: qPayload.format,
+        content: qPayload.content,
+      };
+      if (answerFile) {
+        const aPayload = await readImportFile(answerFile);
+        body.answer_format = aPayload.format;
+        body.answer_content = aPayload.content;
+      }
+      await request(url + '/import', { method: 'POST', body: JSON.stringify(body) });
+      setQuestionFile(null);
+      setAnswerFile(null);
+      setNotice({ message: 'Đã thêm câu hỏi từ file vào ngân hàng.' });
+      reload();
+    } catch (err) {
+      setNotice({ error: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approveAll() {
+    const drafts = bank.questions.filter(q => q.status === 'draft');
+    if (!drafts.length) return;
+    setBusy(true);
+    setNotice({});
+    let rev = bank.revision;
+    try {
+      for (const item of drafts) {
+        const updated = await request(`${url}/questions/${item.id}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ expected_revision: rev, status: 'approved' }),
+        });
+        rev = updated.revision;
+      }
+      setNotice({ message: `Đã duyệt ${drafts.length} câu hỏi nháp.` });
+      reload();
+    } catch (err) {
+      setNotice({ error: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function publishBank() {
+    setBusy(true);
+    setNotice({});
+    try {
+      await request(url + '/publish', {
+        method: 'POST',
+        body: JSON.stringify({ expected_revision: bank.revision }),
+      });
+      setNotice({ message: 'Đã xuất bản ngân hàng 20 câu hỏi.' });
+      reload();
+      if (onPublished) onPublished();
+    } catch (err) {
+      setNotice({ error: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="lms-inline-bank">
+      <div className="lms-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <strong>Thêm file câu hỏi & đáp án (Lab Test {labId})</strong>
+          <span className="lms-secondary">
+            Phiên bản {bank.version} · {labels[bank.status]} · Đã duyệt <strong>{bank.approved_count}/20</strong> câu (tổng {bank.questions.length} câu)
+          </span>
+          <span className="lms-secondary">
+            <strong>Mẫu File câu hỏi:</strong>{' '}
+            <a href="/templates/question-template.docx" download>File câu hỏi (.docx)</a> ·{' '}
+            <a href="/templates/question-template.txt" download>File câu hỏi (.txt)</a>
+            {' | '}
+            <strong>Mẫu File đáp án:</strong>{' '}
+            <a href="/templates/answer-template.xlsx" download>File đáp án (.xlsx)</a> ·{' '}
+            <a href="/templates/answer-template.csv" download>File đáp án (.csv)</a>
+          </span>
+        </div>
+        <div className="lms-actions">
+          <Link to={`/classes/${classId}/labs/${labId}/questions`} className="lms-btn-link">
+            Mở trang riêng để soạn câu hỏi
+          </Link>
+        </div>
+      </div>
+      <Notice {...notice} />
+      {draft ? (
+        <>
+          <form className="lms-filters" onSubmit={handleImport} style={{ marginTop: '12px' }}>
+            <label>
+              1. File câu hỏi (.docx, .txt, .xlsx, .csv)
+              <input type="file" accept=".docx,.txt,.md,.xlsx,.csv,.json" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
+            </label>
+            <label>
+              2. File đáp án tách riêng (.xlsx, .csv, .txt, .docx)
+              <input type="file" accept=".xlsx,.csv,.txt,.docx" onChange={event => setAnswerFile(event.target.files?.[0] || null)} />
+            </label>
+            <button className="lms-primary" disabled={busy || !questionFile}>Thêm file câu hỏi</button>
+          </form>
+          {(draftCount > 0 || bank.approved_count === 20) && (
+            <div className="lms-actions" style={{ marginTop: '10px' }}>
+              {draftCount > 0 && (
+                <button type="button" disabled={busy} onClick={approveAll}>
+                  Duyệt tất cả câu nháp ({draftCount})
+                </button>
+              )}
+              <button
+                type="button"
+                className="lms-primary"
+                disabled={busy || bank.approved_count !== 20}
+                onClick={publishBank}
+              >
+                Xuất bản 20 câu đã duyệt
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="lms-secondary" style={{ marginTop: '8px' }}>
+          Ngân hàng câu hỏi đã xuất bản. Để chỉnh sửa hoặc tạo phiên bản mới, vui lòng bấm <strong>Mở trang riêng để soạn câu hỏi</strong>.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function QuestionBankPage() {

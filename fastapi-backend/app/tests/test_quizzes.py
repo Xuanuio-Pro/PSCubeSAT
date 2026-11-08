@@ -504,9 +504,13 @@ class QuizValidationTests(unittest.TestCase):
 
         from app.services.exam_import import (
             SAMPLE_EXAM_TEXT,
+            merge_questions_and_answers,
+            parse_docx_questions,
             parse_exam_text,
-             parse_xlsx_questions,
+            parse_xlsx_questions,
+            sample_answer_xlsx,
             sample_question_bank_xlsx,
+            sample_question_docx,
             shuffle_true_false_choices,
         )
 
@@ -521,6 +525,19 @@ class QuizValidationTests(unittest.TestCase):
         self.assertEqual(parsed_text[4]["correct_choice_id"], "a:Đ|b:S|c:S|d:Đ")
         self.assertEqual(parsed_text[6]["question_type"], "short_answer")
         self.assertEqual(parsed_text[6]["correct_choice_id"], "10")
+
+        # 1b. Parse separate Question File (.docx without answers) + Answer File (.xlsx)
+        q_docx_b64 = base64.b64encode(sample_question_docx()).decode()
+        a_xlsx_b64 = base64.b64encode(sample_answer_xlsx()).decode()
+        questions_only = parse_docx_questions(q_docx_b64)
+        self.assertTrue(all(not q["correct_choice_id"] for q in questions_only))
+        merged = merge_questions_and_answers(questions_only, "xlsx", a_xlsx_b64)
+        validated_merged = [QuestionInput.model_validate(q).model_dump() for q in merged]
+        self.assertEqual(len(validated_merged), 8)
+        self.assertEqual(validated_merged[0]["correct_choice_id"], "d")
+        self.assertEqual(validated_merged[1]["correct_choice_id"], "a|b|d")
+        self.assertEqual(validated_merged[4]["correct_choice_id"], "a:Đ|b:S|c:S|d:Đ")
+        self.assertEqual(validated_merged[6]["correct_choice_id"], "10")
 
         # 2. Parse sample Excel (.xlsx) with all 4 question types
         xlsx_b64 = base64.b64encode(sample_question_bank_xlsx()).decode()

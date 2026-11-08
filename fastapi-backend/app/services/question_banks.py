@@ -14,7 +14,13 @@ from app.models.curriculum import ClassCourseVersion, CourseVersion
 from app.models.quiz import QuestionBank, QuestionVersion, QuizAttemptItem, QuizPolicy
 from app.schemas.quiz import QuestionInput, normalized
 from app.services.classes import audit
-from app.services.exam_import import parse_csv_questions, parse_exam_text, parse_xlsx_questions
+from app.services.exam_import import (
+    merge_questions_and_answers,
+    parse_csv_questions,
+    parse_docx_questions,
+    parse_exam_text,
+    parse_xlsx_questions,
+)
 
 
 def uid():
@@ -208,17 +214,24 @@ def parse_import(request):
             data = data["questions"] if isinstance(data, dict) else data
         elif request.format == "xlsx":
             data = parse_xlsx_questions(request.content)
+        elif request.format == "docx":
+            data = parse_docx_questions(request.content)
         elif request.format == "text":
             data = parse_exam_text(request.content)
         else:
             data = parse_csv_questions(request.content)
         if not isinstance(data, list) or not 1 <= len(data) <= 200:
             invalid("Nhập từ 1 đến 200 câu hỏi mỗi lần.")
+        data = merge_questions_and_answers(
+            data,
+            getattr(request, "answer_format", None),
+            getattr(request, "answer_content", None),
+        )
         return [QuestionInput.model_validate(q).model_dump() for q in data]
     except (ValueError, KeyError, TypeError, ValidationError) as exc:
         # Do not echo potentially sensitive imported content in validation errors.
         invalid(
-            "Tệp không đúng mẫu: cần đủ nội dung câu hỏi, lựa chọn và đáp án hợp lệ.",
+            "Tệp không đúng mẫu: cần đủ nội dung câu hỏi, lựa chọn và đáp án hợp lệ (kiểm tra cả File câu hỏi và File đáp án).",
             {"error_type": type(exc).__name__},
         )
 

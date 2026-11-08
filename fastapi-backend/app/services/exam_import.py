@@ -4,6 +4,7 @@ import csv
 import io
 import re
 import zipfile
+from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
 from app.services.student_import import _decode_bytes, _parse_xlsx_bytes
@@ -154,6 +155,234 @@ def _detect_section_type(header_line: str, part_num: str) -> str:
     }.get(part_num.upper(), "single_choice")
 
 
+def extract_docx_text(content: str) -> str:
+    """Extract paragraphs and tables from a Word (.docx) archive (base64 or raw)."""
+    raw_bytes = _decode_bytes(content)
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+            if "word/document.xml" not in zf.namelist():
+                raise ValueError("Tệp Word (.docx) thiếu word/document.xml.")
+            root = ET.fromstring(zf.read("word/document.xml"))
+    except zipfile.BadZipFile as exc:
+        raise ValueError("Tệp Word (.docx) không hợp lệ.") from exc
+
+    body = root.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}body")
+    if body is None:
+        return ""
+    lines: list[str] = []
+    for child in body:
+        tag = child.tag.split("}")[-1]
+        if tag == "p":
+            parts: list[str] = []
+            for elem in child.iter():
+                etag = elem.tag.split("}")[-1]
+                if etag == "t" and elem.text:
+                    parts.append(elem.text)
+                elif etag == "tab":
+                    parts.append("\t")
+                elif etag in ("br", "cr"):
+                    parts.append("\n")
+            txt = "".join(parts)
+            for subline in txt.splitlines():
+                if subline.strip():
+                    lines.append(subline.strip())
+        elif tag == "tbl":
+            for tr in child.iter():
+                if tr.tag.split("}")[-1] != "tr":
+                    continue
+                cells: list[str] = []
+                for tc in tr:
+                    if tc.tag.split("}")[-1] != "tc":
+                        continue
+                    cell_text = "".join(
+                        e.text or "" for e in tc.iter() if e.tag.split("}")[-1] == "t"
+                    ).strip()
+                    cells.append(cell_text)
+                if any(cells):
+                    lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def _parse_answer_text_block(
+    answer_text: str,
+) -> tuple[dict[tuple[str, int], str], dict[tuple[str, int], str], dict[int, tuple[str, str]]]:
+    answer_keys: dict[tuple[str, int], str] = {}
+    answer_explanations: dict[tuple[str, int], str] = {}
+    by_index: dict[int, tuple[str, str]] = {}
+    if not answer_text.strip():
+        return answer_keys, answer_explanations, by_index
+
+    current_part = "I"
+    tf_columns: list[int] = []
+    tf_map: dict[tuple[str, int], list[str]] = {}
+    table_q_nums: list[int] = []
+    seq_counter = 0
+
+    for raw_line in answer_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        part_match = re.match(r"^PHẦN\s+([IVX\d]+)\b", line, re.IGNORECASE)
+        if part_match:
+            current_part = part_match.group(1).upper()
+            tf_columns = []
+            table_q_nums = []
+            continue
+        if line.startswith("|"):
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if not cells:
+                continue
+            first = cells[0].casefold()
+            if first == "câu":
+                table_q_nums = [int(c) for c in cells[1:] if c.isdigit()]
+            elif first == "chọn" and table_q_nums:
+                for q_num, val in zip(table_q_nums, cells[1:]):
+                    if val.strip():
+                        answer_keys[(current_part, q_num)] = val.strip()
+            elif all(re.match(r"^câu\s+\d+$", c, re.IGNORECASE) for c in cells if c):
+                tf_columns = [
+                    int(re.search(r"\d+", c).group(0)) for c in cells if re.search(r"\d+", c)
+                ]
+            elif tf_columns:
+                for q_num, cell in zip(tf_columns, cells):
+                    m = re.match(r"^([a-d])\)\s*([ĐDSSTF])", cell, re.IGNORECASE)
+                    if m:
+                        cid = m.group(1).lower()
+                        v = "Đ" if m.group(2).upper() in ("Đ", "D", "T") else "S"
+                        tf_map.setdefault((current_part, q_num), []).append(f"{cid}:{v}")
+            continue
+        m_ans = re.match(r"^Câu\s+(\d+)\s*[.:]\s*(.+)$", line, re.IGNORECASE)
+        if m_ans:
+            q_num = int(m_ans.group(1))
+            rest = m_ans.group(2).strip()
+            if re.fullmatch(r"[A-Da-d](?:\s*[|,]\s*[A-Da-d])+", rest):
+                answer_keys[(current_part, q_num)] = rest.lower()
+            elif re.fullmatch(r"[ĐDSSTF]{4}|[A-Da-d]|-?\d+(?:[.,]\d+)?", rest, re.IGNORECASE):
+                answer_keys[(current_part, q_num)] = rest
+                seq_counter += 1
+                by_index[q_num] = (rest, "")
+            else:
+                answer_explanations[(current_part, q_num)] = rest
+    for key, pairs in tf_map.items():
+        answer_keys[key] = "|".join(pairs)
+    return answer_keys, answer_explanations, by_index
+
+
+def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
+    """Parse a separate Answer File (.xlsx, .csv, .txt, .docx)."""
+    by_index: dict[int, tuple[str, str]] = {}
+    by_part: dict[tuple[str, int], tuple[str, str]] = {}
+
+    if answer_format in ("text", "docx"):
+        txt = extract_docx_text(answer_content) if answer_format == "docx" else answer_content
+        split_marker = re.split(r"-{4,}\s*HẾT\s*-{4,}", txt, maxsplit=1, flags=re.IGNORECASE)
+        target = split_marker[1] if len(split_marker) > 1 else txt
+        keys, expls, idx_map = _parse_answer_text_block(target)
+        for k, ans in keys.items():
+            by_part[k] = (ans, expls.get(k, ""))
+        by_index.update(idx_map)
+        return {"by_index": by_index, "by_part": by_part}
+
+    if answer_format == "xlsx":
+        raw_rows = _parse_xlsx_bytes(_decode_bytes(answer_content))
+    else:
+        raw_rows = list(csv.reader(io.StringIO(answer_content.lstrip("\ufeff"))))
+
+    if not raw_rows:
+        return {"by_index": by_index, "by_part": by_part}
+
+    # Check if row 0 / row 1 uses header names like Phần, Câu, Đáp án, Lời giải
+    header_row = [str(c or "").strip().lstrip("\ufeff").casefold() for c in raw_rows[0]]
+    part_col = next((i for i, h in enumerate(header_row) if h in ("phần", "phan", "part")), None)
+    q_col = next(
+        (i for i, h in enumerate(header_row) if h in ("câu", "cau", "câu hỏi", "cau hoi", "question", "stt")),
+        0,
+    )
+    ans_col = next(
+        (
+            i
+            for i, h in enumerate(header_row)
+            if h in ("đáp án", "dap an", "chọn", "chon", "answer", "0001", "mã đề thi", "ma de thi")
+        ),
+        1,
+    )
+    expl_col = next(
+        (i for i, h in enumerate(header_row) if h in ("lời giải", "loi giai", "giải thích", "giai thich", "explanation")),
+        None,
+    )
+
+    seq_idx = 0
+    for row in raw_rows[1:]:
+        if not any(str(c or "").strip() for c in row):
+            continue
+        q_raw = str(row[q_col] if q_col < len(row) else "").strip()
+        ans_raw = str(row[ans_col] if ans_col < len(row) else "").strip()
+        if not q_raw and ans_raw in ("0001", "0002", "Đáp án", "Mã đề"):
+            # Second header row in answers_test.xlsx (['', '0001', '0002', ...])
+            continue
+        m_num = re.search(r"\d+", q_raw)
+        if not m_num or not ans_raw or ans_raw.casefold() in ("tự luận", "tu luan"):
+            continue
+        q_num = int(m_num.group(0))
+        expl_raw = (
+            str(row[expl_col]).strip()
+            if expl_col is not None and expl_col < len(row) and row[expl_col]
+            else ""
+        )
+        if part_col is not None and part_col < len(row) and str(row[part_col]).strip():
+            part_val = re.sub(r"^phần\s*", "", str(row[part_col]).strip(), flags=re.IGNORECASE).upper()
+            by_part[(part_val, q_num)] = (ans_raw, expl_raw)
+            seq_idx += 1
+            by_index[seq_idx] = (ans_raw, expl_raw)
+        else:
+            by_index[q_num] = (ans_raw, expl_raw)
+
+    return {"by_index": by_index, "by_part": by_part}
+
+
+def merge_questions_and_answers(
+    questions: list[dict],
+    answer_format: str | None = None,
+    answer_content: str | None = None,
+) -> list[dict]:
+    """Attach answers from a separate Answer File onto parsed questions."""
+    answers = (
+        parse_separate_answers(answer_format or "xlsx", answer_content)
+        if answer_content and answer_content.strip()
+        else None
+    )
+    merged: list[dict] = []
+    for idx, item in enumerate(questions, start=1):
+        q = dict(item)
+        obj_match = re.match(
+            r"^Phần\s+([IVX\d]+)\s*-\s*Câu\s+(\d+)",
+            str(q.get("objective") or ""),
+            re.IGNORECASE,
+        )
+        part = obj_match.group(1).upper() if obj_match else None
+        num = int(obj_match.group(2)) if obj_match else None
+        if answers:
+            matched = None
+            if part and num and (part, num) in answers["by_part"]:
+                matched = answers["by_part"][(part, num)]
+            elif idx in answers["by_index"]:
+                matched = answers["by_index"][idx]
+            elif num and num in answers["by_index"]:
+                matched = answers["by_index"][num]
+            if matched:
+                ans_val, expl_val = matched
+                if ans_val:
+                    q["correct_choice_id"] = ans_val
+                if expl_val:
+                    q["explanation"] = expl_val
+        merged.append(q)
+    return merged
+
+
+def parse_docx_questions(content: str) -> list[dict]:
+    return parse_exam_text(extract_docx_text(content))
+
+
 def parse_exam_text(content: str) -> list[dict]:
     """Parse Vietnamese sample exam text (4-part standard exam or inline-answer format)."""
     text = content.lstrip("\ufeff").replace("\r\n", "\n")
@@ -161,57 +390,7 @@ def parse_exam_text(content: str) -> list[dict]:
     body_text = split_marker[0]
     answer_text = split_marker[1] if len(split_marker) > 1 else ""
 
-    # Parse answer tables/keys after ---HẾT--- if present
-    answer_keys: dict[tuple[str, int], str] = {}
-    answer_explanations: dict[tuple[str, int], str] = {}
-    if answer_text.strip():
-        current_part = "I"
-        tf_columns: list[int] = []
-        tf_map: dict[tuple[str, int], list[str]] = {}
-        table_q_nums: list[int] = []
-        for raw_line in answer_text.splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            part_match = re.match(r"^PHẦN\s+([IVX\d]+)\b", line, re.IGNORECASE)
-            if part_match:
-                current_part = part_match.group(1).upper()
-                tf_columns = []
-                table_q_nums = []
-                continue
-            if line.startswith("|"):
-                cells = [c.strip() for c in line.strip("|").split("|")]
-                if not cells:
-                    continue
-                first = cells[0].casefold()
-                if first == "câu":
-                    table_q_nums = [int(c) for c in cells[1:] if c.isdigit()]
-                elif first == "chọn" and table_q_nums:
-                    for q_num, val in zip(table_q_nums, cells[1:]):
-                        if val.strip():
-                            answer_keys[(current_part, q_num)] = val.strip()
-                elif all(re.match(r"^câu\s+\d+$", c, re.IGNORECASE) for c in cells if c):
-                    tf_columns = [
-                        int(re.search(r"\d+", c).group(0)) for c in cells if re.search(r"\d+", c)
-                    ]
-                elif tf_columns:
-                    for q_num, cell in zip(tf_columns, cells):
-                        m = re.match(r"^([a-d])\)\s*([ĐDSSTF])", cell, re.IGNORECASE)
-                        if m:
-                            cid = m.group(1).lower()
-                            v = "Đ" if m.group(2).upper() in ("Đ", "D", "T") else "S"
-                            tf_map.setdefault((current_part, q_num), []).append(f"{cid}:{v}")
-                continue
-            m_ans = re.match(r"^Câu\s+(\d+)\s*[.:]\s*(.+)$", line, re.IGNORECASE)
-            if m_ans:
-                q_num = int(m_ans.group(1))
-                rest = m_ans.group(2).strip()
-                if re.fullmatch(r"[A-Da-d](?:\s*[|,]\s*[A-Da-d])+", rest):
-                    answer_keys[(current_part, q_num)] = rest.lower()
-                else:
-                    answer_explanations[(current_part, q_num)] = rest
-        for key, pairs in tf_map.items():
-            answer_keys[key] = "|".join(pairs)
+    answer_keys, answer_explanations, _ = _parse_answer_text_block(answer_text)
 
     # Parse questions in body_text
     current_part = "I"
@@ -276,7 +455,10 @@ def parse_exam_text(content: str) -> list[dict]:
 
         # Check for A. B. C. D. on a single or multiple lines
         abcd_matches = list(
-            re.finditer(r"(?:^|\s)(\*|_)?([A-D])(?:\1)?\.\s*([^\t]+?)(?=(?:\s+(?:\*|_)?[A-D](?:\*|_)?\.\s)|$)", line)
+            re.finditer(
+                r"(?:^|[\s\t])(\*|_)?([A-D])(?:\1)?\.\s*([^\t]+?)(?=(?:[\s\t]+(?:\*|_)?[A-D](?:\*|_)?\.\s)|$)",
+                line,
+            )
         )
         if abcd_matches and current_q["question_type"] in ("single_choice", "multiple_choice"):
             for m in abcd_matches:
@@ -302,6 +484,10 @@ def parse_exam_text(content: str) -> list[dict]:
                 current_q["inline_correct"].append(f"{cid}:{v}")
             elif marked:
                 current_q["inline_correct"].append(cid)
+            # Ensure statement body after prefix [n, level] has distinct readable text even if OLE equation was stripped
+            stripped_body = PREFIX_RE.sub("", ctext).strip()
+            if stripped_body in ("", "."):
+                ctext = f"{ctext.rstrip('.').strip()} Mệnh đề ({cid})"
             current_q["choices"].append({"id": cid, "text": ctext})
             continue
 
@@ -531,6 +717,119 @@ def sample_question_bank_xlsx() -> bytes:
         '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
         '<sheets><sheet name="QuestionBank" sheetId="1" r:id="rId1"/></sheets>'
+        "</workbook>"
+    )
+    workbook_rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+        'Target="worksheets/sheet1.xml"/>'
+        "</Relationships>"
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", root_rels)
+        zf.writestr("xl/workbook.xml", workbook_xml)
+        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
+        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+    return buffer.getvalue()
+
+
+SAMPLE_QUESTION_ONLY_TEXT = SAMPLE_EXAM_TEXT.split("---------------------------HẾT------------------------")[0].strip()
+
+
+def sample_question_docx() -> bytes:
+    """Generate a separate Word (.docx) Question File containing only questions (Phần I–IV)."""
+    p_xml = []
+    for line in SAMPLE_QUESTION_ONLY_TEXT.splitlines():
+        if not line.strip():
+            continue
+        p_xml.append(f"<w:p><w:r><w:t>{escape(line)}</w:t></w:r></w:p>")
+    doc_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f'<w:body>{"".join(p_xml)}</w:body>'
+        "</w:document>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/word/document.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        "</Types>"
+    )
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Target="word/document.xml"/>'
+        "</Relationships>"
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", rels)
+        zf.writestr("word/document.xml", doc_xml)
+    return buf.getvalue()
+
+
+def sample_answer_xlsx() -> bytes:
+    """Generate a separate Excel (.xlsx) Answer File matching SAMPLE_QUESTION_ONLY_TEXT."""
+    rows = [
+        ("Câu hỏi", "0001", "Phần", "Câu trong phần", "Lời giải", "Ghi chú định dạng"),
+        ("1", "D", "I", "1", "Số 2 là số nguyên tố chẵn duy nhất nên D là mệnh đề sai.", "Trắc nghiệm 1 đáp án: A, B, C hoặc D"),
+        ("2", "A|B|D", "II", "1", "3/4, -5 và 0,25 đều là số hữu tỉ.", "Nhiều đáp án: ngăn cách bởi dấu | (VD: A|B|D)"),
+        ("3", "A|B|D", "II", "2", "Hai góc so le trong bằng nhau, đồng vị bằng nhau, trong cùng phía bù nhau.", ""),
+        ("4", "A|C", "II", "3", "Hai đại lượng tỉ lệ nghịch có tích không đổi.", ""),
+        ("5", "ĐSSĐ", "III", "1", "Lần 1 trượt 2 (Đ), lần 2 trượt 5 (S), tổng trượt <=7 (S), cả 3 lần trúng >=3 (Đ).", "Đúng/Sai 4 ý: nhập 4 ký tự Đ/S (VD: ĐSSĐ)"),
+        ("6", "ĐSSS", "III", "2", "Ý a đúng theo quy tắc hình bình hành.", ""),
+        ("7", "10", "IV", "1", "Độ dài vectơ tổng bằng đường chéo AC = sqrt(6^2 + 8^2) = 10.", "Trả lời ngắn: nhập số hoặc chuỗi ngắn"),
+        ("8", "31", "IV", "2", "Áp dụng định lý sin trong tam giác ABC được AB xấp xỉ 31m.", ""),
+    ]
+    col_letters = [chr(ord("A") + idx) for idx in range(len(rows[0]))]
+    row_xml = []
+    for r_idx, row in enumerate(rows, start=1):
+        cells = "".join(
+            f'<c r="{col_letters[c_idx]}{r_idx}" t="inlineStr"><is><t>{escape(str(val))}</t></is></c>'
+            for c_idx, val in enumerate(row)
+        )
+        row_xml.append(f'<row r="{r_idx}">{cells}</row>')
+
+    sheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f'<sheetData>{"".join(row_xml)}</sheetData>'
+        "</worksheet>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        "</Types>"
+    )
+    root_rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Target="xl/workbook.xml"/>'
+        "</Relationships>"
+    )
+    workbook_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheets><sheet name="Answers" sheetId="1" r:id="rId1"/></sheets>'
         "</workbook>"
     )
     workbook_rels = (
