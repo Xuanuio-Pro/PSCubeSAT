@@ -33,7 +33,6 @@ function Practice({ lesson, labId, classId, preview, staffView, onRefresh }) {
     {content.rubric && <><h3>Tiêu chí chấm</h3><DocViewer content={content.rubric} docPath={undefined} /></>}
     {content.mode === 'exploration' ? <Suspense fallback={<p>Đang tải mô hình…</p>}><ComponentViewer /></Suspense> : (!preview || staffView) && <>
       {content.exercise_id && <button onClick={download}>Tải mã mẫu .ino</button>}<Notice error={error} />
-      <TelemetryControls />
       <Suspense fallback={<p>Đang tải không gian thực hành…</p>}>
         <IDEPanel labId={labId} exerciseId={lesson.id} storageScope={`user:${user?.id || 'staff'}:class:${classId}`} setCode={setCode} showToolbar={false} />
         <div className="lms-actions"><LabPracticeActions code={code} labId={labId} classId={Number(classId)} lessonId={lesson.id} configuredBoard={content.board || ''} /></div>

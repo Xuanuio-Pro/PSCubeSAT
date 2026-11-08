@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import logoSvg from '../../assets/logo.svg';
-import { ChevronDownIcon, ChevronLeftIcon, CheckIcon, CircleIcon, HomeIcon, LockIcon } from '../common/HeaderIcons';
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, CircleIcon, HomeIcon, LockIcon } from '../common/HeaderIcons';
 
 const typeLabels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', labtest: 'Lab test' };
 
@@ -111,6 +111,6 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
         })}
       </div>
     </div>
-    {collapsed && <button type="button" className="course-expand-button" onClick={() => setCollapsed(false)} aria-label="Mở rộng thanh điều hướng"><span>›</span></button>}
+    {collapsed && <button type="button" className="course-expand-button" onClick={() => setCollapsed(false)} aria-expanded={!collapsed} aria-controls="class-course-curriculum" aria-label="Mở rộng thanh điều hướng" title="Mở rộng"><ChevronRightIcon size={18} /></button>}
   </aside>;
 }

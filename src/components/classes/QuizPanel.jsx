@@ -11,6 +11,7 @@ export default function QuizPanel({ classId, labId, onRefresh, policySummary }) 
   const [notice, setNotice] = useState({});
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState({});
+  const [draftText, setDraftText] = useState({});
   const [conflict, setConflict] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [tabId] = useState(() => quizTabId(sessionStorage));
@@ -34,6 +35,7 @@ export default function QuizPanel({ classId, labId, onRefresh, policySummary }) 
     setSeconds(Math.max(0, Math.ceil((Date.parse(next.expires_at) - Date.parse(next.server_now)) / 1000)));
     if (next.status !== 'active') {
       state.current.dirty = {}; state.current.pending = null;
+      setDraftText({});
     }
     setAttempt(next); persist();
   }, [persist]);
@@ -223,10 +225,11 @@ export default function QuizPanel({ classId, labId, onRefresh, policySummary }) 
                 <input
                   type="text"
                   maxLength={64}
-                  value={currentAns}
+                  value={draftText[item.id] ?? currentAns}
                   placeholder="Nhập kết quả (VD: 10 hoặc -1.5)"
                   onChange={event => {
                     const val = event.target.value;
+                    setDraftText(current => ({ ...current, [item.id]: val }));
                     if (val.trim()) choose(item.id, val);
                   }}
                 />

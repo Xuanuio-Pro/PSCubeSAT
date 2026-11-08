@@ -5,34 +5,34 @@ import { LABS } from '../data/lab-metadata';
 
 import DeviceManager from '../components/profile/DeviceManager';
 
-const ROLE_LABEL = { admin: 'Quản trị viên', user: 'Học viên' };
+const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Học viên' };
 
 function ProfileInfo({ user }) {
   return (
     <div className="card">
       <div className="card-header">Thông tin cá nhân</div>
-      <div className="card-body" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+      <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center' }}>
         <div style={{
           width: '64px', height: '64px', borderRadius: '50%', background: 'var(--brand-primary-light)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700,
-          color: 'var(--brand-primary)', flexShrink: 0,
+          color: 'var(--brand-primary-dark)', flexShrink: 0,
         }}>
           {(user.full_name || user.email)[0].toUpperCase()}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flex: 1 }}>
-          <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '16px', flex: 1, minWidth: 0 }}>
+          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Họ và tên</div>
             <div style={{ fontWeight: 600 }}>{user.full_name || '—'}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Email</div>
             <div style={{ fontWeight: 600 }}>{user.email}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Vai trò</div>
             <div style={{ fontWeight: 600 }}>{ROLE_LABEL[user.role] || user.role}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ngày tham gia</div>
             <div style={{ fontWeight: 600 }}>
               {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '—'}
@@ -58,6 +58,7 @@ function ChangePasswordForm() {
     setError('');
     setSuccess(false);
     if (newPassword.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự');
+    if (new TextEncoder().encode(newPassword).length > 72) return setError('Mật khẩu không được vượt quá 72 byte UTF-8');
     if (newPassword !== confirmPassword) return setError('Mật khẩu xác nhận không khớp');
 
     setSubmitting(true);
@@ -75,7 +76,7 @@ function ChangePasswordForm() {
   }
 
   const inputStyle = {
-    width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px',
+    width: '100%', height: '42px', padding: '0 12px', borderRadius: '8px',
     border: '1px solid var(--border-strong)', fontSize: '0.9rem',
   };
 
@@ -85,19 +86,19 @@ function ChangePasswordForm() {
       <div className="card-body">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu hiện tại</label>
-            <input type="password" style={inputStyle} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+            <label htmlFor="profile-current-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu hiện tại</label>
+            <input id="profile-current-password" type="password" autoComplete="current-password" style={inputStyle} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
-            <input type="password" style={inputStyle} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <label htmlFor="profile-new-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
+            <input id="profile-new-password" type="password" autoComplete="new-password" minLength={6} style={inputStyle} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
-            <input type="password" style={inputStyle} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <label htmlFor="profile-confirm-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
+            <input id="profile-confirm-password" type="password" autoComplete="new-password" minLength={6} style={inputStyle} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
-          {error && <div className="auth-error-text">⚠ {error}</div>}
-          {success && <div style={{ color: 'var(--accent-green)', fontSize: '0.85rem', fontWeight: 600 }}>✅ Đã đổi mật khẩu thành công</div>}
+          {error && <div id="profile-password-error" className="auth-error-text" role="alert">⚠ {error}</div>}
+          {success && <div role="status" style={{ color: '#15803d', fontSize: '0.85rem', fontWeight: 600 }}>✓ Đã đổi mật khẩu thành công</div>}
           <button type="submit" className="btn btn-primary btn-sm" disabled={submitting} style={{ alignSelf: 'flex-start' }}>
             {submitting ? 'Đang lưu...' : 'Đổi mật khẩu'}
           </button>
@@ -182,15 +183,18 @@ function LearningProgress({ user }) {
               const icon = done ? '✅' : isLocked ? '🔒' : '⏳';
 
               return (
-                <div
+                <button
+                  type="button"
                   key={lab.id}
+                  disabled={isLocked}
                   onClick={() => {
                     if (isLocked) return;
                     navigate(`/${lab.slug}`);
                   }}
                   title={isLocked ? 'Cần hoàn thành lab trước để mở khóa' : `Lab ${lab.id}: ${lab.title}`}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+                    border: 'none', background: 'transparent', textAlign: 'left',
                     borderRadius: '8px', cursor: isLocked ? 'not-allowed' : 'pointer',
                     opacity: isLocked ? 0.6 : 1,
                     transition: 'background var(--transition-fast)',
@@ -202,23 +206,23 @@ function LearningProgress({ user }) {
                     if (!isLocked) e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                  <span style={{ fontSize: '1.2rem' }}>{lab.icon}</span>
-                  <span style={{ flex: 1, fontWeight: 500, color: isLocked ? 'var(--text-muted)' : 'inherit' }}>
+                  <span style={{ fontSize: '1.1rem' }} aria-hidden="true">{icon}</span>
+                  <span style={{ fontSize: '1.2rem' }} aria-hidden="true">{lab.icon}</span>
+                  <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 500, color: isLocked ? 'var(--text-muted)' : 'inherit' }}>
                     Lab {lab.id}: {lab.title}
                   </span>
                   <span style={{
                     fontSize: '0.8rem',
                     fontWeight: status === 'in-progress' ? 600 : 500,
                     color: status === 'completed'
-                      ? 'var(--accent-green, #16a34a)'
+                      ? '#15803d'
                       : status === 'in-progress'
-                      ? 'var(--brand-primary, #0a4174)'
+                      ? 'var(--brand-primary-dark, #0284c7)'
                       : 'var(--text-muted)',
                   }}>
                     {label}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>

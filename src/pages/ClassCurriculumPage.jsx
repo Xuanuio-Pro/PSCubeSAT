@@ -37,12 +37,21 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
       )}
       <div className="lms-form-grid">{[...fields[lesson.type], ['estimated_minutes', 'Thời lượng dự kiến (phút)', 'number']].map(([key, label, kind]) => {
         const value = lesson.params[key] ?? lesson.content[key] ?? '';
+        const numberBounds = key === 'watch_ratio'
+          ? { min: 0, max: 1, step: '0.05' }
+          : key === 'pass_score'
+          ? { min: 1, max: 5, step: '1' }
+          : key === 'time_limit_minutes'
+          ? { min: 1, max: 180, step: '1' }
+          : key === 'max_attempts'
+          ? { min: 1, max: 100, step: '1' }
+          : { min: 0, max: 7200, step: '1' };
         return <label key={key} className={kind === 'textarea' ? 'lms-wide' : ''}>{label}
           {kind === 'boolean' ? <input type="checkbox" checked={!!value} onChange={event => param(key, event.target.checked)} />
             : kind === 'tracking' ? <select value={value || 'native'} onChange={event => param(key, event.target.value)}><option value="native">Đo đoạn xem (video .mp4/.webm)</option><option value="confirmation">SV xác nhận (nguồn không đo được)</option></select>
-            : kind === 'textarea' ? <textarea rows={5} value={value} onChange={event => param(key, event.target.value)} />
+            : kind === 'textarea' ? <textarea rows={5} maxLength={20000} value={value} onChange={event => param(key, event.target.value)} />
             : kind === 'board' ? <select value={value} onChange={event => param(key, event.target.value)}><option value="">Theo lựa chọn của người học</option><option value="esp32">ESP32</option><option value="esp32s3">ESP32-S3</option></select>
-              : <input type={kind} step={key === 'watch_ratio' ? '0.05' : '1'} value={value} onChange={event => param(key, event.target.value === '' ? '' : kind === 'number' ? Number(event.target.value) : event.target.value)} />}
+              : <input type={kind} {...(kind === 'number' ? numberBounds : { maxLength: 2000 })} value={value} onChange={event => param(key, event.target.value === '' ? '' : kind === 'number' ? Number(event.target.value) : event.target.value)} />}
         </label>;
       })}</div>
     </fieldset>
@@ -102,8 +111,35 @@ function Editor({ initial, classId, onReload }) {
     {config.labs.map(lab => <details key={lab.id} className="lms-panel curriculum-lab" open={lab.id === 2}>
       <summary><h2>Lab {lab.id}: {lab.title}</h2><span>{!lab.enabled && 'Lab đã tắt · '}{lab.lessons.filter(item => item.enabled).length}/{lab.lessons.length} bài đang bật</span></summary>
       <p><Link to={`/classes/${classId}/labs/${lab.id}/questions`}>Soạn ngân hàng và quản lý Lab Test</Link></p><p>{lab.objectives}</p><p><strong>Nhóm nội dung:</strong> {lab.groups.join(' → ') || 'Tổng quan'}</p><p><strong>Minh chứng đầu ra:</strong> {lab.evidence}</p>
-      <fieldset disabled={busy}><legend>Cấu hình Lab {lab.id}</legend><div className="curriculum-switches"><label><input type="checkbox" checked={lab.enabled} onChange={event => updateLab(lab.id, value => ({ ...value, enabled: event.target.checked }))} />Bật lab</label>
-        <label>Lab tiên quyết (giữ Ctrl để chọn nhiều)<select multiple value={lab.prerequisites.map(String)} onChange={event => updateLab(lab.id, value => ({ ...value, prerequisites: [...event.target.selectedOptions].map(option => Number(option.value)) }))}>{config.labs.filter(item => item.id !== lab.id).map(item => <option value={item.id} key={item.id}>Lab {item.id}: {item.title}</option>)}</select></label></div></fieldset>
+      <fieldset disabled={busy}>
+        <legend>Cấu hình Lab {lab.id}</legend>
+        <div className="curriculum-switches">
+          <label><input type="checkbox" checked={lab.enabled} onChange={event => updateLab(lab.id, value => ({ ...value, enabled: event.target.checked }))} />Bật lab</label>
+        </div>
+        <div className="curriculum-prereq-group" role="group" aria-label={`Lab tiên quyết cho Lab ${lab.id}`}>
+          <span className="curriculum-prereq-title">Lab tiên quyết cần hoàn thành trước</span>
+          <div className="curriculum-prereq-list">
+            {config.labs.filter(item => item.id !== lab.id).map(item => {
+              const checked = lab.prerequisites.includes(item.id);
+              return (
+                <label key={item.id} className={`curriculum-prereq-item${checked ? ' is-selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={event => updateLab(lab.id, value => ({
+                      ...value,
+                      prerequisites: event.target.checked
+                        ? [...new Set([...value.prerequisites, item.id])].sort((a, b) => a - b)
+                        : value.prerequisites.filter(prereqId => prereqId !== item.id),
+                    }))}
+                  />
+                  <span>Lab {item.id}: {item.title}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </fieldset>
       {lab.lessons.map(lesson => <LessonSettings key={lesson.id} lesson={lesson} labId={lab.id} classId={classId} onReload={onReload} disabled={busy} onChange={next => updateLab(lab.id, value => ({ ...value, lessons: value.lessons.map(item => item.id === next.id ? next : item) }))} />)}
     </details>)}
   </>;
