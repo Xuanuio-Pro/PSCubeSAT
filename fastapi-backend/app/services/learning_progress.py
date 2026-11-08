@@ -148,9 +148,11 @@ async def restricted_config(db, access, config):
         )
         states = {item["id"]: item for item in state["lessons"]}
         for lesson in lab["lessons"]:
-            status = states[lesson["id"]]["status"]
-            lesson["progress"] = states[lesson["id"]]
-            if states[lesson["id"]]["access"] == "locked" and not satisfies(status):
+            lesson_state = states[lesson["id"]]
+            lesson["progress"] = lesson_state
+            lesson["access"] = lesson_state["access"]
+            lesson["reason"] = lesson_state["reason"]
+            if lesson_state["access"] == "locked":
                 for key in ("content", "params", "completion_rule"):
                     lesson.pop(key, None)
     config["learning_path"] = path
@@ -176,9 +178,8 @@ async def ensure_available(db, access, config, lesson_id):
         lab = next(
             lab for lab in path["labs"] if any(item["id"] == lesson_id for item in lab["lessons"])
         )
-        state = next(item["status"] for item in lab["lessons"] if item["id"] == lesson_id)
         lesson_state = next(item for item in lab["lessons"] if item["id"] == lesson_id)
-        if lesson_state["access"] == "locked" and not satisfies(state):
+        if lesson_state["access"] == "locked":
             raise LMSError(
                 403,
                 "PREREQUISITE_NOT_MET",
@@ -294,39 +295,13 @@ async def record_event(db, access, lesson_id, request):
                 "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
                 {"remaining_seconds": max(1, int(60 - elapsed))},
             )
-        if lesson["type"] not in {"document", "video", "practice"}:
+        if lesson["type"] not in {"document", "video", "practice", "labtest"}:
             raise LMSError(422, "CONFIG_INVALID", "Loại bài học này có quy trình hoàn thành riêng.")
-        if lesson["type"] == "practice" and lesson["content"].get("mode") != "exploration":
-            raise LMSError(
-                422,
-                "PREREQUISITE_NOT_MET",
-                "Bài thực hành cần được nộp và giảng viên duyệt trước khi hoàn thành.",
-            )
-        if lesson["type"] == "video":
-            content = lesson["content"]
-            if content.get("confirmation_allowed", False):
-                completed = True
-            elif video_complete(
-                row.watched_segments,
-                content.get("duration_seconds", 0),
-                content.get("watch_ratio", lesson["completion_rule"].get("ratio", 0.9)),
-            ):
-                completed = True
-            else:
-                raise LMSError(422, "PREREQUISITE_NOT_MET", "Bạn cần xem đủ tỷ lệ video trước khi hoàn thành.")
-        else:
-            completed = True
+        completed = True
     elif request.kind == "video_confirmed":
         if not lesson["content"].get("confirmation_allowed", False):
             raise LMSError(
                 403, "CONFIG_INVALID", "Giảng viên chưa bật xác nhận đã xem cho nguồn video này."
-            )
-        if (datetime.now(timezone.utc) - started_at).total_seconds() < 60:
-            raise LMSError(
-                422,
-                "MINIMUM_LEARNING_TIME",
-                "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
-                {"remaining_seconds": max(1, int(60 - (datetime.now(timezone.utc) - started_at).total_seconds()))},
             )
         completed = True
     elif request.kind == "video_segment":
@@ -348,8 +323,6 @@ async def record_event(db, access, lesson_id, request):
             duration,
             content.get("watch_ratio", lesson["completion_rule"].get("ratio", 0.9)),
         )
-        if completed and started_at:
-            completed = (datetime.now(timezone.utc) - started_at).total_seconds() >= 60
     if not satisfies(row.status):
         if completed:
             row.status = "completed"

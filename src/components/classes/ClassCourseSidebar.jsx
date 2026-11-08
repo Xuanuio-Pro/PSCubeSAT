@@ -5,10 +5,12 @@ import { ChevronDownIcon, ChevronLeftIcon, CheckIcon, CircleIcon, HomeIcon, Lock
 
 const typeLabels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', labtest: 'Lab test' };
 
-function stateFor(lab) {
-  if (lab.access === 'locked') return { status: 'locked', label: 'Đang khóa' };
+function stateFor(lab, unlockedView = false) {
   const lessons = lab.lessons || [];
-  const completed = lessons.filter(item => ['completed', 'waived'].includes(item.progress?.status)).length;
+  const allLessonsLocked = lessons.length > 0 && lessons.every(item => item.access === 'locked' || !item.content);
+  if (!unlockedView && (lab.access === 'locked' || allLessonsLocked)) return { status: 'locked', label: 'Đang khóa' };
+  if (unlockedView) return { status: 'in-progress', label: 'Mở toàn bộ' };
+  const completed = lessons.filter(item => item.access !== 'locked' && ['completed', 'waived'].includes(item.progress?.status)).length;
   if (lessons.length > 0 && completed === lessons.length) return { status: 'completed', label: 'Đã hoàn thành' };
   return { status: 'in-progress', label: `Đang học (${lessons.length ? Math.round((completed / lessons.length) * 100) : 0}%)` };
 }
@@ -19,28 +21,35 @@ function StatusIcon({ status }) {
   return <CircleIcon className="status-dot" size={10} />;
 }
 
-export default function ClassCourseSidebar({ labs, classId, activeLesson, onSelectLesson, homePath = `/classes/${classId}` }) {
+export default function ClassCourseSidebar({ labs, classId, activeLesson, onSelectLesson, homePath = `/classes/${classId}`, unlockedView = false }) {
   const [expandedLab, setExpandedLab] = useState(labs.find(lab => lab.lessons?.some(lesson => lesson.id === activeLesson))?.id ?? labs[0]?.id);
   const [collapsed, setCollapsed] = useState(false);
   const activeLabRef = useRef(null);
 
+  const activeLab = labs.find(lab => lab.lessons?.some(lesson => lesson.id === activeLesson));
+
   useEffect(() => {
-    const activeLab = activeLabRef.current;
-    const rail = activeLab?.parentElement;
+    if (activeLab?.id !== undefined) setExpandedLab(activeLab.id);
+  }, [activeLab?.id]);
+
+  useEffect(() => {
+    const activeLabEl = activeLabRef.current;
+    const rail = activeLabEl?.parentElement;
     if (!rail) return;
-    const itemBounds = activeLab.getBoundingClientRect();
+    const itemBounds = activeLabEl.getBoundingClientRect();
     const railBounds = rail.getBoundingClientRect();
     if (itemBounds.top < railBounds.top) rail.scrollTop -= railBounds.top - itemBounds.top + 4;
     if (itemBounds.bottom > railBounds.bottom) rail.scrollTop += itemBounds.bottom - railBounds.bottom + 4;
   }, [activeLesson]);
 
-  const activeLab = labs.find(lab => lab.lessons?.some(lesson => lesson.id === activeLesson));
   const selectLab = lab => {
-    if (stateFor(lab).status === 'locked') return;
-    const firstLesson = lab.lessons?.[0];
-    if (!firstLesson) return;
+    if (stateFor(lab, unlockedView).status === 'locked') return;
+    const targetLesson = lab.lessons?.find(item => unlockedView || (item.access === 'available' && item.content))
+      || lab.lessons?.find(item => unlockedView || (item.access !== 'locked' && item.content))
+      || lab.lessons?.[0];
+    if (!targetLesson) return;
     setExpandedLab(lab.id);
-    onSelectLesson(firstLesson.id);
+    onSelectLesson(targetLesson.id);
   };
 
   return <aside className={`player-sidebar ${collapsed ? 'is-collapsed' : ''}`}>
@@ -50,7 +59,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
       </Link>
       <nav className="course-rail-nav" aria-label="Chọn Lab trong lớp">
         {labs.map(lab => {
-          const state = stateFor(lab);
+          const state = stateFor(lab, unlockedView);
           return <button
             type="button"
             key={lab.id}
@@ -74,7 +83,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
       </div>
       <div className="curriculum-list">
         {labs.map(lab => {
-          const state = stateFor(lab);
+          const state = stateFor(lab, unlockedView);
           const expanded = expandedLab === lab.id;
           return <div key={lab.id} className={`accordion-section ${lab.id === activeLab?.id ? 'current' : ''} is-${state.status}`}>
             <button type="button" className={`accordion-header ${lab.id === activeLab?.id ? 'current' : ''}`} onClick={() => state.status !== 'locked' && setExpandedLab(expanded ? null : lab.id)} aria-expanded={expanded} disabled={state.status === 'locked'}>
@@ -87,8 +96,8 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
             </button>
             {expanded && <div className="accordion-content">
               {lab.lessons.map(lesson => {
-                const locked = lesson.access === 'locked' || !lesson.content;
-                const completed = ['completed', 'waived'].includes(lesson.progress?.status);
+                const locked = !unlockedView && (lesson.access === 'locked' || !lesson.content);
+                const completed = !locked && ['completed', 'waived'].includes(lesson.progress?.status);
                 return <button type="button" key={lesson.id} className={`sub-lesson-item ${lesson.id === activeLesson ? 'active' : ''} is-${locked ? 'locked' : completed ? 'completed' : 'available'}`} disabled={locked} aria-current={lesson.id === activeLesson ? 'step' : undefined} onClick={() => onSelectLesson(lesson.id)}>
                   <span className="sub-lesson-icon">{completed ? <CheckIcon size={14} /> : locked ? <LockIcon size={13} /> : <CircleIcon className="status-dot" size={10} />}</span>
                   <span className="sub-lesson-copy">

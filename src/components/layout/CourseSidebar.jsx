@@ -130,7 +130,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
                       const completed = Boolean(states[lesson.id]?.completed);
                       const inProgress = !completed && Boolean(states[lesson.id]?.started_at);
                       const firstIncomplete = lessons.findIndex(item => !states[item.id]?.completed);
-                      const locked = labState.status === 'locked' || (firstIncomplete >= 0 && index > firstIncomplete && !completed);
+                      const locked = !isPrivileged && (labState.status === 'locked' || (firstIncomplete >= 0 && index > firstIncomplete && !completed));
                       const lessonStatus = completed ? 'completed' : locked ? 'locked' : inProgress || isLessonActive ? 'in-progress' : 'available';
                       return (
                         <button
