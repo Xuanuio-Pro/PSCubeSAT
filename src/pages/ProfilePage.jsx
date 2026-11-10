@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/lab-metadata';
+import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
 
 import DeviceManager from '../components/profile/DeviceManager';
 
@@ -180,7 +181,6 @@ function LearningProgress({ user }) {
 
               const status = done ? 'completed' : isLocked ? 'locked' : 'in-progress';
               const label = done ? 'Đã hoàn thành' : isLocked ? 'Đang khóa' : `Đang học (${percent}%)`;
-              const icon = done ? '✅' : isLocked ? '🔒' : '⏳';
 
               return (
                 <button
@@ -193,32 +193,62 @@ function LearningProgress({ user }) {
                   }}
                   title={isLocked ? 'Cần hoàn thành lab trước để mở khóa' : `Lab ${lab.id}: ${lab.title}`}
                   style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
-                    border: 'none', background: 'transparent', textAlign: 'left',
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
+                    border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', textAlign: 'left',
                     borderRadius: '8px', cursor: isLocked ? 'not-allowed' : 'pointer',
-                    opacity: isLocked ? 0.6 : 1,
-                    transition: 'background var(--transition-fast)',
+                    opacity: isLocked ? 0.65 : 1,
+                    transition: 'background var(--transition-fast), border-color var(--transition-fast)',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isLocked) e.currentTarget.style.background = 'var(--bg-surface-hover)';
+                    if (!isLocked) {
+                      e.currentTarget.style.background = 'var(--bg-surface-subtle)';
+                      e.currentTarget.style.borderColor = 'var(--border-strong)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isLocked) e.currentTarget.style.background = 'transparent';
+                    if (!isLocked) {
+                      e.currentTarget.style.background = 'var(--bg-surface)';
+                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                    }
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem' }} aria-hidden="true">{icon}</span>
-                  <span style={{ fontSize: '1.2rem' }} aria-hidden="true">{lab.icon}</span>
-                  <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 500, color: isLocked ? 'var(--text-muted)' : 'inherit' }}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: '26px', height: '26px', borderRadius: '6px',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      background: done ? 'var(--status-success-bg)' : isLocked ? 'var(--status-neutral-bg)' : 'var(--status-info-bg)',
+                      color: done ? 'var(--status-success-text)' : isLocked ? 'var(--status-neutral-text)' : 'var(--brand-primary)',
+                      border: `1px solid ${done ? 'var(--status-success-border)' : isLocked ? 'var(--status-neutral-border)' : 'var(--status-info-border)'}`,
+                    }}
+                  >
+                    {done ? <CheckIcon size={14} /> : isLocked ? <LockIcon size={14} /> : <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }} />}
+                  </span>
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: '0.74rem', fontWeight: 700,
+                    padding: '3px 7px', borderRadius: '6px', background: 'var(--bg-app)',
+                    color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', flexShrink: 0,
+                  }}>
+                    LAB 0{lab.id}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 600, color: isLocked ? 'var(--text-muted)' : 'var(--text-heading)' }}>
                     Lab {lab.id}: {lab.title}
                   </span>
                   <span style={{
                     fontSize: '0.8rem',
-                    fontWeight: status === 'in-progress' ? 600 : 500,
-                    color: status === 'completed'
-                      ? '#15803d'
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    background: status === 'completed'
+                      ? 'var(--status-success-bg)'
                       : status === 'in-progress'
-                      ? 'var(--brand-primary-dark, #0284c7)'
-                      : 'var(--text-muted)',
+                      ? 'var(--status-info-bg)'
+                      : 'var(--status-neutral-bg)',
+                    color: status === 'completed'
+                      ? 'var(--status-success-text)'
+                      : status === 'in-progress'
+                      ? 'var(--status-info-text)'
+                      : 'var(--status-neutral-text)',
                   }}>
                     {label}
                   </span>

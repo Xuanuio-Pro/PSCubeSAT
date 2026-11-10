@@ -58,8 +58,13 @@ def utc(value):
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
+def is_summary_lesson(lesson_id: str) -> bool:
+    return str(lesson_id).startswith("summary-")
+
+
 def serialize_progress(row):
     started_at = utc(row.started_at)
+    is_summary = is_summary_lesson(row.lesson_id)
     return {
         "lesson_id": row.lesson_id,
         "lesson_version": row.lesson_version,
@@ -67,12 +72,16 @@ def serialize_progress(row):
         "last_position": row.last_position,
         "watched_seconds": watched_seconds(row.watched_segments),
         "started_at": row.started_at.isoformat() if row.started_at else None,
-        "remaining_seconds": max(
-            0,
-            60 - int((datetime.now(timezone.utc) - started_at).total_seconds()),
-        )
-        if started_at
-        else 60,
+        "remaining_seconds": 0
+        if is_summary
+        else (
+            max(
+                0,
+                60 - int((datetime.now(timezone.utc) - started_at).total_seconds()),
+            )
+            if started_at
+            else 60
+        ),
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
     }
 
@@ -288,7 +297,7 @@ async def record_event(db, access, lesson_id, request):
         pass
     elif request.kind == "complete":
         elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
-        if elapsed < 60:
+        if not is_summary_lesson(lesson_id) and elapsed < 60:
             raise LMSError(
                 422,
                 "MINIMUM_LEARNING_TIME",

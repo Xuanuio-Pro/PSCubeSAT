@@ -289,6 +289,37 @@ class LegacyProgressTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.lessons["first"]["completed"])
         self.db.commit.assert_awaited_once()
 
+    async def test_summary_lesson_can_complete_immediately_without_waiting(self):
+        seed_with_summary = {
+            "legacy": [
+                {
+                    "id": 1,
+                    "lessons": [
+                        {"id": "first", "type": "document"},
+                        {"id": "summary-1", "type": "summary"},
+                    ],
+                }
+            ]
+        }
+        self.progress.lab_id = 1
+        self.progress.lesson_progress = {
+            "first": {
+                "started_at": (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat(),
+                "completed": True,
+            },
+            "summary-1": {
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "completed": False,
+            },
+        }
+
+        with patch("app.services.progress.read_seed", return_value=seed_with_summary):
+            result = await self.service.complete_lesson(self.user, 1, "summary-1")
+
+        self.assertTrue(result.lessons["summary-1"]["completed"])
+        self.assertIsNotNone(result.completed_at)
+        self.db.commit.assert_awaited_once()
+
 
 class LearningAPITests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

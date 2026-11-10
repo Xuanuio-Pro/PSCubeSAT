@@ -68,8 +68,9 @@ function SubmissionPanel({ classId, lessonId, code, rubric, onRefresh }) {
 
 function LessonContent({ lesson, labId, classId, preview, staffView = false, onRefresh, pagination }) {
   const [notice, setNotice] = useState({});
+  const isSummaryLesson = String(lesson.id || '').startsWith('summary-') || /^Tổng hợp\b/i.test(lesson.title || '');
   const [startedAt, setStartedAt] = useState(lesson.progress?.started_at || null);
-  const [remainingSeconds, setRemainingSeconds] = useState(lesson.progress?.remaining_seconds ?? 60);
+  const [remainingSeconds, setRemainingSeconds] = useState(isSummaryLesson ? 0 : (lesson.progress?.remaining_seconds ?? 60));
   const openedKey = useRef(crypto.randomUUID());
   const queue = useRef(Promise.resolve());
   const [busy, setBusy] = useState(false);
@@ -90,12 +91,13 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
     if (!preview && !staffView) event('opened', {}, openedKey.current).catch(failure => setNotice({ error: failure.message }));
   }, [preview, staffView, event]);
   useEffect(() => {
+    if (isSummaryLesson) { setRemainingSeconds(0); return undefined; }
     if (!startedAt || ['completed', 'waived'].includes(lesson.progress?.status)) return undefined;
     const update = () => setRemainingSeconds(Math.max(0, 60 - Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)));
     update();
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, [startedAt, lesson.progress?.status]);
+  }, [isSummaryLesson, startedAt, lesson.progress?.status]);
   async function confirm(kind) {
     setBusy(true); setNotice({});
     try { await event(kind); onRefresh(); setNotice({ message: 'Đã ghi nhận hoàn thành bài học.' }); }
