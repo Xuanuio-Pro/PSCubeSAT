@@ -310,6 +310,7 @@ def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
             i
             for i, h in enumerate(header_row)
             if h in ("đáp án", "dap an", "chọn", "chon", "answer", "0001", "mã đề thi", "ma de thi")
+            or h.startswith("0001 ")
         ),
         1,
     )
