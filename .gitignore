@@ -88,3 +88,5 @@ fastapi-backend/.env.production
 !.env.server.example
 !fastapi-backend/.env.production.example
 *.code-workspace
+# Live design-tool runtime state (pid, token, local paths)
+.impeccable/live/

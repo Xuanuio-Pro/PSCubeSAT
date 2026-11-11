@@ -37,7 +37,7 @@ git pull --ff-only origin main
 bash deploy/initialize-cubesat.sh
 ```
 
-Lệnh stash giữ bản Compose cũ đã tùy chỉnh trên server trước khi cập nhật file cùng tên; chỉ áp dụng cho `docker-compose.yml`, không đụng file env. Tunnel được cấu hình qua overlay mới và token cũ, không cần khôi phục file Compose cũ sau cập nhật.
+Lệnh stash giữ bản Compose cũ đã tùy chỉnh trên server trước khi cập nhật file cùng tên (từ 12/11/2026 repo không còn `docker-compose.yml`; lấy lại bằng `git stash show -p` hoặc `git show 6c58991:docker-compose.yml` nếu cần dừng stack cũ); chỉ áp dụng cho `docker-compose.yml`, không đụng file env. Tunnel được cấu hình qua overlay mới và token cũ, không cần khôi phục file Compose cũ sau cập nhật.
 
 Runner kiểm project của connector cũ, build image setup, cấu hình env, build FE/BE, chờ PostgreSQL healthy, probe bằng SELECT 1, migrate rồi up ứng dụng. Sau khi HTTP API đã qua kiểm tra mới build compiler và chạy preflight live. Nó dừng ở bước đầu tiên gặp lỗi và in dòng lệnh bị dừng; DB/API được khởi động trước bước toolchain để việc tải/build compiler không giữ website ở cấu hình BE cũ. Có thể truyền tag release riêng làm tham số đầu tiên. Xem `deploy/initialize-cubesat.sh` để kiểm tra từng lệnh; không chạy `down -v`/`rm` hay xóa dữ liệu DB. Bước `up` có thể thay container ứng dụng/tunnel trong cùng project; không đổi dự án khác.
 

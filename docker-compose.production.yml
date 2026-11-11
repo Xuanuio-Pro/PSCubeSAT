@@ -1,4 +1,4 @@
-# Standalone production stack. Do not merge with docker-compose.yml:
+# Standalone production stack (not the one-machine docker-compose.local.yml):
 # only the TLS gateway publishes ports; frontend/backend stay internal.
 x-logging: &bounded-logs
   driver: json-file
