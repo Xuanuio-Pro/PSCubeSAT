@@ -3,3 +3,5 @@
 .agents/skills/** text=auto eol=lf -whitespace
 fastapi-backend/app/firmware/curriculum/*.cpp text eol=lf -whitespace
 *.sh text eol=lf
+# Served byte-for-byte and compared with the API-generated template in tests.
+public/templates/class-students.csv -text

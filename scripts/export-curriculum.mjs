@@ -66,11 +66,13 @@ const labs = LABS.map(lab => {
   return { id: lab.id, order_no: lab.id, title: lab.title,
     objectives: lab.description, estimated_minutes: 0, groups: objectives[lab.id][0].split('|').filter(Boolean), evidence: objectives[lab.id][1], lessons };
 });
+// Hash and compare with LF endings so a Windows (autocrlf) checkout matches a Linux one.
+const lf = text => text.replace(/\r\n/g, '\n');
 const sourceHash = createHash('sha256');
-for (const path of ['src/data/curriculum.js', 'src/data/labs.js', 'src/data/lesson-reading.js', 'scripts/export-curriculum.mjs']) sourceHash.update(readFileSync(resolve(root, path)));
+for (const path of ['src/data/curriculum.js', 'src/data/labs.js', 'src/data/lesson-reading.js', 'scripts/export-curriculum.mjs']) sourceHash.update(lf(readFileSync(resolve(root, path), 'utf8')));
 const output = JSON.stringify({ course_id: 'cubesat', course_title: 'CubeSAT Learning Platform', source_hash: sourceHash.digest('hex'), labs, legacy }, null, 2) + '\n';
 const target = resolve(root, 'fastapi-backend/app/firmware/curriculum/seed.json');
 if (process.argv.includes('--check')) {
-  if (readFileSync(target, 'utf8') !== output) throw new Error('Curriculum seed snapshot is stale. Run node scripts/export-curriculum.mjs');
+  if (lf(readFileSync(target, 'utf8')) !== output) throw new Error('Curriculum seed snapshot is stale. Run node scripts/export-curriculum.mjs');
 } else writeFileSync(target, output);
 console.log(`Curriculum: ${labs.length} labs, ${labs.reduce((n, lab) => n + lab.lessons.length, 0)} lessons; seed snapshot ${process.argv.includes('--check') ? 'verified' : 'exported'}.`);
