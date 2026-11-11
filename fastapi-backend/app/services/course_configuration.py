@@ -101,10 +101,10 @@ async def configuration(
     if draft and not access.can_manage:
         raise LMSError(403, "FORBIDDEN_ROLE", "Chỉ giảng viên của lớp được xem cấu hình nháp.")
     row = await latest(db, access.classroom.id, "draft" if draft else "published")
-    if row is None and draft:
-        row = await latest(db, access.classroom.id, "published")
+    if row is None and (draft or access.can_manage):
+        row = await latest(db, access.classroom.id)
     if row is None:
-        if not access.can_manage or student_view:
+        if not access.can_manage:
             raise LMSError(409, "CONFIG_INVALID", "Lớp chưa có chương trình được xuất bản.")
         if not version_id:
             course = (

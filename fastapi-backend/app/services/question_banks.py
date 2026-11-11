@@ -1,7 +1,5 @@
 """Teacher-only authoring; published editions never change in place."""
 
-import csv
-import io
 import json
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -12,9 +10,17 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 
 from app.core.lms_errors import LMSError
+from app.models.curriculum import ClassCourseVersion, CourseVersion
 from app.models.quiz import QuestionBank, QuestionVersion, QuizAttemptItem, QuizPolicy
 from app.schemas.quiz import QuestionInput, normalized
 from app.services.classes import audit
+from app.services.exam_import import (
+    merge_questions_and_answers,
+    parse_csv_questions,
+    parse_docx_questions,
+    parse_exam_text,
+    parse_xlsx_questions,
+)
 
 
 def uid():
@@ -76,6 +82,39 @@ async def bank_for(db, access, lab_id, expected=None, *, editable=False):
             .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
+    if bank is None and 0 <= lab_id <= 8:
+        course_id = (
+            await db.execute(
+                select(ClassCourseVersion.course_version_id)
+                .where(ClassCourseVersion.class_id == access.classroom.id)
+                .order_by(ClassCourseVersion.version.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if not course_id:
+            course_id = (
+                await db.execute(
+                    select(CourseVersion.id)
+                    .where(CourseVersion.status == "published")
+                    .order_by(CourseVersion.created_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+        if course_id:
+            await seed_banks(db, access, course_id)
+            await db.commit()
+            bank = (
+                await db.execute(
+                    select(QuestionBank)
+                    .where(
+                        QuestionBank.class_id == access.classroom.id,
+                        QuestionBank.lab_id == lab_id,
+                    )
+                    .order_by(QuestionBank.version.desc())
+                    .limit(1)
+                    .execution_options(populate_existing=True)
+                )
+            ).scalar_one_or_none()
     if bank is None:
         invalid("Lưu cấu hình giáo trình trước khi soạn ngân hàng.")
     if expected is not None and bank.revision != expected:
@@ -173,38 +212,26 @@ def parse_import(request):
         if request.format == "json":
             data = json.loads(request.content)
             data = data["questions"] if isinstance(data, dict) else data
+        elif request.format == "xlsx":
+            data = parse_xlsx_questions(request.content)
+        elif request.format == "docx":
+            data = parse_docx_questions(request.content)
+        elif request.format == "text":
+            data = parse_exam_text(request.content)
         else:
-            data = []
-            for row in csv.DictReader(io.StringIO(request.content.lstrip("\ufeff"))):
-                data.append(
-                    {
-                        key: row.get(key, "")
-                        for key in (
-                            "prompt",
-                            "correct_choice_id",
-                            "explanation",
-                            "objective",
-                            "difficulty",
-                            "source_reference",
-                        )
-                    }
-                    | {
-                        "choices": [
-                            {
-                                "id": row.get(f"choice_{i}_id", ""),
-                                "text": row.get(f"choice_{i}_text", ""),
-                            }
-                            for i in range(1, 5)
-                        ]
-                    }
-                )
+            data = parse_csv_questions(request.content)
         if not isinstance(data, list) or not 1 <= len(data) <= 200:
             invalid("Nhập từ 1 đến 200 câu hỏi mỗi lần.")
+        data = merge_questions_and_answers(
+            data,
+            getattr(request, "answer_format", None),
+            getattr(request, "answer_content", None),
+        )
         return [QuestionInput.model_validate(q).model_dump() for q in data]
     except (ValueError, KeyError, TypeError, ValidationError) as exc:
         # Do not echo potentially sensitive imported content in validation errors.
         invalid(
-            "Tệp không đúng mẫu: cần 4 lựa chọn khác nhau, đáp án hợp lệ và đầy đủ nội dung.",
+            "Tệp không đúng mẫu: cần đủ nội dung câu hỏi, lựa chọn và đáp án hợp lệ (kiểm tra cả File câu hỏi và File đáp án).",
             {"error_type": type(exc).__name__},
         )
 

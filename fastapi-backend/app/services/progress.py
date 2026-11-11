@@ -61,17 +61,28 @@ class ProgressService:
     async def complete_lesson(self, user, lab_id: int, lesson_id: str) -> LabProgressResponse:
         progress = await self.repo.get_or_create(user.id, lab_id)
         lessons = dict(progress.lesson_progress or {})
+        lab = next((lab for lab in read_seed()["legacy"] if lab["id"] == lab_id), None)
+        lesson_meta = next(
+            (lesson for lesson in (lab["lessons"] if lab else []) if lesson["id"] == lesson_id),
+            None,
+        )
+        is_summary = bool(
+            (lesson_meta and lesson_meta.get("type") == "summary")
+            or str(lesson_id).startswith("summary-")
+        )
         item = lessons.get(lesson_id)
         if item is None:
-            raise LMSError(409, "LESSON_NOT_STARTED", "Hãy mở bài học trước khi hoàn thành.")
-        lab = next((lab for lab in read_seed()["legacy"] if lab["id"] == lab_id), None)
+            if is_summary:
+                item = {"started_at": datetime.now(timezone.utc).isoformat(), "completed": False}
+            else:
+                raise LMSError(409, "LESSON_NOT_STARTED", "Hãy mở bài học trước khi hoàn thành.")
         lesson_ids = [lesson["id"] for lesson in lab["lessons"]] if lab else []
         index = lesson_ids.index(lesson_id) if lesson_id in lesson_ids else -1
         if index > 0 and not all(lessons.get(previous, {}).get("completed") for previous in lesson_ids[:index]):
             raise LMSError(403, "PREREQUISITE_NOT_MET", "Bạn cần hoàn thành bài học trước để mở khóa bài này.")
         started = datetime.fromisoformat(item["started_at"])
         elapsed = (datetime.now(timezone.utc) - started).total_seconds()
-        if user.role not in (UserRole.teacher, UserRole.admin) and elapsed < 60:
+        if user.role not in (UserRole.teacher, UserRole.admin) and not is_summary and elapsed < 60:
             raise LMSError(409, "MINIMUM_LEARNING_TIME", "Bạn cần học bài này đủ 1 phút trước khi hoàn thành.", {"remaining_seconds": int(60 - elapsed)})
         item = {**item, "completed": True, "completed_at": datetime.now(timezone.utc).isoformat()}
         lessons[lesson_id] = item

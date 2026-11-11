@@ -220,6 +220,8 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             "/api/auth/login",
             "/api/auth/google",
             "/api/auth/google/config",
+            "/api/admin/signup",
+            "/api/admin/login",
             "/api/curriculum/preview",
         }
         tested = []
@@ -367,3 +369,180 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.call(1, "GET", "/api/classes")).status_code, 404)
             self.assertEqual((await self.call(1, "GET", "/api/admin/users")).status_code, 404)
             self.assertEqual((await self.call(4, "GET", "/api/boards")).status_code, 401)
+
+    async def test_student_import_csv_xlsx_templates_and_permissions(self):
+        import base64
+        from pathlib import Path
+
+        from app.services.student_import import (
+            parse_student_rows,
+            student_template_csv,
+            student_template_xlsx,
+        )
+
+        # Verify template endpoints & static template files
+        self.assertEqual(
+            (await self.call(4, "GET", "/api/classes/templates/students")).status_code, 403
+        )
+        csv_tpl = await self.call(2, "GET", "/api/classes/templates/students?format=csv")
+        self.assertEqual(csv_tpl.status_code, 200)
+        self.assertIn("email,full_name", csv_tpl.text)
+        xlsx_tpl = await self.call(2, "GET", "/api/classes/templates/students?format=xlsx")
+        self.assertEqual(xlsx_tpl.status_code, 200)
+        self.assertEqual(
+            len(parse_student_rows("xlsx", base64.b64encode(xlsx_tpl.content).decode())), 2
+        )
+
+        root = Path(__file__).resolve().parents[3]
+        self.assertEqual(
+            (root / "public/templates/class-students.csv").read_bytes(),
+            student_template_csv().encode("utf-8"),
+        )
+        self.assertEqual(
+            len(
+                parse_student_rows(
+                    "xlsx",
+                    base64.b64encode(
+                        (root / "public/templates/class-students.xlsx").read_bytes()
+                    ).decode(),
+                )
+            ),
+            2,
+        )
+        self.assertEqual(len(student_template_xlsx()), len(xlsx_tpl.content))
+
+        # Add extra users for import testing: uid 5 (active), uid 6 (removed to restore), uid 7 (locked)
+        async with self.sessions() as db:
+            password = hash_password("secret123")
+            for uid, status in ((5, "active"), (6, "active"), (7, "locked")):
+                db.add(
+                    User(
+                        id=uid,
+                        email=f"user{uid}@example.com",
+                        full_name=f"Sinh viên {uid}",
+                        password_hash=password,
+                        role="user",
+                        status=status,
+                    )
+                )
+            await db.commit()
+        await self.add_student()  # user4 already active
+        await self.call(2, "POST", f"/api/classes/{self.class_a}/members", {"email": "user6@example.com"})
+        await self.call(2, "DELETE", f"/api/classes/{self.class_a}/members", {"user_id": 6})
+
+        # Unauthorized teacher or student cannot import
+        self.assertEqual(
+            (
+                await self.call(
+                    2,
+                    "POST",
+                    f"/api/classes/{self.class_b}/members/import",
+                    {"format": "csv", "content": "email\nuser5@example.com\n"},
+                )
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            (
+                await self.call(
+                    4,
+                    "POST",
+                    f"/api/classes/{self.class_a}/members/import",
+                    {"format": "csv", "content": "email\nuser5@example.com\n"},
+                )
+            ).status_code,
+            403,
+        )
+
+        # CSV import with mixed valid and skipped rows
+        csv_content = (
+            "email,full_name\n"
+            "USER5@example.com,Sinh viên 5\n"
+            "user6@example.com,Sinh viên 6\n"
+            "user4@example.com,Sinh viên 4\n"
+            "user5@example.com,Trùng trong file\n"
+            "missing@example.com,Chưa đăng ký\n"
+            "user7@example.com,Bị khóa\n"
+            "user2@example.com,Giảng viên lớp\n"
+            "not-an-email,Sai định dạng\n"
+            ",Thiếu email\n"
+        )
+        res = await self.call(
+            2,
+            "POST",
+            f"/api/classes/{self.class_a}/members/import",
+            {"format": "csv", "content": csv_content},
+        )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertEqual(body["total_rows"], 9)
+        self.assertEqual(body["added_count"], 1)
+        self.assertEqual(body["restored_count"], 1)
+        self.assertEqual(body["already_active_count"], 1)
+        self.assertEqual(body["skipped_count"], 6)
+        self.assertEqual(
+            [item["code"] for item in body["skipped"]],
+            [
+                "DUPLICATE_IN_FILE",
+                "NOT_REGISTERED",
+                "ACCOUNT_LOCKED",
+                "IS_TEACHER",
+                "INVALID_EMAIL",
+                "EMPTY_EMAIL",
+            ],
+        )
+
+        # Excel (.xlsx) import test: remove user5 first, then re-import via .xlsx
+        await self.call(2, "DELETE", f"/api/classes/{self.class_a}/members", {"user_id": 5})
+        import io
+        import zipfile
+
+        xlsx_buf = io.BytesIO()
+        with zipfile.ZipFile(xlsx_buf, "w") as zf:
+            zf.writestr(
+                "xl/sharedStrings.xml",
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                "<sst><si><t>Email</t></si><si><t>Họ tên</t></si>"
+                "<si><t>user5@example.com</t></si><si><t>Sinh viên 5</t></si>"
+                "<si><t>unknown@gmail.com</t></si></sst>",
+            )
+            zf.writestr(
+                "xl/worksheets/sheet1.xml",
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                "<worksheet><sheetData>"
+                '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+                '<row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s"><v>3</v></c></row>'
+                '<row r="3"><c r="A3" t="s"><v>4</v></c></row>'
+                "</sheetData></worksheet>",
+            )
+        xlsx_b64 = base64.b64encode(xlsx_buf.getvalue()).decode()
+        xlsx_res = await self.call(
+            2,
+            "POST",
+            f"/api/classes/{self.class_a}/members/import",
+            {"format": "xlsx", "content": xlsx_b64},
+        )
+        self.assertEqual(xlsx_res.status_code, 200, xlsx_res.text)
+        self.assertEqual(xlsx_res.json()["restored_count"], 1)
+        self.assertEqual(xlsx_res.json()["skipped_count"], 1)
+        self.assertEqual(xlsx_res.json()["skipped"][0]["code"], "NOT_REGISTERED")
+
+        # Invalid headers & corrupt xlsx rejected with 422 CONFIG_INVALID
+        bad_header = await self.call(
+            2,
+            "POST",
+            f"/api/classes/{self.class_a}/members/import",
+            {"format": "csv", "content": "username,name\nabc,Test\n"},
+        )
+        self.assertEqual(bad_header.status_code, 422)
+        self.assertEqual(bad_header.json()["code"], "CONFIG_INVALID")
+
+        bad_xlsx = await self.call(
+            2,
+            "POST",
+            f"/api/classes/{self.class_a}/members/import",
+            {"format": "xlsx", "content": base64.b64encode(b"not-a-zip").decode()},
+        )
+        self.assertEqual(bad_xlsx.status_code, 422)
+        self.assertEqual(bad_xlsx.json()["code"], "CONFIG_INVALID")
+
