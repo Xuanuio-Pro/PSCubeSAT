@@ -1,9 +1,9 @@
-name: pscubesat-dev
+name: ${COMPOSE_PROJECT_NAME:-pscubesat-dev}
 services:
   redis:
     image: redis:7-alpine
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${DEV_REDIS_PORT:-6379}:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -13,7 +13,7 @@ services:
   mqtt:
     image: eclipse-mosquitto:2
     ports:
-      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:${DEV_MQTT_PORT:-1883}:1883"
     volumes:
       - ./fastapi-backend/data/local-services/config:/mosquitto/config:ro
     restart: unless-stopped
@@ -21,7 +21,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DEV_POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres_dev

@@ -2,37 +2,38 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/lab-metadata';
-import { getLessonsForLab } from '../data/curriculum';
+import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
+
 import DeviceManager from '../components/profile/DeviceManager';
 
-const ROLE_LABEL = { admin: 'Quản trị viên', user: 'Học viên' };
+const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Học viên' };
 
 function ProfileInfo({ user }) {
   return (
     <div className="card">
       <div className="card-header">Thông tin cá nhân</div>
-      <div className="card-body" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+      <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center' }}>
         <div style={{
           width: '64px', height: '64px', borderRadius: '50%', background: 'var(--brand-primary-light)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700,
-          color: 'var(--brand-primary)', flexShrink: 0,
+          color: 'var(--brand-primary-dark)', flexShrink: 0,
         }}>
           {(user.full_name || user.email)[0].toUpperCase()}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flex: 1 }}>
-          <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '16px', flex: 1, minWidth: 0 }}>
+          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Họ và tên</div>
             <div style={{ fontWeight: 600 }}>{user.full_name || '—'}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Email</div>
             <div style={{ fontWeight: 600 }}>{user.email}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Vai trò</div>
             <div style={{ fontWeight: 600 }}>{ROLE_LABEL[user.role] || user.role}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ngày tham gia</div>
             <div style={{ fontWeight: 600 }}>
               {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '—'}
@@ -58,6 +59,7 @@ function ChangePasswordForm() {
     setError('');
     setSuccess(false);
     if (newPassword.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự');
+    if (new TextEncoder().encode(newPassword).length > 72) return setError('Mật khẩu không được vượt quá 72 byte UTF-8');
     if (newPassword !== confirmPassword) return setError('Mật khẩu xác nhận không khớp');
 
     setSubmitting(true);
@@ -75,7 +77,7 @@ function ChangePasswordForm() {
   }
 
   const inputStyle = {
-    width: '100%', height: '40px', padding: '0 12px', borderRadius: '8px',
+    width: '100%', height: '42px', padding: '0 12px', borderRadius: '8px',
     border: '1px solid var(--border-strong)', fontSize: '0.9rem',
   };
 
@@ -85,19 +87,19 @@ function ChangePasswordForm() {
       <div className="card-body">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu hiện tại</label>
-            <input type="password" style={inputStyle} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+            <label htmlFor="profile-current-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu hiện tại</label>
+            <input id="profile-current-password" type="password" autoComplete="current-password" style={inputStyle} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
-            <input type="password" style={inputStyle} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <label htmlFor="profile-new-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
+            <input id="profile-new-password" type="password" autoComplete="new-password" minLength={6} style={inputStyle} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
-            <input type="password" style={inputStyle} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <label htmlFor="profile-confirm-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
+            <input id="profile-confirm-password" type="password" autoComplete="new-password" minLength={6} style={inputStyle} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
-          {error && <div className="auth-error-text">⚠ {error}</div>}
-          {success && <div style={{ color: 'var(--accent-green)', fontSize: '0.85rem', fontWeight: 600 }}>✅ Đã đổi mật khẩu thành công</div>}
+          {error && <div id="profile-password-error" className="auth-error-text" role="alert">⚠ {error}</div>}
+          {success && <div role="status" style={{ color: '#15803d', fontSize: '0.85rem', fontWeight: 600 }}>✓ Đã đổi mật khẩu thành công</div>}
           <button type="submit" className="btn btn-primary btn-sm" disabled={submitting} style={{ alignSelf: 'flex-start' }}>
             {submitting ? 'Đang lưu...' : 'Đổi mật khẩu'}
           </button>
@@ -112,16 +114,22 @@ function LearningProgress({ user }) {
   const { user: authUser } = useAuth();
   const currentUser = user || authUser;
   const [progressByLab, setProgressByLab] = useState({});
+  const [lessonsByLab, setLessonsByLab] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    request('/api/progress')
-      .then((rows) => {
+    Promise.all([
+      request('/api/progress').catch(() => []),
+      request('/api/curriculum/legacy').catch(() => []),
+    ])
+      .then(([rows, catalog]) => {
         const map = {};
-        rows.forEach((r) => { map[r.lab_id] = r; });
+        (rows || []).forEach((r) => { map[r.lab_id] = r; });
         setProgressByLab(map);
+        const lessonMap = {};
+        (catalog || []).forEach((lab) => { lessonMap[lab.id] = lab.lessons || []; });
+        setLessonsByLab(lessonMap);
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -159,7 +167,7 @@ function LearningProgress({ user }) {
               if (done) {
                 percent = 100;
               } else if (!isLocked) {
-                const lessons = getLessonsForLab(lab.id);
+                const lessons = lessonsByLab[lab.id] || [];
                 let completedLessonsCount = 0;
                 if (lab.id === 0) {
                   if (p?.video_watched || p?.lessons?.['overview']?.completed) completedLessonsCount++;
@@ -173,46 +181,78 @@ function LearningProgress({ user }) {
 
               const status = done ? 'completed' : isLocked ? 'locked' : 'in-progress';
               const label = done ? 'Đã hoàn thành' : isLocked ? 'Đang khóa' : `Đang học (${percent}%)`;
-              const icon = done ? '✅' : isLocked ? '🔒' : '⏳';
 
               return (
-                <div
+                <button
+                  type="button"
                   key={lab.id}
+                  disabled={isLocked}
                   onClick={() => {
                     if (isLocked) return;
                     navigate(`/${lab.slug}`);
                   }}
                   title={isLocked ? 'Cần hoàn thành lab trước để mở khóa' : `Lab ${lab.id}: ${lab.title}`}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
+                    border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', textAlign: 'left',
                     borderRadius: '8px', cursor: isLocked ? 'not-allowed' : 'pointer',
-                    opacity: isLocked ? 0.6 : 1,
-                    transition: 'background var(--transition-fast)',
+                    opacity: isLocked ? 0.65 : 1,
+                    transition: 'background var(--transition-fast), border-color var(--transition-fast)',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isLocked) e.currentTarget.style.background = 'var(--bg-surface-hover)';
+                    if (!isLocked) {
+                      e.currentTarget.style.background = 'var(--bg-surface-subtle)';
+                      e.currentTarget.style.borderColor = 'var(--border-strong)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isLocked) e.currentTarget.style.background = 'transparent';
+                    if (!isLocked) {
+                      e.currentTarget.style.background = 'var(--bg-surface)';
+                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                    }
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                  <span style={{ fontSize: '1.2rem' }}>{lab.icon}</span>
-                  <span style={{ flex: 1, fontWeight: 500, color: isLocked ? 'var(--text-muted)' : 'inherit' }}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: '26px', height: '26px', borderRadius: '6px',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      background: done ? 'var(--status-success-bg)' : isLocked ? 'var(--status-neutral-bg)' : 'var(--status-info-bg)',
+                      color: done ? 'var(--status-success-text)' : isLocked ? 'var(--status-neutral-text)' : 'var(--brand-primary)',
+                      border: `1px solid ${done ? 'var(--status-success-border)' : isLocked ? 'var(--status-neutral-border)' : 'var(--status-info-border)'}`,
+                    }}
+                  >
+                    {done ? <CheckIcon size={14} /> : isLocked ? <LockIcon size={14} /> : <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }} />}
+                  </span>
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: '0.74rem', fontWeight: 700,
+                    padding: '3px 7px', borderRadius: '6px', background: 'var(--bg-app)',
+                    color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', flexShrink: 0,
+                  }}>
+                    LAB 0{lab.id}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 600, color: isLocked ? 'var(--text-muted)' : 'var(--text-heading)' }}>
                     Lab {lab.id}: {lab.title}
                   </span>
                   <span style={{
                     fontSize: '0.8rem',
-                    fontWeight: status === 'in-progress' ? 600 : 500,
-                    color: status === 'completed'
-                      ? 'var(--accent-green, #16a34a)'
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    background: status === 'completed'
+                      ? 'var(--status-success-bg)'
                       : status === 'in-progress'
-                      ? 'var(--brand-primary, #0a4174)'
-                      : 'var(--text-muted)',
+                      ? 'var(--status-info-bg)'
+                      : 'var(--status-neutral-bg)',
+                    color: status === 'completed'
+                      ? 'var(--status-success-text)'
+                      : status === 'in-progress'
+                      ? 'var(--status-info-text)'
+                      : 'var(--status-neutral-text)',
                   }}>
                     {label}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>

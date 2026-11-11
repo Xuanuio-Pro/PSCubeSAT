@@ -1,0 +1,53 @@
+PHẦN I. Câu trắc nghiệm một đáp án đúng
+Câu 1. Mệnh đề toán học nào sau đây là mệnh đề sai?
+A. Số 2 là số nguyên.	B. Số 2 là số hữu tỉ.
+C. Số 2 là số hữu tỉ dương.	D. Số 2 không là số nguyên tố.
+
+PHẦN II. Câu trắc nghiệm nhiều đáp án đúng
+Câu 1. Trong các số sau, số nào là số hữu tỉ?
+A. 3/4	B. -5	C. √2	D. 0,25
+Câu 2. Cho hai đường thẳng song song. Trong các phát biểu sau, phát biểu nào đúng?
+A. Hai góc so le trong bằng nhau	B. Hai góc đồng vị bằng nhau	C. Hai góc trong cùng phía bằng nhau	D. Hai góc trong cùng phía có tổng bằng 180°
+Câu 3. Cho hai đại lượng tỉ lệ nghịch với nhau. Trong các phát biểu sau, phát biểu nào đúng?
+A. Tích của hai đại lượng này luôn là một số không đổi	B. Thương của hai đại lượng này luôn là một số không đổi	C. Khi đại lượng này tăng lên thì đại lượng kia giảm xuống theo tỉ lệ tương ứng	D. Đồ thị biểu diễn mối quan hệ giữa hai đại lượng này là một đường thẳng đi qua gốc tọa độ
+
+PHẦN III. Câu trắc nghiệm đúng sai.
+Câu 1. Một cuộc thi bắn cung có 20 người tham gia. Trong lần bắn đầu tiên có 18 người bắn trúng mục tiêu. Trong lần bắn thứ hai có 15 người bắn trúng mục tiêu. Trong lần bắn thứ ba chỉ còn 10 người bắn trúng mục tiêu.
+a) [1,NB] Số người bắn trượt mục tiêu trong lần đầu tiên là 2.
+b) [1,NB] Số người bắn trượt mục tiêu trong lần bắn thứ hai là 6.
+c) [0, TH] Số người bắn trượt mục tiêu trong lần bắn thứ nhất và thứ hai nhiều nhất là 8.
+d) [2, TH] Số người bắn trúng mục tiêu trong cả ba lần bắn ít nhất là 3.
+Câu 2. Cho tứ giác ABCD có M, N, P, Q lần lượt là trung điểm của các cạnh AB, BC, CD, DA. Gọi I là trung điểm của đoạn thẳng MP và G là trọng tâm tam giác BCD.
+a) [1, NB] Vectơ AB + AD = AC.
+b) [2, NB] Vectơ MN = PQ.
+c) [2, TH] Vectơ IA + IB + IC + ID = 0.
+d) [3, VD] Ba điểm A, I, G thẳng hàng.
+
+PHẦN IV. Câu trắc nghiệm trả lời ngắn.
+Câu 1. Cho hình chữ nhật ABCD có AB = 6, AD = 8. Độ dài của vectơ AB + AD bằng bao nhiêu?
+Câu 2. Để đo khoảng cách từ vị trí A đến vị trí B ở hai bên bờ hồ, bạn Hà tiến hành đo khoảng cách AC và các góc BAC = 58°, BCA = 80° với AC = 20m. Khoảng cách từ vị trí A đến vị trí B là bao nhiêu mét (làm tròn kết quả đến hàng đơn vị của mét)?
+---------------------------HẾT------------------------
+PHẦN I
+| Câu | 1 |
+| Chọn | D |
+Lời giải
+Câu 1: D đúng vì 2 là số nguyên tố chẵn duy nhất.
+PHẦN II
+Câu 1. A|B|D
+Câu 2. A|B|D
+Câu 3. A|C
+PHẦN III
+| Câu 1 | Câu 2 |
+| a) Đ | a) Đ |
+| b) S | b) S |
+| c) S | c) S |
+| d) Đ | d) S |
+Lời giải
+Câu 1: a và d đúng theo nguyên lý cực trị tập hợp.
+Câu 2: a đúng theo quy tắc hình bình hành.
+PHẦN IV
+| Câu | 1 | 2 |
+| Chọn | 10 | 31 |
+Lời giải
+Câu 1: Độ dài vectơ tổng bằng AC = căn(6^2 + 8^2) = 10.
+Câu 2: Áp dụng định lý sin trong tam giác ABC được AB xấp xỉ 31m.

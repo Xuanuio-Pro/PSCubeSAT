@@ -14,6 +14,10 @@ export default function AdminLoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    if (!email.trim() || !password) {
+      setError('Vui lòng nhập đầy đủ email và mật khẩu quản trị.');
+      return;
+    }
     setSubmitting(true);
     try {
       const currentUser = await loginAdmin(email.trim().toLowerCase(), password);
@@ -31,7 +35,6 @@ export default function AdminLoginPage() {
   return (
     <AuthLayout variant="admin">
       <div className="admin-auth-header">
-        <span className="admin-auth-kicker">Administration</span>
         <h1 className="auth-title">Đăng nhập quản trị</h1>
         <p className="auth-subtitle">Truy cập tổng quan lớp học, tài khoản và báo cáo hệ thống.</p>
       </div>
@@ -43,10 +46,14 @@ export default function AdminLoginPage() {
             <input
               id="admin-email"
               type="email"
+              required
+              maxLength={200}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="admin@ptit.edu.vn"
               autoComplete="username"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? 'admin-login-error' : undefined}
             />
           </div>
         </div>
@@ -57,15 +64,18 @@ export default function AdminLoginPage() {
             <input
               id="admin-password"
               type="password"
+              required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? 'admin-login-error' : undefined}
             />
           </div>
         </div>
 
-        {error && <div className="auth-error-text" role="alert">{error}</div>}
+        {error && <div id="admin-login-error" className="auth-error-text" role="alert">{error}</div>}
 
         <button type="submit" className="auth-submit-btn" disabled={submitting}>
           {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}

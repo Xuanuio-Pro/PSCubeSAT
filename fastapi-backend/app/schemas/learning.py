@@ -7,7 +7,7 @@ from app.schemas.classes import InputModel
 
 class LessonEventInput(InputModel):
     idempotency_key: str = Field(min_length=8, max_length=128)
-    kind: Literal["opened", "document_read", "video_segment", "video_confirmed"]
+    kind: Literal["opened", "document_read", "complete", "video_segment", "video_confirmed"]
     start: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     end: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     position: float | None = Field(default=None, ge=0, allow_inf_nan=False)

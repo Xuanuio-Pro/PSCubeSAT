@@ -16,13 +16,13 @@ def main():
     settings = get_settings()
     services = []
     redis = urlparse(settings.redis_url)
-    if redis.hostname in ("localhost", "127.0.0.1") and redis.port == 6379:
+    if redis.hostname in ("localhost", "127.0.0.1") and redis.port:
         if redis.password:
             raise SystemExit(
                 "Local Redis password configured; configure your own Redis service instead."
             )
         services.append("redis")
-    if settings.mqtt_host in ("localhost", "127.0.0.1") and settings.mqtt_port == 1883:
+    if settings.mqtt_host in ("localhost", "127.0.0.1") and settings.mqtt_port:
         user = settings.mqtt_username
         if not user or any(c in user for c in ":\r\n"):
             raise SystemExit("Invalid local MQTT service username.")

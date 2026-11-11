@@ -1,5 +1,17 @@
 # Nhật ký quyết định
 
+## 08/11/2026 — Mở rộng soạn đề Lab Test 4 dạng câu hỏi & đề mẫu tham khảo (QUIZ-01/02)
+
+- Hỗ trợ 4 dạng câu hỏi theo cấu trúc đề mẫu: `single_choice` (Phần I: 1 đáp án đúng), `multiple_choice` (Phần II: nhiều đáp án đúng `a|b|d`), `true_false` (Phần III: Đúng/Sai 4 mệnh đề `a:Đ|b:S|c:S|d:Đ`, hỗ trợ tiền tố `[0,1,2,...]` điều khiển thứ tự đảo mệnh đề khi sinh đề), và `short_answer` (Phần IV: trả lời ngắn).
+- Cho phép giảng viên mở và soạn câu hỏi/đáp án trực tiếp ngay tại mục Lab Test trên trang Cấu hình chương trình (`ClassCurriculumPage`) hoặc trang Ngân hàng câu hỏi (`QuestionBankPage`), tự động khởi tạo ngân hàng nếu lớp chưa lưu nháp lần đầu.
+- Bổ sung bộ đề mẫu tham khảo tải về (`/templates/labtest-sample-exam.txt`, `/templates/question-bank.xlsx`, `/templates/answer-sheet-sample.csv`) và hỗ trợ nhập câu hỏi từ tệp `.xlsx`, `.csv`, `.txt`/`.md`, `.json` hoặc dán trực tiếp văn bản đề mẫu.
+
+## 07/11/2026 — Nhập danh sách sinh viên hàng loạt từ Excel/CSV (CLASS-02)
+
+- Giữ nguyên chức năng thêm từng sinh viên bằng email (`POST /api/classes/{class_id}/members`) và bổ sung `POST /api/classes/{class_id}/members/import` (cùng mẫu tải về `/templates/class-students.xlsx`, `/templates/class-students.csv` và `GET /api/classes/templates/students?format=xlsx|csv`).
+- Cấu trúc mẫu gồm cột `email` (bắt buộc) và `full_name` (tùy chọn để giảng viên đối chiếu, không tự ý ghi đè họ tên tài khoản đã đăng ký). Hỗ trợ cả `.xlsx` và `.csv` (tối đa 1 MB, 500 dòng/lần, kiểm tra chống XML entity/zip bomb).
+- Xử lý theo từng dòng hợp lệ (theo lựa chọn của người yêu cầu): thêm mới hoặc khôi phục membership `student` cho các email đã có tài khoản `active` (kèm `audit_logs`), giữ nguyên sinh viên đang active, và trả về danh sách chi tiết các dòng bị bỏ qua (`NOT_REGISTERED`, `ACCOUNT_LOCKED`, `IS_TEACHER`, `INVALID_EMAIL`, `DUPLICATE_IN_FILE`, `EMPTY_EMAIL`).
+
 ## 26/10/2026 — Dashboard, migration, pilot (Sprint 5)
 
 - Cờ theo lớp (người yêu cầu chọn): `LMS_CLASS_MODE` vẫn là công tắc tổng; mỗi lớp có `lms_mode` = `enabled` | `read_only` | `off`, chỉ Admin đổi, bắt buộc lý do, có audit. Lớp mới và lớp có trước migration 0010 mặc định `enabled` để giữ hành vi đã chạy dưới cờ tổng.

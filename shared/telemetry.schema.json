@@ -32,7 +32,7 @@
     "timestamp": {
       "anyOf": [
         {
-          "minimum": 0.0,
+          "minimum": 0,
           "type": "number"
         },
         {
@@ -43,7 +43,7 @@
       "title": "Timestamp"
     },
     "received_at": {
-      "minimum": 0.0,
+      "minimum": 0,
       "title": "Received At",
       "type": "number"
     },
@@ -183,7 +183,7 @@
     "voltageV": {
       "anyOf": [
         {
-          "minimum": 0.0,
+          "minimum": 0,
           "type": "number"
         },
         {
@@ -196,8 +196,8 @@
     "humidityPct": {
       "anyOf": [
         {
-          "maximum": 100.0,
-          "minimum": 0.0,
+          "maximum": 100,
+          "minimum": 0,
           "type": "number"
         },
         {
@@ -210,7 +210,7 @@
     "pressureHpa": {
       "anyOf": [
         {
-          "minimum": 0.0,
+          "minimum": 0,
           "type": "number"
         },
         {
@@ -223,8 +223,8 @@
     "gpsLat": {
       "anyOf": [
         {
-          "maximum": 90.0,
-          "minimum": -90.0,
+          "maximum": 90,
+          "minimum": -90,
           "type": "number"
         },
         {
@@ -237,8 +237,8 @@
     "gpsLon": {
       "anyOf": [
         {
-          "maximum": 180.0,
-          "minimum": -180.0,
+          "maximum": 180,
+          "minimum": -180,
           "type": "number"
         },
         {
@@ -263,7 +263,7 @@
     "uptimeMs": {
       "anyOf": [
         {
-          "minimum": 0.0,
+          "minimum": 0,
           "type": "number"
         },
         {

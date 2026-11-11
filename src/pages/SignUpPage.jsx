@@ -63,15 +63,18 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.fullName ? 'has-error' : ''}`}>
             <input
               id="fullName"
+              required
               autoComplete="name"
               maxLength={200}
               type="text"
               placeholder="Nguyễn Văn A"
+              aria-invalid={Boolean(errors.fullName)}
+              aria-describedby={errors.fullName ? 'signup-fullname-error' : undefined}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
             />
           </div>
-          {errors.fullName && <div className="auth-error-text">⚠ {errors.fullName}</div>}
+          {errors.fullName && <div id="signup-fullname-error" className="auth-error-text" role="alert">⚠ {errors.fullName}</div>}
         </div>
 
         <div className="auth-field">
@@ -79,14 +82,18 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.email ? 'has-error' : ''}`}>
             <input
               id="email"
+              required
+              maxLength={200}
               autoComplete="username"
               type="email"
-              placeholder="email@vi-du.com"
+              placeholder="sinhvien@ptit.edu.vn"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'signup-email-error' : undefined}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          {errors.email && <div className="auth-error-text">⚠ {errors.email}</div>}
+          {errors.email && <div id="signup-email-error" className="auth-error-text" role="alert">⚠ {errors.email}</div>}
         </div>
 
         <div className="auth-field">
@@ -94,9 +101,13 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.password ? 'has-error' : ''}`}>
             <input
               id="password"
+              required
+              minLength={6}
               autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="********"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'signup-password-error' : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -105,11 +116,12 @@ export default function SignUpPage() {
               className="auth-toggle-visibility"
               onClick={() => setShowPassword((v) => !v)}
               aria-label="Hiện/ẩn mật khẩu"
+              aria-pressed={showPassword}
             >
               <EyeIcon open={showPassword} />
             </button>
           </div>
-          {errors.password && <div className="auth-error-text">⚠ {errors.password}</div>}
+          {errors.password && <div id="signup-password-error" className="auth-error-text" role="alert">⚠ {errors.password}</div>}
         </div>
 
         <div className="auth-field">
@@ -117,14 +129,18 @@ export default function SignUpPage() {
           <div className={`auth-input-wrap ${errors.confirmPassword ? 'has-error' : ''}`}>
             <input
               id="confirmPassword"
+              required
+              minLength={6}
               autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="********"
+              aria-invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={errors.confirmPassword ? 'signup-confirm-error' : undefined}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
-          {errors.confirmPassword && <div className="auth-error-text">⚠ {errors.confirmPassword}</div>}
+          {errors.confirmPassword && <div id="signup-confirm-error" className="auth-error-text" role="alert">⚠ {errors.confirmPassword}</div>}
         </div>
 
         <button type="submit" className="auth-submit-btn auth-submit-spaced" disabled={submitting}>

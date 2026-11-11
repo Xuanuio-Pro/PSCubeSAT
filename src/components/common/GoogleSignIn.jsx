@@ -23,7 +23,7 @@ function loadGoogle() {
   return scriptPromise;
 }
 
-export default function GoogleSignIn({ signup = false, remember = false }) {
+export default function GoogleSignIn({ signup = false, remember = true }) {
   const container = useRef(null);
   const { loginGoogle } = useAuth();
   const navigate = useNavigate();

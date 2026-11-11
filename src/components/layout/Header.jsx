@@ -37,7 +37,7 @@ export default function Header() {
       <label className="header-search">
         <span className="sr-only">Tìm kiếm khóa học</span>
         <SearchIcon size={15} className="header-search-svg" />
-        <input type="search" placeholder={lab ? 'Search' : 'Tìm kiếm...'} />
+        <input type="search" maxLength={120} placeholder={lab ? 'Tìm kiếm bài học...' : 'Tìm kiếm...'} />
       </label>
 
       <div className="header-actions">
@@ -46,7 +46,6 @@ export default function Header() {
           <HomeIcon size={17} />
         </Link>
         <Link to="/lab0" className="header-icon-action header-route-action header-secondary-action" aria-label="Lộ trình học" title="Lộ trình học">LAB</Link>
-        <a href="#" className="header-icon-action header-route-action header-secondary-action" aria-label="Tài liệu API" title="Tài liệu API">API</a>
         {lab && (
           <span className="header-lab-tools">
             <button type="button" className="header-icon-action header-lab-alert" aria-label="Thông báo" title="Thông báo">
