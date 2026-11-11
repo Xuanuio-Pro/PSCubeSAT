@@ -1,4 +1,5 @@
-// Source: https://github.com/PTITCube/Lab4-01_Detect_Environment (local corrected example)
+// Reviewed classroom source for the ESP32 OBC hardware profile.
+// Upstream: https://github.com/PTITCube/Lab4-01_Detect_Environment/blob/c079d7ee30215e1de7131b76b0ae1df01d050f55/src/main.cpp
 /**
  * VÍ DỤ 4-1: ĐỌC CẢM BIẾN MÔI TRƯỜNG (BMP280)
  * 

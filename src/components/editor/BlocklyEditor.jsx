@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import * as Blockly from 'blockly';
 import { getToolboxForLab, registerCustomBlocks } from './blockly-toolbox.js';
 import { generateArduino } from './arduino-generator.js';
-import { projectKey, defaultWorkspace, encodeProject, decodeProject, downloadFile } from './blockly-project.js';
+import { projectKey, loadDraft, defaultWorkspace, encodeProject, decodeProject, downloadFile } from './blockly-project.js';
 import './blockly-editor.css';
 
 registerCustomBlocks();
@@ -64,7 +64,7 @@ export default function BlocklyEditor({ labId = 1, exerciseId = '', storageScope
     refreshRef.current = reason => { saveAllowed = true; refresh(true, reason); };
     Blockly.Events.disable();
     try {
-      const saved = localStorage.getItem(projectKey(labId, exerciseId, storageScope));
+      const saved = loadDraft(projectKey, labId, exerciseId, storageScope);
       Blockly.serialization.workspaces.load(saved ? decodeProject(saved, labId) : defaultWorkspace(), workspace);
       setNotice(saved ? 'Đã mở bài lưu trên máy. Chọn Bài mới nếu muốn tự kéo thả lại từ đầu.' : '');
     } catch {

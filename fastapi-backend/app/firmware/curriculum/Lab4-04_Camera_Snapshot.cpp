@@ -1,3 +1,5 @@
+// Reviewed classroom source for the ESP32 OBC hardware profile.
+// Upstream: https://github.com/PTITCube/Lab4-04_Camera_Snapshot/blob/c14459b6a893a4008f87387fc134cf8aff5b817c/src/main.cpp
 // Lab4-04: OBC MUX pins 12/14; send p to capture. Preserve existing SD images.
 // Source: https://github.com/PTITCube/Lab4-04_Camera_Snapshot
 /**

@@ -1,4 +1,5 @@
-// Source: https://github.com/PTITCube/Lab7-03_RTOS_Satellite_System
+// Reviewed classroom source for the ESP32 OBC hardware profile.
+// Upstream: https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System/blob/836100ba0b0b7b8e2eab4660a60864761aef745a/src/main.cpp
 // Unlock only after successful lock. Full runtime integration still requires validation.
 /**
  * CUBESAT FIRMWARE - MAIN FILE

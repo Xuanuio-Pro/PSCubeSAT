@@ -314,7 +314,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
             locked_event.json()["message"],
             "Bạn cần hoàn thành bài học trước để mở khóa bài này.",
         )
-        source = f"/api/curriculum/exercises/Lab2-01a_Battery_GPIO/source?class_id={self.class_a}"
+        source = f"/api/curriculum/exercises/Lab2-01a_Battery_I2C/source?class_id={self.class_a}"
         self.assertEqual((await self.call(4, "GET", source)).status_code, 403)
         with patch(
             "app.services.compiler_svc.compile_code", AsyncMock(return_value={"success": True})
@@ -323,7 +323,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
                 "code": "void setup() {} void loop() {}",
                 "lab_id": 2,
                 "class_id": self.class_a,
-                "lesson_id": "Lab2-01a_Battery_GPIO",
+                "lesson_id": "Lab2-01a_Battery_I2C",
             }
             self.assertEqual((await self.call(4, "POST", "/api/compile", payload)).status_code, 403)
             build.assert_not_called()

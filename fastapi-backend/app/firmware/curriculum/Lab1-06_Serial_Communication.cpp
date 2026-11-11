@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab1-02_Serial_Communication/blob/2b69ba784225bee0d1a984f23695766161e6a57b/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab1-06_Serial_Communication/blob/0b05af16e4618459976e4fe6d3c14d749fbdaa3c/src/main.cpp
 #include <Arduino.h>
 void setup() {
     Serial.begin(115200);

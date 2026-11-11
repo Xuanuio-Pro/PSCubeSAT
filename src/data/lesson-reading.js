@@ -11,6 +11,11 @@ export const READING_NOTES = {
     'Mỗi bài tự lưu riêng trên trình duyệt. Tải file .ino và xuất JSON Blockly để sao lưu/chuyển máy; thay đổi mã yêu cầu biên dịch lại trước khi nạp.',
   ],
   'document-1-3': [
+    'Ngõ ra số (OUTPUT) điều khiển LED qua điện trở hạn dòng. Nhiều LED dùng nhiều chân GPIO; bật tắt tuần tự các chân tạo hiệu ứng chạy đèn.',
+    'Ngõ vào số đọc mức HIGH hoặc LOW. INPUT_PULLUP dùng điện trở kéo lên nội bộ nên nút nhấn đọc LOW khi được nhấn; cần chống dội phím trước khi xử lý sự kiện.',
+    'LED 7 đoạn hiển thị chữ số bằng cách bật tắt từng đoạn. Dùng mảng mã để giải mã chữ số 0-9 thành trạng thái các chân; xác định LED chung anode hay chung cathode trước khi đấu nối.',
+  ],
+  'document-1-4': [
     'WiFi Station kết nối vào mạng có sẵn; Access Point tạo mạng để thiết bị khác kết nối. Phân biệt tên mạng, địa chỉ IP và trạng thái kết nối.',
     'Máy chủ HTTP tiếp nhận request theo đường dẫn và trả response gồm mã trạng thái, header và nội dung. Trình duyệt gửi yêu cầu để đọc trạng thái hoặc điều khiển LED.',
     'Đọc địa chỉ IP trên Serial, kiểm tra máy tính ở đúng mạng. Không đưa mật khẩu WiFi thực vào kho mã hoặc báo cáo công khai.',
@@ -55,22 +60,22 @@ export const READING_NOTES = {
     'Lắp từng cụm khi đã ngắt nguồn; kiểm tra vật dẫn có thể gây chạm chập và tránh kéo căng cáp.',
     'Sau lắp ráp, kiểm tra nguồn và từng phân hệ trước khi vận hành toàn bộ hệ thống.',
   ],
-  'document-6-2': [
+  'document-3-2': [
     'Tác vụ RTOS có hàm thực thi, stack và độ ưu tiên. Bộ điều phối phân chia thời gian chạy cho các tác vụ sẵn sàng.',
     'Phân tách nháy LED, lấy mẫu và truyền tin theo chu kỳ. Tránh vòng bận không nhường CPU; dùng cơ chế chờ của RTOS.',
     'Ghi thời gian thực thi và kiểm tra tác vụ ưu tiên cao có làm đói tác vụ khác hay không.',
   ],
-  'document-6-3': [
+  'document-3-3': [
     'Hai tác vụ truy cập đồng thời dữ liệu hoặc bus có thể gây race condition. Xác định tài nguyên dùng chung và vùng cần bảo vệ.',
     'Dùng mutex cho tài nguyên cần độc quyền; queue giúp truyền dữ liệu giữa tác vụ. Không giữ khóa khi chờ lâu hoặc chờ tài nguyên khác thiếu thứ tự rõ ràng.',
     'Thiết kế timeout và đường xử lý lỗi; thử tình huống mất thiết bị, lỗi truyền và tác vụ dừng bất thường.',
   ],
-  'document-6-4': [
+  'document-3-4': [
     'Watchdog phát hiện phần mềm không tiến triển trong thời gian cho phép. Chọn timeout dựa trên thời gian xử lý dài nhất đã đo.',
     'Chỉ cập nhật watchdog khi tác vụ đã hoàn thành bước kiểm tra cần thiết. Cập nhật vô điều kiện có thể che việc hệ thống bị treo.',
     'Thử gây treo có kiểm soát, đọc nguyên nhân reset và kiểm tra khả năng khởi động lại. Watchdog bổ sung phục hồi, không bảo đảm phần mềm tuyệt đối không lỗi.',
   ],
-  'document-7-1': [
+  'document-4-3': [
     'Ghép kênh cho phép dùng chung đường giao tiếp giữa nhiều thiết bị. Phần mềm cần chọn đúng kênh trước mỗi phiên trao đổi.',
     'Kiểm tra sơ đồ MUX, chân điều khiển và trạng thái mặc định; tránh hai thiết bị cùng điều khiển đường tín hiệu.',
     'Trong đa nhiệm, bảo vệ việc chọn kênh và giao tiếp bằng cùng cơ chế khóa để tác vụ khác không đổi kênh giữa phiên.',

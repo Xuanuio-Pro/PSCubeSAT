@@ -1,10 +1,10 @@
-"""Execute the actual portable Lab6 anomaly rules on the host, without a board."""
+"""Execute the actual portable Lab3-04 anomaly rules on the host, without a board."""
 from pathlib import Path
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-source = (ROOT / "fastapi-backend/app/firmware/curriculum/Lab6-02_Watchdog_And_Event.cpp").read_text(encoding="utf-8")
+source = (ROOT / "fastapi-backend/app/firmware/curriculum/Lab3-04_Watchdog_And_Event.cpp").read_text(encoding="utf-8")
 rules = source.split("// BEGIN PORTABLE ANOMALY RULES\n", 1)[1].split("// END PORTABLE ANOMALY RULES", 1)[0]
 folder = ROOT / "build_cache/firmware-logic"
 folder.mkdir(parents=True, exist_ok=True)
@@ -45,4 +45,4 @@ if not compiler:
 executable = folder / "anomaly-test.exe"
 subprocess.run([compiler, "-std=c++11", "-Wall", "-Wextra", "-Werror", str(test_source), "-o", str(executable)], check=True)
 subprocess.run([str(executable)], check=True)
-print("PASS actual Lab6 C++ rules: three stationary orientations, sustained/transient fall, NaN/Inf, recovery, timer wrap and heat threshold")
+print("PASS actual Lab3-04 C++ rules: three stationary orientations, sustained/transient fall, NaN/Inf, recovery, timer wrap and heat threshold")

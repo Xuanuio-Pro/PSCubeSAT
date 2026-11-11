@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab2-02_Power_Saving/blob/8a7d40969ec4ab6035014541934807e64a6c98e6/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab2-02_Power_Saving/blob/f6c98a87a5d31ce049542fec69962781a8d29725/src/main.cpp
 /**
  * VÍ DỤ 2-2: CHẾ ĐỘ TIẾT KIỆM NĂNG LƯỢNG (DEEP SLEEP)
  * 
@@ -31,9 +31,10 @@ void setup() {
     // Khởi tạo Phân hệ Năng lượng (EPS) để kiểm tra dung lượng Pin
     eps.init();
     
-    // Đọc điện áp Pin
+    // Đọc điện áp và dung lượng Pin từ IC MAX17048
     float voltage = eps.getBatteryVoltage();
-    Serial.printf("[EPS] Điện áp Pin hiện tại: %.2f V\n", voltage);
+    float percent = eps.getBatteryPercent();
+    Serial.printf("[EPS] Điện áp Pin hiện tại: %.2f V (Dung lượng: %.1f %%)\n", voltage, percent);
 
     // Giả lập hệ thống thực hiện công việc (đọc cảm biến, chụp ảnh, gửi dữ liệu...)
     Serial.println("[SYSTEM] Đang thực hiện các nhiệm vụ thiết yếu...");

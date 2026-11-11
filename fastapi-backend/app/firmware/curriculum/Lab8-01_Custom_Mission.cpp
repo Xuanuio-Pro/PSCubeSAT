@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab8-01_Custom_Mission/blob/66f456ca34db9653fc048986e6db8fe9208cd2c1/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab8-01_Custom_Mission/blob/8cb63cde585e3712c2a2cfced8f7ae7e9979efb4/src/main.cpp
 #include <Arduino.h>
 #include <PTITCube.h>
 

@@ -319,3 +319,68 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
         async with sessions() as db:
             with self.assertRaises(ValueError):
                 await ProgressService(db).mark_doc_viewed(uid, -1)
+
+    async def run_alembic(self, action, revision):
+        async with self.engine.begin() as conn:
+
+            def run(sync):
+                config = migration_config()
+                config.attributes["connection"] = sync
+                getattr(command, action)(config, revision)
+
+            await conn.run_sync(run)
+
+    async def lesson_ids(self, lab):
+        async with self.engine.connect() as conn:
+            row = (
+                await conn.execute(
+                    text("SELECT lesson_progress FROM lab_progress WHERE lab_id = :lab"),
+                    {"lab": lab},
+                )
+            ).scalar_one_or_none()
+        return set(row or {})
+
+    async def test_curriculum_restructure_moves_legacy_lessons_and_downgrades(self):
+        await self.run_alembic("upgrade", "0012_merge_0011_heads")
+        async with self.engine.begin() as conn:
+            await conn.execute(
+                text("INSERT INTO users(email,password_hash) VALUES('moved@example.com','x')")
+            )
+            for lab, lessons in {
+                1: ["Lab1-02_Serial_Communication", "video-1-3"],
+                3: ["Lab3-02_Linux_FS_Commands"],
+                6: ["Lab6-01_Multitasking_Scheduler", "video-6-1"],
+                7: ["Lab7-01_Camera_Multiplexer"],
+            }.items():
+                data = '{"' + '": {"completed": true}, "'.join(lessons) + '": {"completed": true}}'
+                await conn.execute(
+                    text(
+                        "INSERT INTO lab_progress(user_id,lab_id,completed_at,lesson_progress) "
+                        "VALUES(1,:lab,now(),CAST(:data AS jsonb))"
+                    ),
+                    {"lab": lab, "data": data},
+                )
+        await self.run_alembic("upgrade", "head")
+        self.assertEqual(await self.lesson_ids(1), {"Lab1-06_Serial_Communication", "video-1-4"})
+        self.assertEqual(
+            await self.lesson_ids(3),
+            {"Lab3-02_Linux_FS_Commands", "Lab3-03_Multitasking_Scheduler"},
+        )
+        self.assertEqual(await self.lesson_ids(6), {"video-6-1"})
+        self.assertEqual(await self.lesson_ids(4), {"Lab4-06_Camera_Multiplexer"})
+        self.assertEqual(await self.lesson_ids(7), set())
+        async with self.engine.connect() as conn:
+            self.assertEqual(
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT count(*) FROM lab_progress WHERE lab_id = 6 AND completed_at IS NOT NULL"
+                        )
+                    )
+                ).scalar_one(),
+                1,
+            )
+        await self.run_alembic("downgrade", "0012_merge_0011_heads")
+        self.assertEqual(await self.lesson_ids(1), {"Lab1-02_Serial_Communication", "video-1-3"})
+        self.assertEqual(await self.lesson_ids(6), {"Lab6-01_Multitasking_Scheduler", "video-6-1"})
+        self.assertEqual(await self.lesson_ids(7), {"Lab7-01_Camera_Multiplexer"})

@@ -2,7 +2,7 @@
 // Source: https://github.com/PTITCube (checked 2026-10-19).
 export const CURRICULUM = {
   "1": {
-    "objective": "Làm quen với Web IDE, nạp code cho vi điều khiển chính, giao tiếp máy tính và kết nối mạng WiFi/Internet.",
+    "objective": "Làm quen với Web IDE, nạp code cho vi điều khiển chính, điều khiển ngõ vào/ra số (LED, nút nhấn, LED 7 đoạn), giao tiếp máy tính và kết nối mạng WiFi/Internet.",
     "lessons": [
       {
         "id": "video-1-1",
@@ -39,57 +39,102 @@ export const CURRICULUM = {
         "repositoryUrl": "https://github.com/PTITCube/Lab1-01_Blink_LED"
       },
       {
-        "id": "Lab1-02_Serial_Communication",
-        "type": "practice",
-        "label": "Thực hành 02",
-        "title": "Gửi và nhận dữ liệu từ máy tính",
-        "exerciseCode": "Lab1-02_Serial_Communication",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-02_Serial_Communication"
-      },
-      {
-        "id": "Lab1-03_Serial_Control_LED",
-        "type": "practice",
-        "label": "Thực hành 03",
-        "title": "Điều khiển LED bằng lệnh gửi từ máy tính",
-        "exerciseCode": "Lab1-03_Serial_Control_LED",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-03_Serial_Control_LED"
-      },
-      {
         "id": "video-1-3",
         "type": "video",
         "label": "Video 1.3",
-        "title": "Giới thiệu về kết nối WiFi và Máy chủ Web",
+        "title": "Điều khiển ngõ vào/ra số (GPIO): nhiều LED, nút nhấn và LED 7 đoạn",
         "videoUrl": ""
       },
       {
         "id": "document-1-3",
         "type": "document",
         "label": "Doc 1.3",
+        "title": "Ngõ vào/ra số, điện trở kéo lên và chống dội phím"
+      },
+      {
+        "id": "Lab1-02_Control_Multiple_LEDs",
+        "type": "practice",
+        "label": "Thực hành 02",
+        "title": "Điều khiển nhiều đèn LED (chạy đèn tuần tự)",
+        "exerciseCode": "Lab1-02_Control_Multiple_LEDs",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-02_Control_Multiple_LEDs"
+      },
+      {
+        "id": "Lab1-03_Button",
+        "type": "practice",
+        "label": "Thực hành 03",
+        "title": "Đọc trạng thái nút nhấn",
+        "exerciseCode": "Lab1-03_Button",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-03_Button"
+      },
+      {
+        "id": "Lab1-04_LED_Button",
+        "type": "practice",
+        "label": "Thực hành 04",
+        "title": "Dùng nút nhấn bật/tắt đèn LED",
+        "exerciseCode": "Lab1-04_LED_Button",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-04_LED_Button"
+      },
+      {
+        "id": "Lab1-05_7_Segment_LED",
+        "type": "practice",
+        "label": "Thực hành 05",
+        "title": "Hiển thị chữ số trên LED 7 đoạn",
+        "exerciseCode": "Lab1-05_7_Segment_LED",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-05_7_Segment_LED"
+      },
+      {
+        "id": "Lab1-06_Serial_Communication",
+        "type": "practice",
+        "label": "Thực hành 06",
+        "title": "Gửi và nhận dữ liệu từ máy tính",
+        "exerciseCode": "Lab1-06_Serial_Communication",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-06_Serial_Communication"
+      },
+      {
+        "id": "Lab1-07_Serial_Control_LED",
+        "type": "practice",
+        "label": "Thực hành 07",
+        "title": "Điều khiển LED bằng lệnh gửi từ máy tính",
+        "exerciseCode": "Lab1-07_Serial_Control_LED",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-07_Serial_Control_LED"
+      },
+      {
+        "id": "video-1-4",
+        "type": "video",
+        "label": "Video 1.4",
+        "title": "Giới thiệu về kết nối WiFi và Máy chủ Web",
+        "videoUrl": ""
+      },
+      {
+        "id": "document-1-4",
+        "type": "document",
+        "label": "Doc 1.4",
         "title": "Lý thuyết về Máy chủ Web và giao thức truyền tải"
       },
       {
-        "id": "Lab1-04_WiFi_Connection",
+        "id": "Lab1-08_WiFi_Connection",
         "type": "practice",
-        "label": "Thực hành 04",
+        "label": "Thực hành 08",
         "title": "Kết nối vào mạng WiFi có sẵn",
-        "exerciseCode": "Lab1-04_WiFi_Connection",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-04_WiFi_Connection"
+        "exerciseCode": "Lab1-08_WiFi_Connection",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-08_WiFi_Connection"
       },
       {
-        "id": "Lab1-05_WiFi_AP_Mode",
+        "id": "Lab1-09_WiFi_AP_Mode",
         "type": "practice",
-        "label": "Thực hành 05",
+        "label": "Thực hành 09",
         "title": "Phát WiFi từ vệ tinh",
-        "exerciseCode": "Lab1-05_WiFi_AP_Mode",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-05_WiFi_AP_Mode"
+        "exerciseCode": "Lab1-09_WiFi_AP_Mode",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-09_WiFi_AP_Mode"
       },
       {
-        "id": "Lab1-06_Web_Server_LED",
+        "id": "Lab1-10_Web_Server_LED",
         "type": "practice",
-        "label": "Thực hành 06",
+        "label": "Thực hành 10",
         "title": "Dựng máy chủ điều khiển LED qua trình duyệt",
-        "exerciseCode": "Lab1-06_Web_Server_LED",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-06_Web_Server_LED"
+        "exerciseCode": "Lab1-10_Web_Server_LED",
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-10_Web_Server_LED"
       },
       {
         "id": "summary-1",
@@ -124,12 +169,20 @@ export const CURRICULUM = {
         "videoUrl": ""
       },
       {
-        "id": "Lab2-01a_Battery_GPIO",
+        "id": "Lab2-01_Detect_Battery_Voltage",
+        "type": "practice",
+        "label": "Thực hành 01",
+        "title": "Đo điện áp pin",
+        "exerciseCode": "Lab2-01_Detect_Battery_Voltage",
+        "repositoryUrl": "https://github.com/PTITCube/Lab2-01_Detect_Battery_Voltage"
+      },
+      {
+        "id": "Lab2-01a_Battery_I2C",
         "type": "practice",
         "label": "Thực hành 01a",
-        "title": "Đọc điện áp pin bằng ADC (Analog)",
-        "exerciseCode": "Lab2-01a_Battery_GPIO",
-        "repositoryUrl": "https://github.com/PTITCube/Lab2-01a_Battery_GPIO"
+        "title": "Đọc điện áp và phần trăm pin qua IC MAX17048 (I2C)",
+        "exerciseCode": "Lab2-01a_Battery_I2C",
+        "repositoryUrl": "https://github.com/PTITCube/Lab2-01a_Battery_I2C"
       },
       {
         "id": "Lab2-01b_Battery_Library",
@@ -163,7 +216,7 @@ export const CURRICULUM = {
     ]
   },
   "3": {
-    "objective": "Giao tiếp với thẻ nhớ để ghi nhận dữ liệu.",
+    "objective": "Giao tiếp với thẻ nhớ để ghi nhận dữ liệu, chạy đa nhiệm và dùng Bộ định thời Watchdog bảo vệ vệ tinh không bị treo.",
     "lessons": [
       {
         "id": "video-3-1",
@@ -184,6 +237,14 @@ export const CURRICULUM = {
         "label": "Video 3.2",
         "title": "Thao tác đọc/ghi file an toàn, tránh hỏng thẻ nhớ",
         "videoUrl": ""
+      },
+      {
+        "id": "Lab3-01_Save_To_MicroSD",
+        "type": "practice",
+        "label": "Thực hành 01",
+        "title": "Ghi log vào thẻ nhớ",
+        "exerciseCode": "Lab3-01_Save_To_MicroSD",
+        "repositoryUrl": "https://github.com/PTITCube/Lab3-01_Save_To_MicroSD"
       },
       {
         "id": "Lab3-01a_MicroSD_SPI",
@@ -208,6 +269,54 @@ export const CURRICULUM = {
         "title": "Xây dựng hệ thống lệnh quản lý file qua máy tính",
         "exerciseCode": "Lab3-02_Linux_FS_Commands",
         "repositoryUrl": "https://github.com/PTITCube/Lab3-02_Linux_FS_Commands"
+      },
+      {
+        "id": "video-3-3",
+        "type": "video",
+        "label": "Video 3.3",
+        "title": "Tại sao phần mềm vệ tinh cần Hệ điều hành?",
+        "videoUrl": ""
+      },
+      {
+        "id": "document-3-2",
+        "type": "document",
+        "label": "Doc 3.2",
+        "title": "Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực"
+      },
+      {
+        "id": "document-3-3",
+        "type": "document",
+        "label": "Doc 3.3",
+        "title": "Tranh chấp tài nguyên và cơ chế khóa bảo vệ"
+      },
+      {
+        "id": "Lab3-03_Multitasking_Scheduler",
+        "type": "practice",
+        "label": "Thực hành 03",
+        "title": "Chạy song song nháy đèn, đọc cảm biến, gửi thông tin",
+        "exerciseCode": "Lab3-03_Multitasking_Scheduler",
+        "repositoryUrl": "https://github.com/PTITCube/Lab3-03_Multitasking_Scheduler"
+      },
+      {
+        "id": "video-3-4",
+        "type": "video",
+        "label": "Video 3.4",
+        "title": "Thực hành gỡ lỗi treo hệ thống bằng Bộ định thời",
+        "videoUrl": ""
+      },
+      {
+        "id": "document-3-4",
+        "type": "document",
+        "label": "Doc 3.4",
+        "title": "Bộ định thời Watchdog Timer trong hàng không vũ trụ"
+      },
+      {
+        "id": "Lab3-04_Watchdog_And_Event",
+        "type": "practice",
+        "label": "Thực hành 04",
+        "title": "Kích hoạt tự động khởi động lại hệ thống khi bị treo",
+        "exerciseCode": "Lab3-04_Watchdog_And_Event",
+        "repositoryUrl": "https://github.com/PTITCube/Lab3-04_Watchdog_And_Event"
       },
       {
         "id": "summary-3",
@@ -242,6 +351,14 @@ export const CURRICULUM = {
         "videoUrl": ""
       },
       {
+        "id": "Lab4-01_Detect_Environment",
+        "type": "practice",
+        "label": "Thực hành 01",
+        "title": "Đọc nhiệt độ và áp suất (BMP)",
+        "exerciseCode": "Lab4-01_Detect_Environment",
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-01_Detect_Environment"
+      },
+      {
         "id": "Lab4-01a_Environment_I2C",
         "type": "practice",
         "label": "Thực hành 01a",
@@ -263,6 +380,14 @@ export const CURRICULUM = {
         "label": "Video 4.3",
         "title": "Tương tác với cảm biến gia tốc và đo góc nghiêng",
         "videoUrl": ""
+      },
+      {
+        "id": "Lab4-02_Detect_IMU_Attitude",
+        "type": "practice",
+        "label": "Thực hành 02",
+        "title": "Đo gia tốc và góc quay (IMU)",
+        "exerciseCode": "Lab4-02_Detect_IMU_Attitude",
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-02_Detect_IMU_Attitude"
       },
       {
         "id": "Lab4-02a_IMU_I2C",
@@ -294,6 +419,14 @@ export const CURRICULUM = {
         "title": "Trích xuất và phân tích định dạng dữ liệu thô trả về từ module định vị"
       },
       {
+        "id": "Lab4-03_Detect_GPS_Rawdata",
+        "type": "practice",
+        "label": "Thực hành 03",
+        "title": "Đọc dữ liệu GPS thô",
+        "exerciseCode": "Lab4-03_Detect_GPS_Rawdata",
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-03_Detect_GPS_Rawdata"
+      },
+      {
         "id": "Lab4-03a_GPS_UART",
         "type": "practice",
         "label": "Thực hành 03a",
@@ -315,6 +448,14 @@ export const CURRICULUM = {
         "label": "Video 4.5",
         "title": "Tương tác, gửi lệnh chụp ảnh và thu thập hình ảnh từ module Máy ảnh",
         "videoUrl": ""
+      },
+      {
+        "id": "Lab4-04_Camera_Snapshot",
+        "type": "practice",
+        "label": "Thực hành 04",
+        "title": "Chụp ảnh bằng camera",
+        "exerciseCode": "Lab4-04_Camera_Snapshot",
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-04_Camera_Snapshot"
       },
       {
         "id": "Lab4-04a_Camera_UART",
@@ -339,6 +480,20 @@ export const CURRICULUM = {
         "title": "Tổng hợp đọc tất cả cảm biến",
         "exerciseCode": "Lab4-05_Read_All_Sensors",
         "repositoryUrl": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors"
+      },
+      {
+        "id": "document-4-3",
+        "type": "document",
+        "label": "Doc 4.3",
+        "title": "Kỹ thuật ghép kênh bằng IC phần cứng"
+      },
+      {
+        "id": "Lab4-06_Camera_Multiplexer",
+        "type": "practice",
+        "label": "Thực hành 06",
+        "title": "Chuyển mạch luân phiên phần cứng",
+        "exerciseCode": "Lab4-06_Camera_Multiplexer",
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer"
       },
       {
         "id": "summary-4",
@@ -379,6 +534,14 @@ export const CURRICULUM = {
         "title": "Đóng gói bản tin và kiến trúc Trạm mặt đất"
       },
       {
+        "id": "Lab5-01_Send_Telemetry",
+        "type": "practice",
+        "label": "Thực hành 01",
+        "title": "Gửi telemetry",
+        "exerciseCode": "Lab5-01_Send_Telemetry",
+        "repositoryUrl": "https://github.com/PTITCube/Lab5-01_Send_Telemetry"
+      },
+      {
         "id": "Lab5-01a_Send_Telemetry_UART",
         "type": "practice",
         "label": "Thực hành 01a",
@@ -393,6 +556,14 @@ export const CURRICULUM = {
         "title": "Đóng gói packet Telemetry hoàn chỉnh",
         "exerciseCode": "Lab5-01b_Send_Telemetry_Library",
         "repositoryUrl": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library"
+      },
+      {
+        "id": "Lab5-02_Receive_Command",
+        "type": "practice",
+        "label": "Thực hành 02",
+        "title": "Nhận lệnh",
+        "exerciseCode": "Lab5-02_Receive_Command",
+        "repositoryUrl": "https://github.com/PTITCube/Lab5-02_Receive_Command"
       },
       {
         "id": "Lab5-02a_Receive_Command_UART",
@@ -435,7 +606,7 @@ export const CURRICULUM = {
     ]
   },
   "6": {
-    "objective": "Lắp ráp khung vệ tinh, chuyển đổi sang lập trình đa nhiệm, sử dụng cơ chế khóa và Bộ định thời bảo vệ vệ tinh không bị treo.",
+    "objective": "Lắp ráp khung vệ tinh và tìm hiểu cấu trúc cơ khí bảo vệ các phân hệ.",
     "lessons": [
       {
         "id": "video-6-1",
@@ -458,59 +629,11 @@ export const CURRICULUM = {
         "videoUrl": ""
       },
       {
-        "id": "video-6-3",
-        "type": "video",
-        "label": "Video 6.3",
-        "title": "Tại sao phần mềm vệ tinh cần Hệ điều hành?",
-        "videoUrl": ""
-      },
-      {
-        "id": "document-6-2",
-        "type": "document",
-        "label": "Doc 6.2",
-        "title": "Khái niệm cơ bản về Tác vụ, Độ ưu tiên và Bộ điều phối trong Hệ điều hành Thời gian thực"
-      },
-      {
-        "id": "document-6-3",
-        "type": "document",
-        "label": "Doc 6.3",
-        "title": "Tranh chấp tài nguyên và cơ chế khóa bảo vệ"
-      },
-      {
-        "id": "Lab6-01_Multitasking_Scheduler",
-        "type": "practice",
-        "label": "Thực hành 01",
-        "title": "Chạy song song nháy đèn, đọc cảm biến, gửi thông tin",
-        "exerciseCode": "Lab6-01_Multitasking_Scheduler",
-        "repositoryUrl": "https://github.com/PTITCube/Lab6-01_Multitasking_Scheduler"
-      },
-      {
-        "id": "video-6-4",
-        "type": "video",
-        "label": "Video 6.4",
-        "title": "Thực hành gỡ lỗi treo hệ thống bằng Bộ định thời",
-        "videoUrl": ""
-      },
-      {
-        "id": "document-6-4",
-        "type": "document",
-        "label": "Doc 6.4",
-        "title": "Bộ định thời Watchdog Timer trong hàng không vũ trụ"
-      },
-      {
-        "id": "Lab6-02_Watchdog_And_Event",
-        "type": "practice",
-        "label": "Thực hành 02",
-        "title": "Kích hoạt tự động khởi động lại hệ thống khi bị treo",
-        "exerciseCode": "Lab6-02_Watchdog_And_Event",
-        "repositoryUrl": "https://github.com/PTITCube/Lab6-02_Watchdog_And_Event"
-      },
-      {
         "id": "summary-6",
         "type": "summary",
         "label": "Tổng hợp",
         "title": "Tổng hợp Lab 6",
-        "description": "Hoàn thiện bộ khung vật lý và đảm bảo độ tin cậy tuyệt đối cho phần mềm bay."
+        "description": "Hoàn thiện bộ khung vật lý của vệ tinh."
       }
     ]
   },
@@ -523,20 +646,6 @@ export const CURRICULUM = {
         "label": "Video 7.1",
         "title": "Giới thiệu về bài toán Tích hợp Hệ thống trên vệ tinh",
         "videoUrl": ""
-      },
-      {
-        "id": "document-7-1",
-        "type": "document",
-        "label": "Doc 7.1",
-        "title": "Kỹ thuật ghép kênh bằng IC phần cứng"
-      },
-      {
-        "id": "Lab7-01_Camera_Multiplexer",
-        "type": "practice",
-        "label": "Thực hành 01",
-        "title": "Chuyển mạch luân phiên phần cứng",
-        "exerciseCode": "Lab7-01_Camera_Multiplexer",
-        "repositoryUrl": "https://github.com/PTITCube/Lab7-01_Camera_Multiplexer"
       },
       {
         "id": "video-7-2",
@@ -552,20 +661,20 @@ export const CURRICULUM = {
         "title": "Kiến trúc phân lớp phần mềm Vệ tinh toàn diện"
       },
       {
-        "id": "Lab7-02_Full_Satellite_Program",
+        "id": "Lab7-01_Full_Satellite_Program",
         "type": "practice",
-        "label": "Thực hành 02",
+        "label": "Thực hành 01",
         "title": "Phần mềm vệ tinh hoàn chỉnh với vòng lặp tuần tự",
-        "exerciseCode": "Lab7-02_Full_Satellite_Program",
-        "repositoryUrl": "https://github.com/PTITCube/Lab7-02_Full_Satellite_Program"
+        "exerciseCode": "Lab7-01_Full_Satellite_Program",
+        "repositoryUrl": "https://github.com/PTITCube/Lab7-01_Full_Satellite_Program"
       },
       {
-        "id": "Lab7-03_RTOS_Satellite_System",
+        "id": "Lab7-02_RTOS_Satellite_System",
         "type": "practice",
-        "label": "Thực hành 03",
+        "label": "Thực hành 02",
         "title": "Hệ thống vệ tinh chạy đa nhiệm RTOS",
-        "exerciseCode": "Lab7-03_RTOS_Satellite_System",
-        "repositoryUrl": "https://github.com/PTITCube/Lab7-03_RTOS_Satellite_System"
+        "exerciseCode": "Lab7-02_RTOS_Satellite_System",
+        "repositoryUrl": "https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System"
       },
       {
         "id": "summary-7",

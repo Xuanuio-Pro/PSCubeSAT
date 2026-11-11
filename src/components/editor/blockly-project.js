@@ -1,7 +1,7 @@
 import * as Blockly from 'blockly';
 import { allowedBlockTypes, registerCustomBlocks } from './blockly-toolbox.js';
 
-export { DEFAULT_ARDUINO_CODE, downloadFile, projectKey, sourceKey } from './project-files.js';
+export { DEFAULT_ARDUINO_CODE, downloadFile, loadDraft, projectKey, sourceKey } from './project-files.js';
 
 export const emptyWorkspace = () => ({ blocks: { languageVersion: 0, blocks: [] } });
 export const defaultWorkspace = () => starterWorkspace(1, true);

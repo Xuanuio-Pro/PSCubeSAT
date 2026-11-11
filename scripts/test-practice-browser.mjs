@@ -39,7 +39,7 @@ await page.route('**/api/**', async intercepted => {
   if (pathname.startsWith('/api/progress')) return reply({});
   if (pathname.endsWith('/source')) {
     sourceAuthorized = true;
-    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab6-02_Watchdog_And_Event.cpp', import.meta.url), 'utf8');
+    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab3-04_Watchdog_And_Event.cpp', import.meta.url), 'utf8');
     return intercepted.fulfill({ status: 200, contentType: 'text/plain', body: source });
   }
   return reply({});
@@ -73,11 +73,11 @@ const login = async () => {
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
 };
 try {
-  await page.goto(route('Lab6-01_Multitasking_Scheduler'));
+  await page.goto(route('Lab3-03_Multitasking_Scheduler'));
   await page.waitForURL('**/login');
   assert.equal(await page.getByRole('button', { name: 'Kết nối USB', exact: true }).count(), 0);
   await login();
-  await page.waitForURL('**/lab6?lesson=Lab6-01_Multitasking_Scheduler');
+  await page.waitForURL('**/lab3?lesson=Lab3-03_Multitasking_Scheduler');
   await page.reload(); // A stored token must be verified by /me before mounting services.
   await page.getByRole('heading', { name: 'Tác vụ chạy đồng thời', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Kết nối USB', exact: true }).click();
@@ -94,8 +94,8 @@ try {
   await emit('LED ON');
   await page.getByText(/Lệnh cuối: Bật/).waitFor();
   assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 0);
-  await page.locator('.practice-activity').screenshot({ path: path.join(output, 'lab6-scheduler.png') });
-  console.log('PASS Lab6: observed task counters, duration, timeline and illustrative provenance');
+  await page.locator('.practice-activity').screenshot({ path: path.join(output, 'lab3-scheduler.png') });
+  console.log('PASS Lab3-03: observed task counters, duration, timeline and illustrative provenance');
 
   // Navigate through the SPA, keeping the same fake USB session and provider.
   async function select(id) {
@@ -113,8 +113,8 @@ try {
   assert.equal(await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).count(), 0);
   console.log('PASS Lab4: multiline readings, correct hPa, no humidity tile for BMP280, independent expiry');
 
-  await select('Lab7-03_RTOS_Satellite_System');
-  for (const line of fixtures.find(item => item.id === 'Lab7-03_RTOS_Satellite_System').lines) await emit(line);
+  await select('Lab7-02_RTOS_Satellite_System');
+  for (const line of fixtures.find(item => item.id === 'Lab7-02_RTOS_Satellite_System').lines) await emit(line);
   await page.getByText('3.72 V', { exact: true }).waitFor();
   await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).waitFor();
   await page.locator('.vector-legend').filter({ hasText: 'µT' }).waitFor();
@@ -148,7 +148,7 @@ try {
   assert.equal(await page.getByRole('heading', { name: 'Gia tốc thô · số đếm thanh ghi' }).count(), 0);
   for (const [panel, count] of [['Tư thế 3D', 1], ['Định vị GPS', 0], ['Camera', 0], ['Môi trường', 0]]) assert.equal(await page.getByRole('region', { name: panel, exact: true }).count(), count);
   console.log('PASS Raw IMU: register counts drive tilt in the 3D viewer without inventing a g scale');
-  await select('Lab6-02_Watchdog_And_Event');
+  await select('Lab3-04_Watchdog_And_Event');
   await emit('{"type":"telemetry","temp":28.5,"pressure":1013,"acc_x":0,"acc_y":0,"acc_z":1,"uptime_ms":10000}');
   await page.getByText('🌡️ 28.5 °C', { exact: true }).waitFor();
   await emit('[SỰ CỐ] EMERGENCY: FREEFALL DETECTED!');
@@ -159,25 +159,25 @@ try {
   assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 0);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Tải mã mẫu ESP32 (.ino)', exact: true }).click();
-  assert.equal((await download).suggestedFilename(), 'Lab6-02_Watchdog_And_Event.ino');
+  assert.equal((await download).suggestedFilename(), 'Lab3-04_Watchdog_And_Event.ino');
   assert.ok(sourceAuthorized);
-  console.log('PASS reviewed Lab6: actual sensor visualization, explicit event/recovery and correct source download');
-  for (const id of ['Lab1-01_Blink_LED', 'Lab1-02_Serial_Communication', 'Lab1-03_Serial_Control_LED']) {
+  console.log('PASS reviewed Lab3-04: actual sensor visualization, explicit event/recovery and correct source download');
+  for (const id of ['Lab1-01_Blink_LED', 'Lab1-06_Serial_Communication', 'Lab1-07_Serial_Control_LED']) {
     await select(id);
     assert.equal(await page.locator('.lab-visual-stack .card').count(), 1);
     assert.equal(await page.getByRole('heading', { name: /LED \/ Serial|Phản hồi Serial \/ Echo|Command Uplink/ }).count(), 0);
   }
-  await select('Lab1-04_WiFi_Connection');
+  await select('Lab1-08_WiFi_Connection');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('192.168.1.22');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'IP address: 192.168.1.22' }).waitFor();
   assert.equal(await page.locator('.lab1-connection-notice a').count(), 0);
-  await select('Lab1-05_WiFi_AP_Mode');
+  await select('Lab1-09_WiFi_AP_Mode');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('AP IP address:'); await emit('192.168.4.1'); await emit('Số lượng thiết bị đang kết nối: 2');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'Thiết bị đang kết nối: 2' }).waitFor();
   assert.match(await page.locator('.lab1-connection-notice').innerText(), /IP address: 192\.168\.4\.1/);
-  await select('Lab1-06_Web_Server_LED');
+  await select('Lab1-10_Web_Server_LED');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('IP address: 192.168.1.23');
   await page.locator('.lab1-connection-notice').waitFor();

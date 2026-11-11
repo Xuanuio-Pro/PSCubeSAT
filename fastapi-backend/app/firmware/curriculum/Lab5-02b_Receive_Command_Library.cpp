@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab5-02b_Receive_Command_Library/blob/5f98479e4d47cbf22bf2a5764687b75fbf35b54d/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab5-02b_Receive_Command_Library/blob/bef9d522efa51842fd6ab0783f226725be1fbdf8/src/main.cpp
 /**
  * VÍ DỤ: VỆ TINH NHẬN LỆNH ĐIỀU KHIỂN (COMMAND) QUA LORA
  * 

@@ -4,7 +4,7 @@ import { reduceNetworkReport } from './network-report.js';
 // Panels per exercise, matched to what the reference sketch actually prints. First match wins.
 /** @type {Array<[RegExp, string[]]>} */
 const EXERCISE_PANELS = [
-  [/^Lab1-0[456]/, ['lab1Connection']],
+  [/^Lab1-(0[89]|10)/, ['lab1Connection']],
   [/^Lab2-/, ['voltage']],
   [/^Lab3-01/, ['storage']],
   [/^Lab4-01/, ['environment']],
@@ -14,30 +14,30 @@ const EXERCISE_PANELS = [
   [/^Lab4-05/, ['environment', 'attitude', 'gps']],
   [/^Lab5-01/, ['radio']],
   [/^Lab5-0[23]/, ['radio', 'commands']],
-  [/^Lab6-02/, ['anomaly', 'attitude']],
-  [/^Lab7-01/, ['gps', 'camera']],
-  [/^Lab7-02/, ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system']],
-  [/^Lab7-03/, ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system']],
+  [/^Lab3-04/, ['anomaly', 'attitude']],
+  [/^Lab4-06/, ['gps', 'camera']],
+  [/^Lab7-01/, ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system']],
+  [/^Lab7-02/, ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system']],
   [/^Lab8-/, ['dashboard']],
 ];
 
 // Profiles describe the shipped examples, not capabilities discovered on a board.
 export function practiceProfile(id = '') {
   const lab = Number(/^Lab(\d+)-/.exec(id)?.[1] ?? 0);
-  const scheduler = id.startsWith('Lab6-01');
+  const scheduler = id.startsWith('Lab3-03');
   const panels = [...(EXERCISE_PANELS.find(([pattern]) => pattern.test(id))?.[1] ?? [])];
   let commands = [];
-  if (id.startsWith('Lab1-03')) commands = ['1', '0'];
+  if (id.startsWith('Lab1-07')) commands = ['1', '0'];
   if (id.startsWith('Lab3-02')) commands = ['pwd', 'ls', 'mkdir demo', 'cd demo', 'touch note.txt', 'rm note.txt', 'cd ..', 'rm demo'];
   if (id.startsWith('Lab4-04')) commands = ['p'];
-  if (id.startsWith('Lab7-03')) commands = ['ping', 'status', 'uptime', 'get_sensor', 'get_eps', 'get_gps', 'pause', 'resume', 'capture', 'help'];
+  if (id.startsWith('Lab7-02')) commands = ['ping', 'status', 'uptime', 'get_sensor', 'get_eps', 'get_gps', 'pause', 'resume', 'capture', 'help'];
   const note = scheduler
-    ? 'Lab6-01 dùng nhiệt độ cố định 28,5°C và mô phỏng gửi mạng bằng delay. Bản mẫu đã sửa xuất LED ON/OFF; bản gốc không có log LED. Chỉ hiển thị trạng thái LED khi nhận phản hồi.'
-    : id.startsWith('Lab6-02') ? 'Bản mẫu đã sửa kiểm tra gia tốc ba trục, thời gian rơi và bật watchdog; xuất mẫu cảm biến mỗi giây. Cảnh báo là kết luận của firmware, không thay cho kiểm chứng vật lý.'
+    ? 'Lab3-03 dùng nhiệt độ cố định 28,5°C và mô phỏng gửi mạng bằng delay. Bản mẫu đã sửa xuất LED ON/OFF; bản gốc không có log LED. Chỉ hiển thị trạng thái LED khi nhận phản hồi.'
+    : id.startsWith('Lab3-04') ? 'Bản mẫu đã sửa kiểm tra gia tốc ba trục, thời gian rơi và bật watchdog; xuất mẫu cảm biến mỗi giây. Cảnh báo là kết luận của firmware, không thay cho kiểm chứng vật lý.'
       : lab === 5 ? 'Log phát LoRa chỉ xác nhận yêu cầu gửi tại OBC. Cần phản hồi từ trạm mặt đất để xác nhận nhận thành công; USB Serial không thay thế đường lệnh LoRa.'
       : lab === 8 ? 'Mẫu Lab8 là khung chương trình. Hãy bổ sung nhiệm vụ và xuất JSON telemetry để dashboard có dữ liệu.'
         : /^Lab4-02a/.test(id) ? 'RAW_ACCEL là số đếm thanh ghi. Góc nghiêng chỉ suy ra từ hướng vector; không quy đổi sang g khi chưa biết thang đo.'
-          : /^Lab4-04|^Lab7-01/.test(id) ? 'Ảnh lưu trên thẻ SD chưa được truyền về trình duyệt. Preview chỉ xuất hiện khi firmware gửi ảnh về: IMG:base64, IMG_BEGIN/IMG_CHUNK/IMG_END (Lab4-04b) hoặc imageData.'
+          : /^Lab4-04|^Lab4-06/.test(id) ? 'Ảnh lưu trên thẻ SD chưa được truyền về trình duyệt. Preview chỉ xuất hiện khi firmware gửi ảnh về: IMG:base64, IMG_BEGIN/IMG_CHUNK/IMG_END (Lab4-04b) hoặc imageData.'
             : 'Hiển thị theo dữ liệu thực nhận. Trường không được xuất hoặc quá hạn sẽ hiện —; log khởi tạo chưa chứng minh toàn bộ hệ thống hoạt động.';
   return { id, lab, scheduler, panels, commands, note };
 }

@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab1-03_Serial_Control_LED/blob/4530ac2a68fb610793773d5122b154504502d8f0/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab1-07_Serial_Control_LED/blob/c9ebd7ed742c3c3eace4231b21d4858075a40273/src/main.cpp
 #include <Arduino.h>
 
 const int LED_PIN = 2;

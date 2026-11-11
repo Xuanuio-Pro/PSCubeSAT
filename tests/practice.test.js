@@ -35,7 +35,7 @@ for (const fixture of fixtures) test(`reference Serial output: ${fixture.id}`, (
 });
 
 test('scheduler counts observed work, pairs duration and does not claim LED or actual MQTT activity', () => {
-  const decode = createPracticeDecoder('Lab6-01_Multitasking_Scheduler');
+  const decode = createPracticeDecoder('Lab3-03_Multitasking_Scheduler');
   let activity = emptyActivity();
   const lines = [entry('[Sensor] Đang đọc dữ liệu... Nhiệt độ: 28.5C'), entry('[Network] BẮT ĐẦU gửi dữ liệu lên máy chủ...', 11000), entry('[Network] ĐÃ GỬI XONG!', 11500)];
   for (const line of lines) {
@@ -107,7 +107,7 @@ test('No Fix invalidates the marker immediately; invalid NMEA checksums never pr
 });
 
 test('diagnostic response formats map to the actual measurements and units', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   assert.equal(decode(entry('Sensor: Temp=28.50C, Press=1012.25hPa')).frame.temperatureC, 28.5);
   assert.equal(decode(entry('EPS: Battery=3.72V')).frame.voltageV, 3.72);
   assert.equal(decode(entry('GPS: Lat=21.028500, Lng=105.854200')).frame.gpsLon, 105.8542);
@@ -115,7 +115,7 @@ test('diagnostic response formats map to the actual measurements and units', () 
 });
 
 test('explicit unavailable fields clear old readings without clearing unrelated sparse measurements', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   const store = createTelemetryStore(() => 10000);
   store.setLink('connected');
   store.ingest(adaptSerialLine('{"temp":28,"pressure":1013,"battery_v":3.8,"gyro_z":1}', 'serial-local', 10000));
@@ -132,7 +132,7 @@ test('explicit unavailable fields clear old readings without clearing unrelated 
 });
 
 test('invalid metadata or coercible nested values cannot overwrite a bound device', () => {
-  const decode = createPracticeDecoder('Lab7-02_Full_Satellite_Program');
+  const decode = createPracticeDecoder('Lab7-01_Full_Satellite_Program');
   for (const metadata of [{ device_id: 'another' }, { source: 'demo' }, { type: 'command' }, { schema_version: 2 }, { device_id: false }]) {
     const result = decode(entry(JSON.stringify({ ...metadata, valid: false, temp: null })), 'bound');
     assert.equal(result.frame, null);
@@ -165,14 +165,14 @@ test('reviewed firmware log formats preserve correct units and subsystem evidenc
   assert.equal(decode(entry('[WDT] Watchdog Timer đã bật (timeout: 10s)')).events.length, 0);
   assert.equal(decode(entry('E task_wdt: Task watchdog got triggered.')).events[0].phase, 'error');
   assert.equal(decode(entry('[EVENT] No current anomaly in valid measurements.')).events[0].phase, 'recovered');
-  const scheduler = createPracticeDecoder('Lab6-01_Multitasking_Scheduler');
+  const scheduler = createPracticeDecoder('Lab3-03_Multitasking_Scheduler');
   const result = scheduler(entry('LED ON'));
   assert.equal(result.frame.ledOn, true);
   assert.ok(result.events.some(event => event.group === 'task' && event.name === 'LED' && event.illustrative === false));
 });
 
 test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter another session', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   for (const prefix of ['[CMD] ', '[TX] ', '[RX] ', 'random ']) assert.equal(decode(entry(prefix + '{"temp":22}')).frame, null);
   const store = createTelemetryStore(() => 10000);
   store.setLink('connected');
@@ -190,16 +190,20 @@ test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter an
 });
 test('each exercise shows only the panels its reference sketch has data for', () => {
   const expected = {
-    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': ['lab1Connection'], 'Lab1-05': ['lab1Connection'], 'Lab1-06': ['lab1Connection'],
-    'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
-    'Lab3-01a': ['storage'], 'Lab3-01b': ['storage'], 'Lab3-02': ['commands'],
-    'Lab4-01a': ['environment'], 'Lab4-01b': ['environment'], 'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
-    'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'], 'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
-    'Lab4-05': ['environment', 'attitude', 'gps'],
-    'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'], 'Lab5-02a': ['radio', 'commands'], 'Lab5-02b': ['radio', 'commands'], 'Lab5-03': ['radio', 'commands'],
-    'Lab6-01': [], 'Lab6-02': ['anomaly', 'attitude'],
-    'Lab7-01': ['gps', 'camera'], 'Lab7-02': ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system'],
-    'Lab7-03': ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system', 'commands'],
+    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [],
+    'Lab1-08': ['lab1Connection'], 'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'],
+    'Lab2-01': ['voltage'], 'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
+    'Lab3-01': ['storage'], 'Lab3-01a': ['storage'], 'Lab3-01b': ['storage'], 'Lab3-02': ['commands'],
+    'Lab3-03': [], 'Lab3-04': ['anomaly', 'attitude'],
+    'Lab4-01': ['environment'], 'Lab4-01a': ['environment'], 'Lab4-01b': ['environment'],
+    'Lab4-02': ['attitude'], 'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
+    'Lab4-03': ['gps'], 'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'],
+    'Lab4-04': ['camera', 'commands'], 'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
+    'Lab4-05': ['environment', 'attitude', 'gps'], 'Lab4-06': ['gps', 'camera'],
+    'Lab5-01': ['radio'], 'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
+    'Lab5-02': ['radio', 'commands'], 'Lab5-02a': ['radio', 'commands'], 'Lab5-02b': ['radio', 'commands'], 'Lab5-03': ['radio', 'commands'],
+    'Lab7-01': ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system'],
+    'Lab7-02': ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system', 'commands'],
     'Lab8-01': ['dashboard'],
   };
   for (const fixture of fixtures) {
@@ -207,7 +211,7 @@ test('each exercise shows only the panels its reference sketch has data for', ()
     assert.deepEqual(plan.panels, expected[fixture.id.split('_')[0]], fixture.id);
     assert.ok(!plan.panels.includes('telemetry'), `${fixture.id}: raw telemetry table duplicates dedicated panels`);
   }
-  assert.deepEqual(visualizationPlan(practiceProfile('Lab7-02_Full_Satellite_Program')).systemRows, ['sensor', 'gps', 'eps', 'storage', 'radio']);
+  assert.deepEqual(visualizationPlan(practiceProfile('Lab7-01_Full_Satellite_Program')).systemRows, ['sensor', 'gps', 'eps', 'storage', 'radio']);
 });
 
 test('LoRa logs from the raw UART and the COM library become TX/RX/error radio events', () => {
@@ -222,7 +226,7 @@ test('LoRa logs from the raw UART and the COM library become TX/RX/error radio e
 });
 
 test('Lab1 AP preserves its IP through bounded logs and errors clear old connection details', () => {
-  const decode = createPracticeDecoder('Lab1-05_WiFi_AP_Mode');
+  const decode = createPracticeDecoder('Lab1-09_WiFi_AP_Mode');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('Configuring access point...AP IP address:'); feed('192.168.4.1');
@@ -238,7 +242,7 @@ test('Lab1 AP preserves its IP through bounded logs and errors clear old connect
 });
 
 test('Lab1 web status requires valid device IP and explicit server startup; reconnect cannot reuse old IP', () => {
-  const decode = createPracticeDecoder('Lab1-06_Web_Server_LED');
+  const decode = createPracticeDecoder('Lab1-10_Web_Server_LED');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('IP address:'); feed('999.168.1.2'); feed('0.0.0.0');

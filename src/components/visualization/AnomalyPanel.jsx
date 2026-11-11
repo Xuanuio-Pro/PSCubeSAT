@@ -3,7 +3,7 @@ import { makeSparkOption } from './spark-option';
 import { useTelemetry } from '../../contexts/telemetry-api';
 import './practice.css';
 
-// Thresholds copied from Lab6-02 FallDetector / isOverheating; the verdict itself always comes from the firmware log.
+// Thresholds copied from Lab3-04 FallDetector / isOverheating; the verdict itself always comes from the firmware log.
 const FREEFALL_G = 1;
 const OVERHEAT_C = 45;
 const MAX_POINTS = 60;

@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { CURRICULUM, getLessonsForLab, getLessonForLab, lessonUrl } from '../src/data/curriculum.js';
 import { LABS } from '../src/data/labs.js';
 import { READING_NOTES, lessonReadingContent } from '../src/data/lesson-reading.js';
-import { projectKey, sourceKey } from '../src/components/editor/blockly-project.js';
+import { projectKey, sourceKey, loadDraft } from '../src/components/editor/blockly-project.js';
 
-test('PTITCube syllabus exposes 81 ordered sections and all 32 individual exercises', () => {
-  assert.deepEqual(LABS.slice(1).map(lab => getLessonsForLab(lab.id).length), [13, 8, 7, 17, 11, 11, 8, 6]);
+test('PTITCube syllabus exposes 95 ordered sections and all 44 individual exercises', () => {
+  assert.deepEqual(LABS.slice(1).map(lab => getLessonsForLab(lab.id).length), [19, 9, 15, 23, 13, 4, 6, 6]);
   const sections = Object.values(CURRICULUM).flatMap(lab => lab.lessons);
-  assert.equal(new Set(sections.map(item => item.id)).size, 81);
-  assert.equal(sections.filter(item => item.type === 'practice').length, 32);
-  assert.equal(sections.filter(item => item.type === 'video').length, 23);
-  assert.equal(sections.filter(item => item.type === 'document').length, 18);
+  assert.equal(new Set(sections.map(item => item.id)).size, 95);
+  assert.equal(sections.filter(item => item.type === 'practice').length, 44);
+  assert.equal(sections.filter(item => item.type === 'video').length, 24);
+  assert.equal(sections.filter(item => item.type === 'document').length, 19);
   for (const lab of LABS.slice(1)) {
     const lessons = getLessonsForLab(lab.id);
     assert.equal(lessons[0].type, 'video');
@@ -48,9 +48,22 @@ test('lesson URLs restore selection, invalid/cross-lab IDs fall back and Lab0 ke
 test('exercise storage isolates all code/workspaces while preserving legacy lab keys', () => {
   const exercises = Object.entries(CURRICULUM).flatMap(([lab, value]) => value.lessons.filter(item => item.type === 'practice').map(item => [Number(lab), item.id]));
   for (const key of [projectKey, sourceKey]) {
-    assert.equal(new Set(exercises.map(([lab, exercise]) => key(lab, exercise))).size, 32);
+    assert.equal(new Set(exercises.map(([lab, exercise]) => key(lab, exercise))).size, 44);
     for (const [lab, exercise] of exercises) assert.notEqual(key(lab, exercise), key(lab));
   }
   assert.equal(projectKey(1), 'ptit:blockly:v1:lab:1');
   assert.equal(sourceKey(1), 'ptit:source:v1:lab:1');
+});
+
+test('drafts saved under a renamed exercise id stay readable, and new keys win over old ones', () => {
+  const store = new Map();
+  globalThis.localStorage = { getItem: key => store.get(key) ?? null };
+  try {
+    store.set(sourceKey(6, 'Lab6-01_Multitasking_Scheduler'), 'old draft');
+    assert.equal(loadDraft(sourceKey, 3, 'Lab3-03_Multitasking_Scheduler'), 'old draft');
+    store.set(sourceKey(3, 'Lab3-03_Multitasking_Scheduler'), 'new draft');
+    assert.equal(loadDraft(sourceKey, 3, 'Lab3-03_Multitasking_Scheduler'), 'new draft');
+    store.set(sourceKey(2, 'Lab2-01a_Battery_GPIO'), 'adc draft');
+    assert.equal(loadDraft(sourceKey, 2, 'Lab2-01a_Battery_I2C'), null);
+  } finally { delete globalThis.localStorage; }
 });
