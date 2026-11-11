@@ -2,6 +2,17 @@
 
 > **Hệ thống Trạm Mặt Đất (Ground Station) & Trình Biên Dịch Code / Quản Lý Telemetry Realtime cho Vệ Tinh Giáo Dục CubeSat (ESP32 / ESP32-S3).**
 
+## Cài đặt nhanh trên một máy (chỉ cần Docker)
+
+```powershell
+git clone -b develop https://github.com/Xuanuio-Pro/PSCubeSAT.git
+cd PSCubeSAT
+powershell -ExecutionPolicy Bypass -File .\setup-local.ps1   # Windows
+# bash setup-local.sh                                        # Linux/macOS
+```
+
+Mở http://localhost:8080. Chi tiết, vận hành, sao lưu và giới hạn: [Docs/LOCAL_INSTALL.md](Docs/LOCAL_INSTALL.md).
+
 ---
 
 ## 📌 Tổng Quan Kiến Trúc (Architecture Overview)
