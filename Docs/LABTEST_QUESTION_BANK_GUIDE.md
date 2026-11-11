@@ -53,9 +53,9 @@ Câu 1. Cho hình chữ nhật ABCD có AB = 6, AD = 8. Độ dài của vectơ 
 ### 2.2. Mẫu File Đáp án tách riêng (`/templates/answer-template.xlsx` hoặc `.csv`)
 Chứa đáp án tương ứng với từng câu hỏi trong File câu hỏi (hỗ trợ đối chiếu theo **số thứ tự câu hỏi liên tiếp `1..N`** như mẫu `answers_test.xlsx` hoặc đối chiếu theo **`Phần` + `Câu`**):
 
-| Câu hỏi | 0001 (Đáp án) | Phần | Câu trong phần | Lời giải |
-| :---: | :---: | :---: | :---: | :--- |
-| `1` | `D` | `I` | `1` | Số 2 là số nguyên tố chẵn duy nhất nên D sai. |
+| Câu hỏi | 0001 (Đáp án) | Phần | Câu trong phần | Lời giải | Giải thích A | Giải thích B | Giải thích C | Giải thích D |
+| :---: | :---: | :---: | :---: | :--- | :--- | :--- | :--- | :--- |
+| `1` | `D` | `I` | `1` | Tóm tắt cách giải. | Vì sao A sai. | Vì sao B sai. | Vì sao C sai. | Vì sao D đúng. |
 | `2` | `A\|B\|D` | `II` | `1` | 3/4, -5 và 0,25 đều là số hữu tỉ. |
 | `3` | `A\|B\|D` | `II` | `2` | Hai góc so le trong bằng nhau, đồng vị bằng nhau. |
 | `4` | `A\|C` | `II` | `3` | Hai đại lượng tỉ lệ nghịch có tích không đổi. |
@@ -81,6 +81,7 @@ Khi soạn các mệnh đề `a)`, `b)`, `c)`, `d)` của câu Đúng/Sai trong 
 - **Số thứ tự `> 0` bằng nhau**: Luôn **đứng gần nhau** và được hoán vị ngẫu nhiên với nhau trong nhóm.
 - **Số thứ tự `> 0` nhỏ hơn**: Luôn **đứng trước** số thứ tự lớn hơn.
 - Tiền tố `[số, mức_độ]` tự động được ẩn đi khi hiển thị đề thi cho sinh viên.
+- Với câu lựa chọn, điền giải thích riêng cho từng phương án vào các cột `Giải thích A` đến `Giải thích D`. Sau khi được công bố, học sinh sẽ thấy vì sao lựa chọn của mình đúng/sai, nên chọn phương án nào và vì sao phương án đúng.
 
 ---
 

@@ -195,7 +195,13 @@ async def serialize(db, attempt, *, result=False):
             public.update(
                 {
                     k: item.snapshot[k]
-                    for k in ("correct_choice_id", "explanation", "source_reference")
+                    for k in (
+                        "correct_choice_id",
+                        "explanation",
+                        "choice_explanations",
+                        "source_reference",
+                    )
+                    if k in item.snapshot
                 }
             )
         public_items.append(public)

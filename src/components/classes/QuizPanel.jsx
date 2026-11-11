@@ -237,6 +237,17 @@ export default function QuizPanel({ classId, labId, onRefresh, policySummary }) 
               {item.correct_choice_id && <p className="lms-secondary"><strong>Đáp án đúng:</strong> {item.correct_choice_id}</p>}
             </div>
           )}
+          {!active && item.choice_explanations && Object.entries(item.choice_explanations).map(([choiceId, explanation]) => {
+            if (!explanation) return null;
+            const selectedValue = qType === 'true_false'
+              ? tfSelected[choiceId]
+              : qType === 'multiple_choice'
+              ? (multiSelected.has(choiceId) ? 'Đã chọn' : 'Không chọn')
+              : (currentAns === choiceId ? 'Bạn đã chọn' : '');
+            return <p className="quiz-choice-explanation" key={choiceId}>
+              <strong>Phương án {choiceId.toUpperCase()} {selectedValue ? `(${selectedValue})` : ''}:</strong> {explanation}
+            </p>;
+          })}
           {item.explanation && <div className="quiz-explanation"><p>{item.explanation}</p><small>Nguồn: {item.source_reference}</small></div>}
         </fieldset>;
       })}

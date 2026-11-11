@@ -97,6 +97,11 @@ def parse_tabular_questions(rows: list[dict[str, str]]) -> list[dict]:
             "objective": (row.get("objective") or "").strip(),
             "difficulty": (row.get("difficulty") or "medium").strip() or "medium",
             "source_reference": (row.get("source_reference") or "").strip(),
+            "choice_explanations": {
+                choice_id: (row.get(f"explanation_{choice_id}") or "").strip()
+                for choice_id in ("a", "b", "c", "d")
+                if (row.get(f"explanation_{choice_id}") or "").strip()
+            },
         }
         if q_type == "short_answer" and not any(
             (row.get(f"choice_{i}_text") or "").strip() for i in range(1, 5)
@@ -270,8 +275,8 @@ def _parse_answer_text_block(
 
 def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
     """Parse a separate Answer File (.xlsx, .csv, .txt, .docx)."""
-    by_index: dict[int, tuple[str, str]] = {}
-    by_part: dict[tuple[str, int], tuple[str, str]] = {}
+    by_index: dict[int, tuple[str, str, dict[str, str]]] = {}
+    by_part: dict[tuple[str, int], tuple[str, str, dict[str, str]]] = {}
 
     if answer_format in ("text", "docx"):
         txt = extract_docx_text(answer_content) if answer_format == "docx" else answer_content
@@ -279,8 +284,10 @@ def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
         target = split_marker[1] if len(split_marker) > 1 else txt
         keys, expls, idx_map = _parse_answer_text_block(target)
         for k, ans in keys.items():
-            by_part[k] = (ans, expls.get(k, ""))
-        by_index.update(idx_map)
+            by_part[k] = (ans, expls.get(k, ""), {})
+        by_index.update(
+            {key: (answer, explanation, {}) for key, (answer, explanation) in idx_map.items()}
+        )
         return {"by_index": by_index, "by_part": by_part}
 
     if answer_format == "xlsx":
@@ -307,9 +314,36 @@ def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
         1,
     )
     expl_col = next(
-        (i for i, h in enumerate(header_row) if h in ("lời giải", "loi giai", "giải thích", "giai thich", "explanation")),
+        (
+            i
+            for i, h in enumerate(header_row)
+            if h
+            in (
+                "lời giải",
+                "loi giai",
+                "giải thích",
+                "giai thich",
+                "explanation",
+            )
+        ),
         None,
     )
+    explanation_cols = {
+        letter: next(
+            (
+                i
+                for i, h in enumerate(header_row)
+                if h in (
+                    f"giải thích {letter}",
+                    f"giai thich {letter}",
+                    f"explanation_{letter}",
+                    f"explanation {letter}",
+                )
+            ),
+            None,
+        )
+        for letter in ("a", "b", "c", "d")
+    }
 
     seq_idx = 0
     for row in raw_rows[1:]:
@@ -329,13 +363,18 @@ def parse_separate_answers(answer_format: str, answer_content: str) -> dict:
             if expl_col is not None and expl_col < len(row) and row[expl_col]
             else ""
         )
+        choice_explanations = {
+            letter: str(row[index]).strip()
+            for letter, index in explanation_cols.items()
+            if index is not None and index < len(row) and str(row[index] or "").strip()
+        }
         if part_col is not None and part_col < len(row) and str(row[part_col]).strip():
             part_val = re.sub(r"^phần\s*", "", str(row[part_col]).strip(), flags=re.IGNORECASE).upper()
-            by_part[(part_val, q_num)] = (ans_raw, expl_raw)
+            by_part[(part_val, q_num)] = (ans_raw, expl_raw, choice_explanations)
             seq_idx += 1
-            by_index[seq_idx] = (ans_raw, expl_raw)
+            by_index[seq_idx] = (ans_raw, expl_raw, choice_explanations)
         else:
-            by_index[q_num] = (ans_raw, expl_raw)
+            by_index[q_num] = (ans_raw, expl_raw, choice_explanations)
 
     return {"by_index": by_index, "by_part": by_part}
 
@@ -370,11 +409,13 @@ def merge_questions_and_answers(
             elif num and num in answers["by_index"]:
                 matched = answers["by_index"][num]
             if matched:
-                ans_val, expl_val = matched
+                ans_val, expl_val, choice_explanations = matched
                 if ans_val:
                     q["correct_choice_id"] = ans_val
                 if expl_val:
                     q["explanation"] = expl_val
+                if choice_explanations:
+                    q["choice_explanations"] = choice_explanations
         merged.append(q)
     return merged
 

@@ -52,6 +52,7 @@ function emptyQuestion(type = 'single_choice') {
     choices: defaultChoices(type),
     correct_choice_id: type === 'true_false' ? 'a:Đ|b:S|c:S|d:Đ' : '',
     explanation: '',
+    choice_explanations: {},
     objective: 'Kiểm tra kiến thức Lab',
     difficulty: 'medium',
     source_reference: 'Tài liệu Lab',
@@ -68,6 +69,7 @@ function editableQuestion(q) {
     choices: choices?.length === 4 ? choices : defaultChoices(question_type),
     correct_choice_id,
     explanation,
+    choice_explanations: q.choice_explanations || {},
     objective,
     difficulty,
     source_reference,
@@ -199,11 +201,15 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
   async function importFile(event) {
     event.preventDefault();
     if (!questionFile || questionFile.size > 1000000) {
-      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.docx, .txt, .xlsx, .csv, .json).' });
+      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.csv hoặc .xlsx).' });
       return;
     }
-    if (answerFile && answerFile.size > 1000000) {
-      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.xlsx, .csv, .txt, .docx).' });
+    if (!answerFile) {
+      setNotice({ error: 'Cần chọn File đáp án (.csv hoặc .xlsx).' });
+      return;
+    }
+    if (answerFile.size > 1000000) {
+      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.csv hoặc .xlsx).' });
       return;
     }
     const qPayload = await readImportFile(questionFile);
@@ -212,11 +218,9 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
       format: qPayload.format,
       content: qPayload.content,
     };
-    if (answerFile) {
-      const aPayload = await readImportFile(answerFile);
-      body.answer_format = aPayload.format;
-      body.answer_content = aPayload.content;
-    }
+    const aPayload = await readImportFile(answerFile);
+    body.answer_format = aPayload.format;
+    body.answer_content = aPayload.content;
     const result = await mutate(url + '/import', body);
     if (result) {
       setQuestionFile(null);
@@ -359,7 +363,23 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
             </label>
           )}
 
-          <label>Lời giải / Giải thích đáp án<textarea {...field('explanation')} required minLength={5} maxLength={5000} rows={2} placeholder="Giải thích vì sao đáp án đúng..." /></label>
+          <label>Lời giải chung<textarea {...field('explanation')} required minLength={5} maxLength={5000} rows={2} placeholder="Tóm tắt cách giải..." /></label>
+          {question.question_type !== 'short_answer' && <div className="lms-wide">
+            <p>Giải thích riêng từng phương án (học sinh sẽ thấy vì sao phương án đã chọn đúng/sai sau khi được công bố):</p>
+            {question.choices.map(choice => <label key={choice.id}>
+              Giải thích phương án {choice.id.toUpperCase()}
+              <textarea
+                maxLength={5000}
+                rows={2}
+                value={question.choice_explanations?.[choice.id] || ''}
+                placeholder={`Vì sao phương án ${choice.id.toUpperCase()} đúng hoặc sai?`}
+                onChange={event => setQuestion(current => ({
+                  ...current,
+                  choice_explanations: { ...current.choice_explanations, [choice.id]: event.target.value },
+                }))}
+              />
+            </label>)}
+          </div>}
           <div className="lms-form-grid">
             <label>Mục tiêu kiến thức<input {...field('objective')} required minLength={3} maxLength={500} /></label>
             <label>Độ khó<select {...field('difficulty')}><option value="easy">Nhận biết (Dễ)</option><option value="medium">Thông hiểu (Trung bình)</option><option value="hard">Vận dụng (Khó)</option></select></label>
@@ -382,8 +402,9 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
       <h2>Nhập từ File câu hỏi & File đáp án tách riêng</h2>
       <p className="lms-import-head">
         <strong>Mẫu File câu hỏi:</strong>{' '}
-        <a href="/templates/question-template.docx" download>File câu hỏi mẫu (.docx)</a> ·{' '}
-        <a href="/templates/question-template.txt" download>File câu hỏi mẫu (.txt)</a>
+        <a href="/templates/question-bank.csv" download>File câu hỏi mẫu (.csv)</a>
+        {' · '}
+        <a href="/templates/question-bank.xlsx" download>File câu hỏi mẫu (.xlsx)</a>
         {' | '}
         <strong>Mẫu File đáp án (tách riêng):</strong>{' '}
         <a href="/templates/answer-template.xlsx" download>File đáp án mẫu (.xlsx)</a> ·{' '}
@@ -391,12 +412,12 @@ export function BankEditor({ initial, classId, labId, reload, inline = false, on
       </p>
       <form className="lms-filters" onSubmit={importFile}>
         <label>
-          1. File câu hỏi (.docx, .txt, .xlsx, .csv, .json)
-          <input type="file" accept=".docx,.txt,.md,.xlsx,.csv,.json" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
+          1. File câu hỏi (.csv hoặc .xlsx)
+          <input type="file" accept=".xlsx,.csv" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
         </label>
         <label>
-          2. File đáp án (.xlsx, .csv, .txt, .docx)
-          <input type="file" accept=".xlsx,.csv,.txt,.docx" onChange={event => setAnswerFile(event.target.files?.[0] || null)} />
+          2. File đáp án (.csv hoặc .xlsx, bắt buộc)
+          <input type="file" accept=".xlsx,.csv" onChange={event => setAnswerFile(event.target.files?.[0] || null)} required />
         </label>
         <button className="lms-primary" disabled={busy || !questionFile}>Kiểm tra và nhập câu hỏi</button>
       </form>
@@ -473,11 +494,15 @@ export function InlineQuestionBank({ classId, labId, onPublished = null }) {
   async function handleImport(event) {
     event.preventDefault();
     if (!questionFile || questionFile.size > 1000000) {
-      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.docx, .txt, .xlsx, .csv, .json).' });
+      setNotice({ error: 'Chọn File câu hỏi tối đa 1 MB (.csv hoặc .xlsx).' });
       return;
     }
-    if (answerFile && answerFile.size > 1000000) {
-      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.xlsx, .csv, .txt, .docx).' });
+    if (!answerFile) {
+      setNotice({ error: 'Cần chọn File đáp án (.csv hoặc .xlsx).' });
+      return;
+    }
+    if (answerFile.size > 1000000) {
+      setNotice({ error: 'Chọn File đáp án tối đa 1 MB (.csv hoặc .xlsx).' });
       return;
     }
     setBusy(true);
@@ -489,11 +514,9 @@ export function InlineQuestionBank({ classId, labId, onPublished = null }) {
         format: qPayload.format,
         content: qPayload.content,
       };
-      if (answerFile) {
-        const aPayload = await readImportFile(answerFile);
-        body.answer_format = aPayload.format;
-        body.answer_content = aPayload.content;
-      }
+      const aPayload = await readImportFile(answerFile);
+      body.answer_format = aPayload.format;
+      body.answer_content = aPayload.content;
       await request(url + '/import', { method: 'POST', body: JSON.stringify(body) });
       setQuestionFile(null);
       setAnswerFile(null);
@@ -557,8 +580,8 @@ export function InlineQuestionBank({ classId, labId, onPublished = null }) {
           </span>
           <span className="lms-secondary">
             <strong>Mẫu File câu hỏi:</strong>{' '}
-            <a href="/templates/question-template.docx" download>File câu hỏi (.docx)</a> ·{' '}
-            <a href="/templates/question-template.txt" download>File câu hỏi (.txt)</a>
+            <a href="/templates/question-bank.csv" download>File câu hỏi (.csv)</a> ·{' '}
+            <a href="/templates/question-bank.xlsx" download>File câu hỏi (.xlsx)</a>
             {' | '}
             <strong>Mẫu File đáp án:</strong>{' '}
             <a href="/templates/answer-template.xlsx" download>File đáp án (.xlsx)</a> ·{' '}
@@ -576,12 +599,12 @@ export function InlineQuestionBank({ classId, labId, onPublished = null }) {
         <>
           <form className="lms-filters" onSubmit={handleImport} style={{ marginTop: '12px' }}>
             <label>
-              1. File câu hỏi (.docx, .txt, .xlsx, .csv)
-              <input type="file" accept=".docx,.txt,.md,.xlsx,.csv,.json" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
+              1. File câu hỏi (.csv hoặc .xlsx)
+              <input type="file" accept=".xlsx,.csv" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
             </label>
             <label>
-              2. File đáp án tách riêng (.xlsx, .csv, .txt, .docx)
-              <input type="file" accept=".xlsx,.csv,.txt,.docx" onChange={event => setAnswerFile(event.target.files?.[0] || null)} />
+              2. File đáp án tách riêng (.csv hoặc .xlsx, bắt buộc)
+              <input type="file" accept=".xlsx,.csv" onChange={event => setAnswerFile(event.target.files?.[0] || null)} required />
             </label>
             <button className="lms-primary" disabled={busy || !questionFile}>Thêm file câu hỏi</button>
           </form>

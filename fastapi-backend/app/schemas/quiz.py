@@ -72,6 +72,7 @@ class QuestionInput(InputModel):
     choices: list[Choice] = Field(default_factory=list, max_length=4)
     correct_choice_id: str = Field(min_length=1, max_length=256)
     explanation: str = Field(default="Đã kiểm tra theo đáp án chuẩn.", min_length=5, max_length=5000)
+    choice_explanations: dict[str, str] = Field(default_factory=dict, max_length=4)
     objective: str = Field(default="Kiểm tra kiến thức Lab", min_length=3, max_length=500)
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     source_reference: str = Field(default="Tài liệu Lab", min_length=3, max_length=2000)
@@ -81,6 +82,15 @@ class QuestionInput(InputModel):
         for name in ("prompt", "explanation", "objective", "source_reference"):
             if not normalized(getattr(self, name)):
                 raise ValueError("Không được để trống nội dung bắt buộc.")
+        if any(
+            not isinstance(choice_id, str)
+            or not normalized(choice_id)
+            or not isinstance(text, str)
+            or not normalized(text)
+            or len(text) > 5000
+            for choice_id, text in self.choice_explanations.items()
+        ):
+            raise ValueError("Giải thích từng phương án không được để trống.")
         if self.question_type == "short_answer":
             if not self.choices:
                 self.choices = [
@@ -101,6 +111,8 @@ class QuestionInput(InputModel):
         values = [normalized(choice.text) for choice in self.choices]
         if len(set(ids)) != 4 or len(set(values)) != 4 or not all(values):
             raise ValueError("Cần bốn lựa chọn khác nhau và ID không trùng.")
+        if any(choice_id not in ids for choice_id in self.choice_explanations):
+            raise ValueError("Giải thích từng phương án phải dùng đúng ID lựa chọn.")
 
         if self.question_type == "single_choice":
             lower_map = {cid.lower(): cid for cid in ids}

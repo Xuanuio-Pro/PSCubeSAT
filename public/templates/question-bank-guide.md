@@ -24,7 +24,7 @@ Hệ thống hỗ trợ **4 dạng câu hỏi** theo cấu trúc đề mẫu:
    - Hệ thống tự chuẩn hóa dấu phẩy/chấm thập phân (`12,5` và `12.5` được tính như nhau).
 
 ## Các định dạng tệp hỗ trợ nhập (`Import`)
-- **Đề mẫu văn bản (`.txt`, `.md`)**: Soạn theo mẫu 4 phần kèm bảng đáp án cuối đề sau dòng `---HẾT---`, hoặc mẫu đề rút gọn đánh dấu `*A.` / `_A._` và `Đáp án:`.
-- **Excel (`.xlsx`) / CSV (`.csv`)**: Có cột `question_type` (`single_choice`, `multiple_choice`, `true_false`, `short_answer`), `prompt`, `choice_1_text`..`choice_4_text`, `correct_choice_id`, `explanation`, `objective`, `difficulty`, `source_reference`.
+- **Excel (`.xlsx`) / CSV (`.csv`)**: File câu hỏi có cột `question_type` (`single_choice`, `multiple_choice`, `true_false`, `short_answer`), `prompt`, `choice_1_text`..`choice_4_text`, `objective`, `difficulty`, `source_reference`. File đáp án tách riêng có `Câu hỏi`, `Phần`, `Câu trong phần`, `0001 (Đáp án)`, `Lời giải` và các cột `Giải thích A`, `Giải thích B`, `Giải thích C`, `Giải thích D`.
+- Mỗi phương án nên có giải thích riêng. Sau khi bài được công bố, học sinh sẽ thấy phương án mình chọn đúng/sai, đáp án đúng và lý do của từng phương án. Không đưa đáp án vào File câu hỏi.
 - **JSON (`.json`)**: Mảng `questions` theo schema chuẩn.
 - Ngân hàng câu hỏi cần đủ **20 câu đã duyệt (`approved`)** để xuất bản; mỗi lượt thi của sinh viên rút ngẫu nhiên **5 câu**.
