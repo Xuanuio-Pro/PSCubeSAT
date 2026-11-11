@@ -4,9 +4,9 @@ const exerciseSuffix = exerciseId => exerciseId ? `:exercise:${encodeURIComponen
 export const projectKey = (labId, exerciseId = '', scope = '') => `ptit:blockly:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
 export const sourceKey = (labId, exerciseId = '', scope = '') => `ptit:source:v1:lab:${labId}${exerciseSuffix(exerciseId)}${scope ? `:scope:${encodeURIComponent(scope)}` : ''}`;
 // Exercises renamed or moved between labs: [old lab, old id]. Drafts saved under the old key stay readable.
-// Lab2-01a is excluded: its hardware changed from raw ADC to the MAX17048 I2C gauge, so an old draft would not fit.
 const LEGACY_EXERCISES = {
   'Lab1-06_Serial_Communication': [1, 'Lab1-02_Serial_Communication'], 'Lab1-07_Serial_Control_LED': [1, 'Lab1-03_Serial_Control_LED'],
+  'Lab2-01a_Battery_I2C': [2, 'Lab2-01a_Battery_GPIO'],
   'Lab1-08_WiFi_Connection': [1, 'Lab1-04_WiFi_Connection'], 'Lab1-09_WiFi_AP_Mode': [1, 'Lab1-05_WiFi_AP_Mode'], 'Lab1-10_Web_Server_LED': [1, 'Lab1-06_Web_Server_LED'],
   'Lab3-03_Multitasking_Scheduler': [6, 'Lab6-01_Multitasking_Scheduler'], 'Lab3-04_Watchdog_And_Event': [6, 'Lab6-02_Watchdog_And_Event'],
   'Lab4-06_Camera_Multiplexer': [7, 'Lab7-01_Camera_Multiplexer'],

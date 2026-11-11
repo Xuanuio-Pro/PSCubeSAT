@@ -180,7 +180,7 @@ export const CURRICULUM = {
         "id": "Lab2-01a_Battery_I2C",
         "type": "practice",
         "label": "Thực hành 01a",
-        "title": "Đọc điện áp và phần trăm pin qua IC MAX17048 (I2C)",
+        "title": "Đọc điện áp pin bằng ADC (Analog)",
         "exerciseCode": "Lab2-01a_Battery_I2C",
         "repositoryUrl": "https://github.com/PTITCube/Lab2-01a_Battery_I2C"
       },

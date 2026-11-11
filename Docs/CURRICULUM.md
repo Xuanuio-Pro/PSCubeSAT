@@ -45,13 +45,13 @@ Không nạp phần cứng trong lượt thay đổi cấu trúc giáo trình n�
 Nguồn: các repo trong https://github.com/PTITCube (Lab1, Lab3, Lab6 và các lab liên quan đã đổi cấu trúc).
 
 - **Lab 1** có thêm 4 bài GPIO: `Lab1-02_Control_Multiple_LEDs`, `Lab1-03_Button`, `Lab1-04_LED_Button`, `Lab1-05_7_Segment_LED`, kèm Video 1.3/Doc 1.3 (video để trống, tài liệu tóm lược từ README upstream). Các bài Serial/WiFi/Web Server dời thành `Lab1-06` đến `Lab1-10`; video/tài liệu WiFi cũ thành `video-1-4`/`document-1-4`.
-- **Lab 2** đổi `Lab2-01a_Battery_GPIO` thành `Lab2-01a_Battery_I2C` (IC MAX17048, sketch lấy từ upstream); thêm bài tổng quan `Lab2-01_Detect_Battery_Voltage`.
+- **Lab 2** đổi ID `Lab2-01a_Battery_GPIO` thành `Lab2-01a_Battery_I2C` theo tên repo. Nội dung vẫn là bản đo ADC đã kiểm chứng vì kit đo pin qua cầu chia áp (upstream đã chuyển sang MAX17048); thêm bài tổng quan `Lab2-01_Detect_Battery_Voltage`.
 - **Lab 3** nhận Scheduler và Watchdog từ Lab 6 (`Lab3-03_Multitasking_Scheduler`, `Lab3-04_Watchdog_And_Event`) cùng video/tài liệu RTOS và Watchdog (`video-3-3`, `video-3-4`, `document-3-2` đến `document-3-4`); thêm `Lab3-01_Save_To_MicroSD`.
 - **Lab 4** nhận `Lab4-06_Camera_Multiplexer` và `document-4-3` từ Lab 7; thêm `Lab4-01`, `02`, `03`, `04` (bài tổng quan dùng thư viện, 03 là GPS raw).
 - **Lab 5** thêm `Lab5-01_Send_Telemetry`, `Lab5-02_Receive_Command`.
 - **Lab 6** chỉ còn lắp ráp cơ khí (không có bài thực hành).
 - **Lab 7** còn `Lab7-01_Full_Satellite_Program`, `Lab7-02_RTOS_Satellite_System`.
 
-Ánh xạ ID cũ → mới: `fastapi-backend/alembic/versions/0013_curriculum_restructure.py`. Migration đổi khóa trong `lab_progress.lesson_progress` (chuyển sang đúng hàng lab khi bài đổi lab) và có downgrade; cờ/ngày hoàn thành mức lab không bị sửa. Bản nháp trình duyệt dưới khóa cũ vẫn đọc được qua `loadDraft` (`src/components/editor/project-files.js`), trừ `Lab2-01a` vì phần cứng đã đổi. Phiên bản khóa học đã xuất bản và lớp đang dùng không bị sửa; seed tạo phiên bản mới theo hash.
+Ánh xạ ID cũ → mới: `fastapi-backend/alembic/versions/0013_curriculum_restructure.py`. Migration đổi khóa trong `lab_progress.lesson_progress` (chuyển sang đúng hàng lab khi bài đổi lab) và có downgrade; cờ/ngày hoàn thành mức lab không bị sửa. Bản nháp trình duyệt dưới khóa cũ vẫn đọc được qua `loadDraft` (`src/components/editor/project-files.js`). Phiên bản khóa học đã xuất bản và lớp đang dùng không bị sửa; seed tạo phiên bản mới theo hash.
 
 Bài thực hành mới từ upstream không có log Serial bổ sung nên panel trực quan chỉ hiện dữ liệu sketch thực in; fixture `tests/fixtures/practice-serial.json` của các bài mới để trống dòng log.

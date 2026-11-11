@@ -72,7 +72,8 @@
 
 - Làm theo cấu trúc repo hiện tại của PTITCube. Lab 6 giữ lại chỉ với lắp ráp cơ khí vì không còn bài code nào trên GitHub; số Lab vẫn là 0–8.
 - Các repo "ví dụ cha" (Lab2-01, Lab3-01, Lab4-01 đến 04, Lab5-01/02) được thêm thành bài thực hành riêng, đứng đầu nhóm bài a/b tương ứng.
-- Đổi ID bài cũ sang ID mới bằng migration `0013_curriculum_restructure` (có downgrade). Tiến độ `Lab2-01a_Battery_GPIO` được ánh xạ sang `Lab2-01a_Battery_I2C` dù phần cứng đổi từ ADC sang MAX17048 (giả định: giữ nguyên vị trí học, không giữ nội dung); bản nháp trình duyệt của bài này không được chuyển.
+- Đổi ID bài cũ sang ID mới bằng migration `0013_curriculum_restructure` (có downgrade). Tiến độ và bản nháp của `Lab2-01a_Battery_GPIO` chuyển sang `Lab2-01a_Battery_I2C`; nội dung bài vẫn là đo ADC.
 - Compiler vẫn ghim PTITCube-Library `218d2b6` kèm overrides. Thư viện upstream đã tiến tới `41f19ba` (EPS dùng MAX17048). Các sketch upstream đã đổi nhiều và cần thư viện mới được giữ ở bản local đã kiểm chứng, ghi rõ trong `notes` của `catalog.json`. Nâng thư viện và rebase overrides là việc riêng, chưa làm.
 - Bài mới từ upstream không thêm log Serial; panel trực quan chỉ hiện dữ liệu sketch tự in.
 - Video bài mới của Lab 1 để trống (TODO GV); tài liệu Doc 1.3 tóm lược từ README upstream.
+- Cập nhật cùng ngày: nhóm xác nhận kit vẫn đo pin bằng ADC qua cầu chia áp. Giữ PTITCube-Library `218d2b6` (không nâng lên `41f19ba`/MAX17048); `Lab2-01a_Battery_I2C` dùng lại bản ADC đã kiểm chứng, chỉ đổi ID theo tên repo.

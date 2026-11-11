@@ -192,16 +192,17 @@
     {
       "id": "Lab2-01a_Battery_I2C",
       "file": "Lab2-01a_Battery_I2C.cpp",
-      "upstream_commit": "d547ed3aadfddf91112323b60337a830e5feacbe",
-      "upstream_url": "https://github.com/PTITCube/Lab2-01a_Battery_I2C/blob/d547ed3aadfddf91112323b60337a830e5feacbe/src/main.cpp",
+      "upstream_commit": "33da095f82a2a714c1f1d908be1d3d3b69dbeddc",
+      "upstream_url": "https://github.com/PTITCube/Lab2-01a_Battery_GPIO/blob/33da095f82a2a714c1f1d908be1d3d3b69dbeddc/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "MAX17048 fuel gauge over raw I2C (Wire.h), as in the current upstream sketch. Voltage and percent come from the IC, not from an ADC divider."
+        "ESP32 GPIO34; analogReadMilliVolts and 12-bit ADC. Measure resistor ratio/calibrate with a meter.",
+        "Upstream Lab2-01a_Battery_I2C now targets the MAX17048 fuel gauge; this ADC version is kept because the kit measures battery voltage through the ADC divider (confirmed 2026-11-11)."
       ],
-      "source_sha256": "d5c9e07f00edcda636101da12517dad49475701b2db0b6ab1784fa43f438cfbf",
+      "source_sha256": "c99d8da79c5246f56668084b3369645f7eb76423871724847201a2e7acd13c34",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "d5c9e07f00edcda636101da12517dad49475701b2db0b6ab1784fa43f438cfbf",
+        "source_sha256": "c99d8da79c5246f56668084b3369645f7eb76423871724847201a2e7acd13c34",
         "compiler_image": "sha256:46ef9794c208af300417cf7069b5ca2eb3c727108831c9815b7e7c29bba9d119",
         "result": "passed"
       }
