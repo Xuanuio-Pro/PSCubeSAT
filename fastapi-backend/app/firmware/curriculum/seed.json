@@ -1,7 +1,7 @@
 {
   "course_id": "cubesat",
   "course_title": "CubeSAT Learning Platform",
-  "source_hash": "b4f3d1edf4409c7a10c1b60bde41dfdd80766b95b7b19eab09dca185c843a44a",
+  "source_hash": "e002f1a53d5bd6b2af3756ef4e2177efaa700a014dd18a91a9af84bea91da546",
   "labs": [
     {
       "id": 0,
@@ -673,7 +673,7 @@
           "lab_id": 2,
           "type": "practice",
           "order_no": 4,
-          "title": "Đọc điện áp và phần trăm pin qua IC MAX17048 (I2C)",
+          "title": "Đọc điện áp pin bằng ADC (Analog)",
           "content": {
             "group": "Đo điện áp pin",
             "estimated_minutes": null,
@@ -2803,7 +2803,7 @@
           "id": "Lab2-01a_Battery_I2C",
           "type": "practice",
           "label": "Thực hành 01a",
-          "title": "Đọc điện áp và phần trăm pin qua IC MAX17048 (I2C)",
+          "title": "Đọc điện áp pin bằng ADC (Analog)",
           "exerciseCode": "Lab2-01a_Battery_I2C",
           "repositoryUrl": "https://github.com/PTITCube/Lab2-01a_Battery_I2C",
           "reading": ""

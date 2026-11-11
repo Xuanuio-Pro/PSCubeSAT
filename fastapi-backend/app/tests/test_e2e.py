@@ -8,12 +8,13 @@ Question content is synthetic (mechanics only, no subject-matter answers).
 
 import json
 import unittest
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import Integer, func, select
+from sqlalchemy import Integer, func, select, update
 
 from app.core.security import create_access_token, hash_password
-from app.models.learning import ProgressEvent
+from app.models.learning import LessonProgress, ProgressEvent
 from app.models.tables import LabProgress, User
 from app.tests import test_course_configuration as course
 from app.tests.test_quizzes import question
@@ -59,6 +60,9 @@ async def cross_role_flow(t, call, sessions, tokens):
         )
         if item["lesson_id"] == "document":
             item["params"] = {"markdown": "Định hướng học tập (dữ liệu kiểm thử)."}
+        # Every enabled lesson before the Lab Test must be completed in order; keep Lab 0 to document.
+        if item["lesson_id"] in ("overview", "components"):
+            item["enabled"] = False
     body = await apply(body)
 
     # Bank: import 20 drafts, approve each, publish exactly 20.
@@ -89,12 +93,17 @@ async def cross_role_flow(t, call, sessions, tokens):
     # Student: Lab 0 -> Lab Test -> Lab 1/2 unlocked.
     path = await ok(6, "GET", base + "/learning-path")
     t.assertEqual([path["labs"][i]["access"] for i in (1, 2)], ["locked", "locked"])
-    await ok(
-        6,
-        "POST",
-        base + "/lessons/document/events",
-        {"idempotency_key": str(uuid4()), "kind": "document_read"},
-    )
+    events = base + "/lessons/document/events"
+    await ok(6, "POST", events, {"idempotency_key": str(uuid4()), "kind": "opened"})
+    # Completion needs a 60-second minimum learning time; backdate the start instead of waiting.
+    async with sessions() as db:
+        await db.execute(
+            update(LessonProgress)
+            .where(LessonProgress.lesson_id == "document")
+            .values(started_at=datetime.now(timezone.utc) - timedelta(seconds=65))
+        )
+        await db.commit()
+    await ok(6, "POST", events, {"idempotency_key": str(uuid4()), "kind": "complete"})
     t.assertEqual((await ok(6, "GET", base + "/learning-path"))["labs"][1]["access"], "locked")
     attempt = await ok(6, "POST", base + "/labs/0/attempts", {"idempotency_key": str(uuid4())})
     t.assertEqual(len(attempt["items"]), 5)

@@ -39,7 +39,7 @@ class CurriculumPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(first, await seed_curriculum(db))
             await db.commit()
             self.assertEqual(
-                (await db.execute(select(func.count()).select_from(Lesson))).scalar_one(), 93
+                (await db.execute(select(func.count()).select_from(Lesson))).scalar_one(), 107
             )
         await self.cli("downgrade", "0009_quizzes")
         async with self.engine.connect() as db:
@@ -48,7 +48,7 @@ class CurriculumPostgresTests(unittest.IsolatedAsyncioTestCase):
                 "0009_quizzes",
             )
             self.assertEqual(
-                (await db.execute(text("SELECT count(*) FROM lessons"))).scalar_one(), 93
+                (await db.execute(text("SELECT count(*) FROM lessons"))).scalar_one(), 107
             )
         await self.cli("upgrade", "head")
         await self.assert_schema_matches()

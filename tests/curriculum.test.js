@@ -64,6 +64,7 @@ test('drafts saved under a renamed exercise id stay readable, and new keys win o
     store.set(sourceKey(3, 'Lab3-03_Multitasking_Scheduler'), 'new draft');
     assert.equal(loadDraft(sourceKey, 3, 'Lab3-03_Multitasking_Scheduler'), 'new draft');
     store.set(sourceKey(2, 'Lab2-01a_Battery_GPIO'), 'adc draft');
-    assert.equal(loadDraft(sourceKey, 2, 'Lab2-01a_Battery_I2C'), null);
+    assert.equal(loadDraft(sourceKey, 2, 'Lab2-01a_Battery_I2C'), 'adc draft');
+    assert.equal(loadDraft(sourceKey, 1, 'Lab1-02_Control_Multiple_LEDs'), null);
   } finally { delete globalThis.localStorage; }
 });

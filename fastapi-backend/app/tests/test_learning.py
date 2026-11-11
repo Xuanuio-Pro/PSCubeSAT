@@ -333,7 +333,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
             active = item["lesson_id"] == "document" or item["lesson_id"].startswith(
                 "summary-"
             )
-            item["enabled"] = active or item["lesson_id"] == "Lab2-01a_Battery_GPIO"
+            item["enabled"] = active or item["lesson_id"] == "Lab2-01a_Battery_I2C"
             item["required"] = active
             if item["lesson_id"] == "document":
                 item["params"] = {"markdown": "Hướng dẫn định hướng trong dữ liệu kiểm thử."}
@@ -382,7 +382,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
         lessons = (
             ["document"]
             if lab == 0
-            else ["Lab2-01a_Battery_GPIO", "summary-2"]
+            else ["Lab2-01a_Battery_I2C", "summary-2"]
             if lab == 2
             else [f"summary-{lab}"]
         )
