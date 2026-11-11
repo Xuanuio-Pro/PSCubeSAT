@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/lab-metadata';
-import { getLessonsForLab } from '../data/curriculum';
+import { useLmsResource } from '../components/classes/use-lms-resource';
 import DeviceManager from '../components/profile/DeviceManager';
 
 const ROLE_LABEL = { admin: 'Quản trị viên', user: 'Học viên' };
@@ -113,6 +113,7 @@ function LearningProgress({ user }) {
   const currentUser = user || authUser;
   const [progressByLab, setProgressByLab] = useState({});
   const [loading, setLoading] = useState(true);
+  const { data: catalog } = useLmsResource('/api/curriculum/legacy');
 
   useEffect(() => {
     request('/api/progress')
@@ -159,7 +160,7 @@ function LearningProgress({ user }) {
               if (done) {
                 percent = 100;
               } else if (!isLocked) {
-                const lessons = getLessonsForLab(lab.id);
+                const lessons = catalog?.find((item) => item.id === lab.id)?.lessons ?? [];
                 let completedLessonsCount = 0;
                 if (lab.id === 0) {
                   if (p?.video_watched || p?.lessons?.['overview']?.completed) completedLessonsCount++;
