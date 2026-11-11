@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/3053a45cc28a1d7d4028cb90301076ad4ea5145d/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/2b5efa9f62a9aeb51cf8e47a2e76e6f059c92c77/src/main.cpp
 /**
  * VÍ DỤ TỔNG HỢP: HỆ THỐNG GIAO TIẾP VỆ TINH FULL DUPLEX (COMMAND & TELEMETRY)
  * 

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import client_ip
 from app.db import get_db
 from app.models.tables import AccountStatus, User, UserRole
 from app.schemas.auth import AuthTokenResponse, LoginRequest, RegisterRequest
@@ -34,9 +35,9 @@ async def admin_signup(req: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-async def admin_login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def admin_login(req: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     try:
-        return await AuthService(db).login_user(req, require_role=UserRole.admin)
+        return await AuthService(db).login_user(req, client_ip(request.scope), require_role=UserRole.admin)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
 

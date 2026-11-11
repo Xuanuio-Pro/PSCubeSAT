@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library/blob/fec7725019e27d304fbd9745914f9eedd3c04015/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library/blob/ee5daf0e718f55cfc625e74388849270986191dc/src/main.cpp
 /**
  * VÍ DỤ: VỆ TINH GỬI DỮ LIỆU (TELEMETRY) QUA LORA
  * 

@@ -52,17 +52,17 @@ class CurriculumTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_source_is_authenticated_ino_download_and_not_arbitrary_file_read(self):
         response = await self.client.get(
-            "/api/curriculum/exercises/Lab6-02_Watchdog_And_Event/source"
+            "/api/curriculum/exercises/Lab3-04_Watchdog_And_Event/source"
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("attachment;", response.headers["content-disposition"])
-        self.assertIn("Lab6-02_Watchdog_And_Event.ino", response.headers["content-disposition"])
+        self.assertIn("Lab3-04_Watchdog_And_Event.ino", response.headers["content-disposition"])
         self.assertIn("scheduler.enableWatchdog(10)", response.text)
         self.assertIn("std::sqrt(ax * ax + ay * ay + az * az)", response.text)
         metadata = next(
             item
             for item in curriculum.catalog()["exercises"]
-            if item["id"] == "Lab6-02_Watchdog_And_Event"
+            if item["id"] == "Lab3-04_Watchdog_And_Event"
         )
         self.assertEqual(sha256(response.content).hexdigest(), metadata["source_sha256"])
         for exercise_id in ["missing", "catalog.json", "..%2F..%2F.env"]:

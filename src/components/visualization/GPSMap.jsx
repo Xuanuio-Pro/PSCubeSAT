@@ -10,6 +10,10 @@ const cubesatIcon = L.divIcon({
   iconSize: [30, 30],
 });
 
+// Map stays visible without a fix; centred on PTIT Hà Đông until the first valid position.
+/** @type {import('leaflet').LatLngTuple} */
+const DEFAULT_CENTER = [20.9806, 105.7873];
+
 function MapUpdater({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -22,6 +26,7 @@ function MapUpdater({ center }) {
 export default function GPSMap({ height = 350 }) {
   const { latest, history, status, generation } = useTelemetry();
   const validGPS = sample => sample?.gpsLat != null && sample?.gpsLon != null;
+  const lastKnown = history.findLast(validGPS);
   const position = validGPS(latest) ? /** @type {import('leaflet').LatLngTuple} */ ([latest.gpsLat, latest.gpsLon]) : null;
   const trail = history.filter(validGPS).map(sample => /** @type {import('leaflet').LatLngTuple} */ ([sample.gpsLat, sample.gpsLon]));
   const display = (value, decimals) => value == null ? '—' : value.toFixed(decimals);
@@ -36,20 +41,22 @@ export default function GPSMap({ height = 350 }) {
           <span>Alt: {display(latest?.gpsAlt, 1)}m</span>
         </div>
       </div>
+      {!position && <div className="telemetry-empty">{lastKnown ? 'Mất fix — bản đồ giữ vị trí hợp lệ gần nhất' : 'Chờ fix GPS — đem mạch ra ngoài trời'}</div>}
       <div style={{ height }}>
-        {position ? <MapContainer
+        <MapContainer
           key={generation}
-          center={position}
+          center={position ?? (lastKnown ? /** @type {import('leaflet').LatLngTuple} */ ([lastKnown.gpsLat, lastKnown.gpsLon]) : DEFAULT_CENTER)}
           zoom={16}
           style={{ height: '100%', width: '100%', borderRadius: '0 0 12px 12px' }}
           zoomControl={true}
-          attributionControl={false}
+          attributionControl={true}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="© OpenStreetMap"
           />
-          <MapUpdater center={position} />
-          <Marker position={position} icon={cubesatIcon}>
+          {position && <MapUpdater center={position} />}
+          {position && <Marker position={position} icon={cubesatIcon}>
             <Popup>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
                 <b>🛰️ PTIT CubeSat</b><br />
@@ -58,14 +65,14 @@ export default function GPSMap({ height = 350 }) {
                 Alt: {display(latest?.gpsAlt, 1)}m
               </div>
             </Popup>
-          </Marker>
+          </Marker>}
           {trail.length > 1 && (
             <Polyline
               positions={trail}
               pathOptions={{ color: '#388bfd', weight: 2, opacity: 0.7 }}
             />
           )}
-        </MapContainer> : <div className="telemetry-empty">Chờ tọa độ từ nguồn đã chọn</div>}
+        </MapContainer>
       </div>
     </div>
   );

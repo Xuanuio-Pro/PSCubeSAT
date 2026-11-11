@@ -1,5 +1,5 @@
 import Editor from '@monaco-editor/react';
-import { DEFAULT_ARDUINO_CODE } from './blockly-project.js';
+import { DEFAULT_ARDUINO_CODE } from './project-files.js';
 
 export default function MonacoEditor({ code, onChange, readOnly = false, height = '400px' }) {
   return (

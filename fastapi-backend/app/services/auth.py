@@ -11,6 +11,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from app.core.lms_errors import LMSError
+from app.core.logging import mask_email
+from app.core.rate_limit import FixedWindowLimiter
 from app.core.redis import get_redis
 from app.core.security import (
     create_access_token,
@@ -91,6 +94,15 @@ async def get_required_user(
 # ── AuthService ─────────────────────────────────────────────────────────────────
 
 
+# Brute-force guard: failures per (email, IP) lock that pair briefly; failures per email from
+# all addresses lock it longer, so a distributed guess is slowed without one IP locking a victim.
+LOGIN_FAILURES = FixedWindowLimiter()
+PAIR_FAILURES, PAIR_WINDOW_S = 5, 15 * 60
+EMAIL_FAILURES, EMAIL_WINDOW_S = 30, 60 * 60
+# Verified for unknown emails too, so response time does not reveal which emails exist.
+_DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
+
+
 class AuthService:
     """Service xử lý toàn bộ nghiệp vụ xác thực (đăng ký, đăng nhập, đăng xuất, lấy thông tin)."""
 
@@ -104,7 +116,7 @@ class AuthService:
 
         if await self.user_repo.check_email_exists(email_clean):
             logger.warning(
-                f"[AuthService] ❌ Attempt to register with existing email: {email_clean}"
+                f"[AuthService] ❌ Attempt to register with existing email: {mask_email(email_clean)}"
             )
             raise ValueError("Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.")
 
@@ -130,7 +142,7 @@ class AuthService:
         await self.db_session.refresh(created_user)
 
         logger.success(
-            f"[AuthService] ✅ New user registered: {created_user.email} (ID: {created_user.id})"
+            f"[AuthService] ✅ New user registered: {mask_email(created_user.email)} (ID: {created_user.id})"
         )
 
         token = create_access_token(
@@ -210,15 +222,35 @@ class AuthService:
             ),
         )
 
-    async def login_user(self, request: LoginRequest, *, require_role: UserRole | None = None) -> AuthTokenResponse:
+    async def login_user(
+        self, request: LoginRequest, client_ip: str, *, require_role: UserRole | None = None
+    ) -> AuthTokenResponse:
         """Xác thực email + password, trả về JWT token nếu hợp lệ."""
         email_clean = request.email.strip().lower()
+        pair_key, email_key = f"pair:{email_clean}:{client_ip}", f"email:{email_clean}"
+        retry_after = LOGIN_FAILURES.blocked(pair_key, PAIR_FAILURES) or LOGIN_FAILURES.blocked(
+            email_key, EMAIL_FAILURES
+        )
+        if retry_after:
+            raise LMSError(
+                429,
+                "LOGIN_LOCKED",
+                f"Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau {int(retry_after + 0.999)} giây.",
+                {"retry_after": int(retry_after + 0.999)},
+            )
 
         user = await self.user_repo.get_by_email(email_clean)
-        if not user or not await run_in_threadpool(
-            verify_password, request.password, user.password_hash
-        ):
+        valid = await run_in_threadpool(
+            verify_password, request.password, user.password_hash if user else _DUMMY_HASH
+        )
+        if not user or not valid:
+            LOGIN_FAILURES.hit(pair_key, PAIR_FAILURES, PAIR_WINDOW_S)
+            if LOGIN_FAILURES.hit(email_key, EMAIL_FAILURES, EMAIL_WINDOW_S):
+                logger.bind(action="login_email_locked", email=mask_email(email_clean)).warning(
+                    "Login failures from many addresses locked an account email"
+                )
             raise ValueError("Email hoặc mật khẩu không chính xác.")
+        LOGIN_FAILURES.reset(pair_key)
 
         if user.status != AccountStatus.active:
             raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.")
@@ -229,7 +261,7 @@ class AuthService:
         if require_role is None and user.role == UserRole.admin:
             raise ValueError("Tài khoản quản trị chỉ được đăng nhập từ trang quản trị.")
 
-        logger.info(f"[AuthService] 🔑 User logged in: {user.email} ({user.role.value})")
+        logger.info(f"[AuthService] 🔑 User logged in: {mask_email(user.email)} ({user.role.value})")
 
         token = create_access_token(
             {

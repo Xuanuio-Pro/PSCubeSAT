@@ -1,3 +1,5 @@
+// Reviewed classroom source for the ESP32 OBC hardware profile.
+// Upstream: https://github.com/PTITCube/Lab3-04_Watchdog_And_Event/blob/5a83d93f3540680cd7f6dae35f6b2690a51a215b/src/main.cpp
 // Reviewed ESP32 OBC example. Upstream: PTITCube/Lab6-02_Watchdog_And_Event
 #include <Arduino.h>
 #include <PTITCube.h>

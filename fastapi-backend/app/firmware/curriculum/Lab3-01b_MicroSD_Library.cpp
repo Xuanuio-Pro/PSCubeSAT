@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/8145856370115be49a0fdeeac732744a0ccd31fe/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/cc979ecd49ca47fc95def8411ebaffd65d132f83/src/main.cpp
 /**
  * VÍ DỤ: LƯU TRỮ LOG VÀO THẺ NHỚ
  * 
@@ -27,7 +27,7 @@ void setup() {
 void loop() {
     static int counter = 0;
     
-    String data = "Log entry #" + String(counter) + " - Uptime: " + String(millis()) + "ms";
+    String data = "Hello world #" + String(counter) + " - Uptime: " + String(millis()) + "ms";
     Serial.println(data);
     
     const String line = data + "\n";

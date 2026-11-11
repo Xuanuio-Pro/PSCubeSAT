@@ -10,22 +10,27 @@ import SerialMonitor from '../serial/SerialMonitor';
 const DashboardBuilder = lazy(() => import('../dashboard/DashboardBuilder'));
 const PANELS = {
   voltage: lazy(() => import('./VoltageChart')), environment: lazy(() => import('./EnvironmentPanel')),
-  attitude: lazy(() => import('./AttitudeViewer3D')), rawImu: lazy(() => import('./RawIMUPanel')),
+  attitude: lazy(() => import('./AttitudeViewer3D')),
   gps: lazy(() => import('./GPSMap')), camera: lazy(() => import('./CameraViewer')),
-  telemetry: lazy(() => import('../groundstation/TelemetryPanel')),
   network: lazy(() => import('./NetworkPanel')), storage: lazy(() => import('./StoragePanel')),
-  led: lazy(() => import('./LEDPanel')),
+  radio: lazy(() => import('./RadioPanel')), anomaly: lazy(() => import('./AnomalyPanel')),
   lab1Connection: lazy(() => import('./Lab1ConnectionNotice')),
 };
+// Compact panels sit side by side when an exercise shows two or more of them.
+const GRID = ['attitude', 'gps', 'camera', 'voltage', 'radio', 'commands'];
+// Evidence groups that already have a dedicated panel are not repeated in "Kết quả thực hành".
+const DEDICATED = { radio: 'radio', anomaly: 'alert' };
 
 export default function PracticeVisualization() {
   const { exerciseId } = useTelemetry();
   const profile = practiceProfile(exerciseId);
   const plan = visualizationPlan(profile);
-  const gridPanels = profile.lab === 4 ? ['attitude', 'gps', 'camera'] : profile.lab === 5 ? ['telemetry', 'commands'] : profile.lab === 7 ? ['attitude', 'gps', 'voltage'] : [];
+  const grid = plan.panels.filter(name => GRID.includes(name));
+  const gridPanels = grid.length > 1 ? grid : [];
   const render = name => {
+    if (name === 'lab1Connection') { const Panel = PANELS[name]; return <Panel key={name} />; }
+    if (name === 'system') return <SystemCheck key={name} rows={plan.systemRows} />;
     const Panel = PANELS[name];
-    if (name === 'lab1Connection') return <Panel key={name} />;
     return <section key={name} className="practice-panel" aria-label={PANEL_LABELS[name]}>
       {name === 'commands' ? <CommandPanel commands={profile.commands} labId={profile.lab} exerciseId={exerciseId} /> : <Panel {...(['attitude', 'gps'].includes(name) ? { height: 320 } : {})} />}
     </section>;
@@ -35,11 +40,9 @@ export default function PracticeVisualization() {
     <Suspense fallback={<p className="telemetry-empty">Đang tải bảng trực quan…</p>}>
       {profile.lab === 8 ? <DashboardBuilder /> : <>
         {gridPanels.length > 0 && <div className="lab-visual-grid">{gridPanels.map(render)}</div>}
-        {plan.panels.filter(name => !gridPanels.includes(name) && Object.hasOwn(PANELS, name)).map(render)}
+        {plan.panels.filter(name => !gridPanels.includes(name)).map(render)}
       </>}
     </Suspense>
-    {(plan.panels.includes('system') || profile.lab === 7) && <SystemCheck />}
-    {plan.panels.includes('commands') && !gridPanels.includes('commands') && <CommandPanel commands={profile.commands} labId={profile.lab} exerciseId={exerciseId} />}
-    {profile.lab !== 1 && <PracticeActivity />}
+    {profile.lab !== 1 && <PracticeActivity exclude={plan.panels.map(name => DEDICATED[name]).filter(Boolean)} />}
   </div>;
 }

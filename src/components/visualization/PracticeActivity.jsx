@@ -8,14 +8,15 @@ const PHASES = { start: 'Bắt đầu', done: 'Hoàn tất', sample: 'Nhận d�
 const time = at => new Date(at).toLocaleTimeString();
 const TaskTimeline = lazy(() => import('./TaskTimeline'));
 
-export default function PracticeActivity() {
+/** @param {{ exclude?: string[] }} props Evidence groups already shown by a dedicated panel. */
+export default function PracticeActivity({ exclude = [] }) {
   const { exerciseId, activity, now, mode, link } = useTelemetry();
   const profile = practiceProfile(exerciseId);
   const tasks = ['Sensor', 'Network'];
   const events = activity.events.filter(event => event.group === 'task');
   const recent = activity.lastLineAt !== null && now - activity.lastLineAt <= 5000;
   const live = mode === 'serial' && link === 'connected' && recent;
-  const evidence = Object.entries(activity.subsystems).filter(([group, event]) => ['alert', 'power', 'radio', 'mux'].includes(group) || event.phase === 'error');
+  const evidence = Object.entries(activity.subsystems).filter(([group, event]) => !exclude.includes(group) && (['alert', 'power', 'radio', 'mux'].includes(group) || event.phase === 'error'));
   if (!profile.scheduler && evidence.length === 0) return null;
   return <section className="card practice-activity" aria-label="Kết quả thực hành">
     <div className="card-header"><h3>{profile.scheduler ? 'Tác vụ chạy đồng thời' : 'Kết quả thực hành'}</h3><span className={`practice-stream ${live ? 'is-live' : ''}`}>{mode !== 'serial' ? 'Nguồn dữ liệu khác USB' : live ? 'Đang nhận Serial' : link !== 'connected' ? 'Serial đã ngắt' : 'Chờ log Serial'}</span></div>

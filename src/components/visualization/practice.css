@@ -29,3 +29,17 @@
 .lab1-connection-notice { margin: 0; padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface-subtle); color: var(--text-heading); line-height: 1.6; overflow-wrap: anywhere; }
 .lab1-connection-notice a { color: var(--text-link); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .lab1-connection-notice.is-error { border-color: var(--status-danger-border); background: var(--status-danger-bg); color: var(--status-danger-text); }
+.radio-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; margin-bottom: 12px; }
+.radio-log { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; font-size: 12px; }
+.radio-log li { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-subtle); min-width: 0; }
+.radio-log time { white-space: nowrap; color: var(--text-muted); }
+.radio-log code { overflow-wrap: anywhere; min-width: 0; }
+.radio-kind { flex-shrink: 0; min-width: 34px; text-align: center; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; border: 1px solid var(--status-neutral-border); background: var(--status-neutral-bg); color: var(--status-neutral-text); }
+.radio-kind.is-tx { border-color: var(--status-info-border); background: var(--status-info-bg); color: var(--status-info-text); }
+.radio-kind.is-rx { border-color: var(--status-success-border); background: var(--status-success-bg); color: var(--status-success-text); }
+.radio-kind.is-error { border-color: var(--status-danger-border); background: var(--status-danger-bg); color: var(--status-danger-text); }
+.anomaly-status { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); }
+.anomaly-status strong { font-size: 15px; }
+.anomaly-status p { margin: 2px 0 0; font: 12px/1.5 var(--font-mono); color: var(--text-muted); overflow-wrap: anywhere; }
+.anomaly-status.is-error { border-color: var(--status-danger-border); background: var(--status-danger-bg); color: var(--status-danger-text); }
+.anomaly-status.is-ok { border-color: var(--status-success-border); background: var(--status-success-bg); color: var(--status-success-text); }

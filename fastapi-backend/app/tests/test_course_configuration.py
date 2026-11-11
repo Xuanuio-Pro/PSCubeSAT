@@ -125,7 +125,7 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.status_code, 200, result.text)
         return result.json()
 
-    async def test_seed_idempotent_exact_ids_and_26_practices(self):
+    async def test_seed_idempotent_exact_ids_and_34_practices(self):
         async with self.sessions() as db:
             second = await seed_curriculum(db)
             await db.commit()
@@ -134,13 +134,13 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
                 (await db.execute(select(func.count()).select_from(CourseVersion))).scalar_one(), 1
             )
             lessons = list((await db.execute(select(Lesson))).scalars())
-            self.assertEqual(len(lessons), 93)
+            self.assertEqual(len(lessons), 107)
             original = {item["id"] for lab in read_seed()["legacy"] for item in lab["lessons"]}
             self.assertEqual(
                 {item.id for item in lessons}, original | {f"labtest-{i}" for i in range(9)}
             )
             self.assertEqual(
-                len([item for item in lessons if item.type == "practice" and item.lab_id >= 2]), 26
+                len([item for item in lessons if item.type == "practice" and item.lab_id >= 2]), 34
             )
             self.assertEqual(
                 next(item for item in lessons if item.id == "summary-2").type, "document"
@@ -172,7 +172,7 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         before = (await self.call(4, "GET", f"/api/classes/{self.class_a}/curriculum")).json()
         body = settings_payload(await self.draft())
         for item in body["lessons"]:
-            if item["lesson_id"] in ("document-2-1", "Lab2-01a_Battery_GPIO"):
+            if item["lesson_id"] in ("document-2-1", "Lab2-01a_Battery_I2C"):
                 item.update(enabled=False, required=False)
         saved = await self.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)
@@ -189,8 +189,8 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         after = (await self.call(4, "GET", f"/api/classes/{self.class_a}/curriculum")).json()
         ids = {item["id"] for lab in after["labs"] for item in lab["lessons"]}
         self.assertNotIn("document-2-1", ids)
-        self.assertNotIn("Lab2-01a_Battery_GPIO", ids)
-        source = f"/api/curriculum/exercises/Lab2-01a_Battery_GPIO/source?class_id={self.class_a}"
+        self.assertNotIn("Lab2-01a_Battery_I2C", ids)
+        source = f"/api/curriculum/exercises/Lab2-01a_Battery_I2C/source?class_id={self.class_a}"
         self.assertEqual((await self.call(4, "GET", source)).status_code, 403)
         self.assertNotIn("labtest-2", ids)
         self.assertNotIn(0, {lab["id"] for lab in after["labs"]})
@@ -202,13 +202,13 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ids, {"components"})
         for path in [
             "/api/curriculum/legacy",
-            "/api/curriculum/exercises/Lab2-01a_Battery_GPIO/source",
+            "/api/curriculum/exercises/Lab2-01a_Battery_I2C/source",
             "/api/labs/1/template",
         ]:
             # Pilot student: legacy path cannot bypass class locks. Non-pilot user keeps it.
             self.assertEqual((await self.call(4, "GET", path)).status_code, 403, path)
             self.assertEqual((await self.call(3, "GET", path)).status_code, 200, path)
-        source = f"/api/curriculum/exercises/Lab2-01a_Battery_GPIO/source?class_id={self.class_a}"
+        source = f"/api/curriculum/exercises/Lab2-01a_Battery_I2C/source?class_id={self.class_a}"
         self.assertEqual((await self.call(4, "GET", source)).status_code, 403)
         self.assertEqual((await self.call(3, "GET", source)).status_code, 403)
         await self.call(2, "DELETE", f"/api/classes/{self.class_a}/members", {"user_id": 4})
@@ -266,7 +266,7 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         ):
             payload = {"code": "void loop() {}", "lab_id": 2}
             self.assertEqual((await self.call(4, "POST", "/api/compile", payload)).status_code, 403)
-            payload.update(class_id=self.class_a, lesson_id="Lab2-01a_Battery_GPIO")
+            payload.update(class_id=self.class_a, lesson_id="Lab2-01a_Battery_I2C")
             result = await self.call(4, "POST", "/api/compile", payload)
             self.assertEqual(result.status_code, 403, result.text)
             progress.assert_not_called()

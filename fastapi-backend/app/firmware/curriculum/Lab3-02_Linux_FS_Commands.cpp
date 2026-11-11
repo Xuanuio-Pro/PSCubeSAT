@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab3-02_Linux_FS_Commands/blob/18283df4f3b0cabda8ae99f3086621a477fa1fb0/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab3-02_Linux_FS_Commands/blob/77ec8cc0fcaa10f5353780785696217d916fac24/src/main.cpp
 /**
  * VÍ DỤ 2: QUẢN LÝ THẺ NHỚ BẰNG LỆNH KIỂU LINUX
  * 

@@ -1,3 +1,5 @@
+// Reviewed classroom source for the ESP32 OBC hardware profile.
+// Upstream: https://github.com/PTITCube/Lab7-01_Full_Satellite_Program/blob/2e2117a2521fcd5b0b81caa1eb1a6d35eb3e043c/src/main.cpp
 // Local API-compatible version; upstream https://github.com/PTITCube/Lab7-02_Full_Satellite_Program
 /**
  * @file 1_Full_System_Telemetry.cpp

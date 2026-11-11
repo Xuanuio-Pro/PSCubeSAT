@@ -5,7 +5,7 @@ import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
 import { authorizedFetch, useAuth } from '../../contexts/auth-api';
 import { getAuthToken } from '../../contexts/auth-storage';
-import { downloadFile } from '../editor/blockly-project';
+import { downloadFile } from '../editor/project-files';
 import TelemetryControls from '../groundstation/TelemetryControls';
 import PracticeVisualization from '../visualization/PracticeVisualization';
 import { useLmsResource } from '../classes/use-lms-resource';

@@ -10,12 +10,13 @@ const SUBSYSTEMS = [
 ];
 
 // Passive evidence only: a sketch is not assumed to implement generic diagnostic commands.
-export default function SystemCheck() {
+/** @param {{ rows?: string[] }} props Subsystem ids the current sketch exercises. */
+export default function SystemCheck({ rows = SUBSYSTEMS.map(sys => sys.id) }) {
   const { latest, activity, now, mode, link } = useTelemetry();
   return <section className="card">
     <div className="card-header"><h3>System Check · Phản hồi các phân hệ</h3></div>
     <div className="card-body">
-      <div className="system-check-grid">{SUBSYSTEMS.map(sys => {
+      <div className="system-check-grid">{SUBSYSTEMS.filter(sys => rows.includes(sys.id)).map(sys => {
         const count = sys.keys.filter(key => latest?.[key] != null).length;
         const evidence = activity.subsystems[sys.id];
         const fresh = mode === 'serial' && link === 'connected' && evidence && now - evidence.at <= 5000;

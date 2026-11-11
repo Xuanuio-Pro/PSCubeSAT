@@ -7,6 +7,8 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PSCUBESAT_PLAYWRIGHT || 'playwright');
 const fixtures = JSON.parse(await readFile(new URL('../tests/fixtures/practice-serial.json', import.meta.url), 'utf8'));
+// The legacy (non-class) curriculum the backend serves from the same seed snapshot.
+const legacyCurriculum = JSON.parse(await readFile(new URL('../fastapi-backend/app/firmware/curriculum/seed.json', import.meta.url), 'utf8')).legacy;
 const base = process.env.PSCUBESAT_WEB_URL || 'http://localhost:5175';
 const output = path.resolve('build_cache/practice-browser');
 await mkdir(output, { recursive: true });
@@ -32,10 +34,12 @@ await page.route('**/api/**', async intercepted => {
   if (pathname === '/api/auth/me') return reply(mockUser);
   if (pathname === '/api/auth/logout') { revoke = true; return reply({ message: 'Logged out' }); }
   if (pathname === '/api/devices') return reply([]);
+  if (pathname === '/api/lms/config') return reply({ class_mode: false, legacy_allowed: true });
+  if (pathname === '/api/curriculum/legacy') return reply(legacyCurriculum);
   if (pathname.startsWith('/api/progress')) return reply({});
   if (pathname.endsWith('/source')) {
     sourceAuthorized = true;
-    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab6-02_Watchdog_And_Event.cpp', import.meta.url), 'utf8');
+    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab3-04_Watchdog_And_Event.cpp', import.meta.url), 'utf8');
     return intercepted.fulfill({ status: 200, contentType: 'text/plain', body: source });
   }
   return reply({});
@@ -69,11 +73,11 @@ const login = async () => {
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
 };
 try {
-  await page.goto(route('Lab6-01_Multitasking_Scheduler'));
+  await page.goto(route('Lab3-03_Multitasking_Scheduler'));
   await page.waitForURL('**/login');
   assert.equal(await page.getByRole('button', { name: 'Kết nối USB', exact: true }).count(), 0);
   await login();
-  await page.waitForURL('**/lab6?lesson=Lab6-01_Multitasking_Scheduler');
+  await page.waitForURL('**/lab3?lesson=Lab3-03_Multitasking_Scheduler');
   await page.reload(); // A stored token must be verified by /me before mounting services.
   await page.getByRole('heading', { name: 'Tác vụ chạy đồng thời', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Kết nối USB', exact: true }).click();
@@ -89,9 +93,9 @@ try {
   assert.match(await page.locator('.practice-task-grid').innerText(), /Thời gian quan sát: \d+ ms/);
   await emit('LED ON');
   await page.getByText(/Lệnh cuối: Bật/).waitFor();
-  assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 1);
-  await page.locator('.practice-activity').screenshot({ path: path.join(output, 'lab6-scheduler.png') });
-  console.log('PASS Lab6: observed task counters, duration, timeline and illustrative provenance');
+  assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 0);
+  await page.locator('.practice-activity').screenshot({ path: path.join(output, 'lab3-scheduler.png') });
+  console.log('PASS Lab3-03: observed task counters, duration, timeline and illustrative provenance');
 
   // Navigate through the SPA, keeping the same fake USB session and provider.
   async function select(id) {
@@ -103,23 +107,23 @@ try {
   for (const line of fixtures.find(item => item.id === 'Lab4-01b_Environment_Library').lines) await emit(line);
   await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).waitFor();
   await page.locator('.environment-reading-value').filter({ hasText: '1012.3' }).waitFor();
-  assert.match(await page.locator('.environment-readings').innerText(), /—/);
+  assert.doesNotMatch(await page.locator('.environment-readings').innerText(), /Độ ẩm/);
   await page.locator('.environment-panel').screenshot({ path: path.join(output, 'lab4-environment.png') });
   await page.waitForTimeout(6100);
   assert.equal(await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).count(), 0);
-  console.log('PASS Lab4: multiline readings, correct hPa, absent humidity, independent expiry');
+  console.log('PASS Lab4: multiline readings, correct hPa, no humidity tile for BMP280, independent expiry');
 
-  await select('Lab7-03_RTOS_Satellite_System');
-  for (const line of fixtures.find(item => item.id === 'Lab7-03_RTOS_Satellite_System').lines) await emit(line);
+  await select('Lab7-02_RTOS_Satellite_System');
+  for (const line of fixtures.find(item => item.id === 'Lab7-02_RTOS_Satellite_System').lines) await emit(line);
   await page.getByText('3.72 V', { exact: true }).waitFor();
   await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).waitFor();
-  const cells = await page.locator('.telemetry-grid').innerText();
-  assert.match(cells, /57\.296/); assert.match(cells, /20\.000/);
+  await page.locator('.vector-legend').filter({ hasText: 'µT' }).waitFor();
+  assert.equal(await page.locator('.telemetry-grid').count(), 0);
   await page.getByRole('button', { name: '🏓 Ping', exact: true }).click();
   await page.getByText('Đã gửi USB · chờ phản hồi Serial', { exact: false }).waitFor();
   assert.ok((await page.evaluate(() => window.__practiceTest.writes)).includes('ping\n'));
   await emit('[TELEMETRY] GPS: {"valid":false,"lat":0,"lng":0}');
-  await page.getByText('Chờ tọa độ từ nguồn đã chọn', { exact: true }).waitFor();
+  await page.getByText(/Mất fix|Chờ fix GPS/).waitFor();
   console.log('PASS Lab7: six sparse packets, SI conversion, USB write status and invalid fix removal');
 
   await select('Lab4-04b_Camera_Library');
@@ -140,39 +144,40 @@ try {
   await page.getByRole('button', { name: 'Ngắt USB', exact: true }).waitFor();
   await select('Lab4-02a_IMU_I2C');
   await emit('[RAW] RAW_ACCEL: X = 120 | Y = -220 | Z = 16384');
-  await page.getByRole('heading', { name: 'Gia tốc thô · số đếm thanh ghi' }).waitFor();
-  await page.getByText('Mẫu mới', { exact: true }).waitFor();
-  assert.equal(await page.getByRole('heading', { name: /3D Attitude Viewer.*chờ IMU/ }).count(), 1);
-  for (const panel of ['Tư thế 3D', 'Định vị GPS', 'Camera', 'Môi trường']) assert.equal(await page.getByRole('region', { name: panel, exact: true }).count(), 1);
-  console.log('PASS Raw IMU: register counts are visualized without inventing scale or fused attitude');
-  await select('Lab6-02_Watchdog_And_Event');
+  await page.locator('.vector-legend').filter({ hasText: '120, -220, 16384' }).waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Gia tốc thô · số đếm thanh ghi' }).count(), 0);
+  for (const [panel, count] of [['Tư thế 3D', 1], ['Định vị GPS', 0], ['Camera', 0], ['Môi trường', 0]]) assert.equal(await page.getByRole('region', { name: panel, exact: true }).count(), count);
+  console.log('PASS Raw IMU: register counts drive tilt in the 3D viewer without inventing a g scale');
+  await select('Lab3-04_Watchdog_And_Event');
   await emit('{"type":"telemetry","temp":28.5,"pressure":1013,"acc_x":0,"acc_y":0,"acc_z":1,"uptime_ms":10000}');
-  await page.locator('.environment-reading-value').filter({ hasText: '28.5' }).waitFor();
+  await page.getByText('🌡️ 28.5 °C', { exact: true }).waitFor();
   await emit('[SỰ CỐ] EMERGENCY: FREEFALL DETECTED!');
-  await page.locator('.practice-evidence--error').filter({ hasText: 'FREEFALL DETECTED!' }).waitFor();
+  await page.locator('.anomaly-status.is-error').filter({ hasText: 'FREEFALL DETECTED!' }).waitFor();
+  assert.equal(await page.locator('.practice-evidence--error').count(), 0);
   await emit('[EVENT] No current anomaly in valid measurements.');
-  await page.getByText(/Firmware báo hết điều kiện cảnh báo/).waitFor();
+  await page.locator('.anomaly-status.is-ok').waitFor();
+  assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 0);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Tải mã mẫu ESP32 (.ino)', exact: true }).click();
-  assert.equal((await download).suggestedFilename(), 'Lab6-02_Watchdog_And_Event.ino');
+  assert.equal((await download).suggestedFilename(), 'Lab3-04_Watchdog_And_Event.ino');
   assert.ok(sourceAuthorized);
-  console.log('PASS reviewed Lab6: actual sensor visualization, explicit event/recovery and correct source download');
-  for (const id of ['Lab1-01_Blink_LED', 'Lab1-02_Serial_Communication', 'Lab1-03_Serial_Control_LED']) {
+  console.log('PASS reviewed Lab3-04: actual sensor visualization, explicit event/recovery and correct source download');
+  for (const id of ['Lab1-01_Blink_LED', 'Lab1-06_Serial_Communication', 'Lab1-07_Serial_Control_LED']) {
     await select(id);
     assert.equal(await page.locator('.lab-visual-stack .card').count(), 1);
     assert.equal(await page.getByRole('heading', { name: /LED \/ Serial|Phản hồi Serial \/ Echo|Command Uplink/ }).count(), 0);
   }
-  await select('Lab1-04_WiFi_Connection');
+  await select('Lab1-08_WiFi_Connection');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('192.168.1.22');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'IP address: 192.168.1.22' }).waitFor();
   assert.equal(await page.locator('.lab1-connection-notice a').count(), 0);
-  await select('Lab1-05_WiFi_AP_Mode');
+  await select('Lab1-09_WiFi_AP_Mode');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('AP IP address:'); await emit('192.168.4.1'); await emit('Số lượng thiết bị đang kết nối: 2');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'Thiết bị đang kết nối: 2' }).waitFor();
   assert.match(await page.locator('.lab1-connection-notice').innerText(), /IP address: 192\.168\.4\.1/);
-  await select('Lab1-06_Web_Server_LED');
+  await select('Lab1-10_Web_Server_LED');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('IP address: 192.168.1.23');
   await page.locator('.lab1-connection-notice').waitFor();
@@ -190,18 +195,19 @@ try {
   await page.locator('.lab-practice-visualization').screenshot({ path: path.join(output, 'lab1-wifi-notice.png') });
   console.log('PASS Lab1: Serial-only 1–3, WiFi 4, AP/client count 5, one web address notice 6; disconnect removes link');
   await select('Lab3-02_Linux_FS_Commands');
-  await emit('[Storage] Nội dung thư mục: /logs'); await emit('📄 telemetry.csv (120 bytes)');
-  await page.getByRole('heading', { name: 'Thẻ SD / Hệ thống tệp', exact: true }).waitFor();
-  await page.locator('.practice-report-list').filter({ hasText: 'telemetry.csv' }).waitFor();
-  await emit('ERR: Directory not found');
-  await page.locator('.practice-report-list').filter({ hasText: 'Lỗi · ERR: Directory not found' }).waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Thẻ SD / Hệ thống tệp', exact: true }).count(), 0);
+  await page.getByRole('button', { name: '➕ mkdir demo', exact: true }).click();
+  assert.ok((await page.evaluate(() => window.__practiceTest.writes)).includes('mkdir demo\n'));
   await select('Lab5-03_Satellite_Comm_System');
   const commandCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: /Command Uplink/ }) });
   assert.ok(await commandCard.getByRole('textbox').isDisabled());
   await page.getByLabel('Vai trò cổng lệnh', { exact: true }).selectOption('gs');
   await commandCard.getByRole('button', { name: '🏓 Ping', exact: true }).click();
   await commandCard.getByText('Đã gửi USB · chờ phản hồi Serial', { exact: false }).waitFor();
-  console.log('PASS preserved blocks, WiFi/LED reports and real SD listing');
+  await emit('[RX] Nhận được lệnh từ mặt đất: ping');
+  await page.locator('.radio-log').filter({ hasText: 'RX' }).waitFor();
+  assert.equal(await page.locator('.telemetry-grid').count(), 0);
+  console.log('PASS Lab3-02 shell buttons, Lab5 radio log and ground-station command role');
   for (const fixture of fixtures) {
     await select(fixture.id);
     assert.equal(await page.locator('.lab-visual-stack > .serial-card').count(), 1, fixture.id);

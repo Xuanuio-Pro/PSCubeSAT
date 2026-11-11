@@ -3,12 +3,12 @@ import BlocklyEditor from './BlocklyEditor';
 import MonacoEditor from './MonacoEditor';
 import CloudCompiler from '../serial/CloudCompiler';
 import WebFlasher from '../serial/WebFlasher';
-import { sourceKey, downloadFile, DEFAULT_ARDUINO_CODE } from './blockly-project.js';
+import { sourceKey, loadDraft, downloadFile, DEFAULT_ARDUINO_CODE } from './project-files.js';
 import { cppToWorkspace } from './cpp-to-blockly.js';
 
 function restoreDocument(labId, exerciseId, storageScope) {
   try {
-    const saved = JSON.parse(localStorage.getItem(sourceKey(labId, exerciseId, storageScope)) || 'null');
+    const saved = JSON.parse(loadDraft(sourceKey, labId, exerciseId, storageScope) || 'null');
     if (saved?.version === 2 && typeof saved.code === 'string') return { text: saved.code, origin: 'cpp', legacyManualCode: saved.legacyManualCode || '' };
     if (saved?.mode === 'manual' && typeof saved.manualCode === 'string') return { text: saved.manualCode, origin: 'cpp', legacyManualCode: '' };
     return { text: null, origin: 'blocks', legacyManualCode: saved?.manualCode || '' };

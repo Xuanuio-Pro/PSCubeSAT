@@ -10,24 +10,23 @@ import { lessonReadingContent } from '../src/data/lesson-reading.js';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const objectives = [
   ['', 'Tổng quan các phân hệ'], ['', 'Web IDE và kết nối OBC'],
-  ['Nguồn và pin|ADC|Thư viện pin|Tiết kiệm năng lượng', 'Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng'],
-  ['MicroSD/SPI|Ghi log|Quản lý file qua lệnh', 'File log đọc được, thao tác ghi/đọc, xử lý lỗi thẻ nhớ'],
+  ['Nguồn và pin|Đo điện áp pin|Thư viện pin|Tiết kiệm năng lượng', 'Đọc điện áp, giải thích kết quả, minh chứng chế độ tiết kiệm năng lượng'],
+  ['MicroSD/SPI|Ghi log|Quản lý file qua lệnh|Task/scheduler|Khóa tài nguyên|Watchdog', 'File log đọc được, xử lý lỗi thẻ nhớ, lịch chạy task và minh chứng phục hồi khi treo'],
   ['Môi trường|IMU|GPS|Camera|Tích hợp cảm biến', 'Dữ liệu từng cảm biến và bài tổng hợp; đối chiếu cấu hình phần cứng'],
   ['Gửi telemetry|Nhận lệnh|Liên lạc hai chiều', 'Bản tin gửi/nhận, phản hồi lệnh, xử lý tình huống mất kết nối'],
-  ['Lắp ráp cơ khí|Task/scheduler|Khóa tài nguyên|Watchdog', 'Checklist lắp ráp, lịch chạy task và minh chứng phục hồi khi treo'],
-  ['Multiplexer|Chương trình tổng hợp|RTOS', 'Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ'],
+  ['Lắp ráp cơ khí', 'Checklist lắp ráp và minh chứng khung vệ tinh hoàn chỉnh'],
+  ['Chương trình tổng hợp|RTOS', 'Kiểm tra tích hợp, giải thích luồng dữ liệu và kết quả nhiệm vụ'],
   ['Yêu cầu nhiệm vụ|Thiết kế|Triển khai|Báo cáo/demo', 'Mã nguồn, cấu hình dashboard, dữ liệu demo và báo cáo theo rubric'],
 ];
 function groupFor(lab, item, index, count) {
   const groups = objectives[lab][0].split('|').filter(Boolean);
   const id = item.id;
   let group = 0;
-  if (lab === 2) group = /Power_Saving|document-2-2/.test(id) ? 3 : /01b/.test(id) ? 2 : /01a|video-2-2/.test(id) ? 1 : 0;
-  else if (lab === 3) group = /02_Linux/.test(id) ? 2 : /01b/.test(id) ? 1 : 0;
-  else if (lab === 4) group = /Read_All/.test(id) ? 4 : /04[a-b]?_Camera|4-5/.test(id) ? 3 : /03[a-b]?_GPS|4-4|document-4-2/.test(id) ? 2 : /02[a-b]?_IMU|Detect_IMU|4-3/.test(id) ? 1 : 0;
+  if (lab === 2) group = /Power_Saving|document-2-2/.test(id) ? 3 : /01b/.test(id) ? 2 : /01a|video-2-2|Detect_Battery/.test(id) ? 1 : 0;
+  else if (lab === 3) group = /Watchdog|video-3-4|document-3-4/.test(id) ? 5 : /document-3-3/.test(id) ? 4 : /Scheduler|video-3-3|document-3-2/.test(id) ? 3 : /02_Linux/.test(id) ? 2 : /01b/.test(id) ? 1 : 0;
+  else if (lab === 4) group = /Read_All|Camera_Multiplexer|document-4-3/.test(id) ? 4 : /04[a-b]?_Camera|4-5/.test(id) ? 3 : /03[a-b]?_GPS|Detect_GPS|4-4|document-4-2/.test(id) ? 2 : /02[a-b]?_IMU|Detect_IMU|4-3/.test(id) ? 1 : 0;
   else if (lab === 5) group = /03_Satellite/.test(id) ? 2 : /02[a-b]?_Receive|5-3|document-5-2/.test(id) ? 1 : 0;
-  else if (lab === 6) group = /Watchdog|6-4/.test(id) ? 3 : /document-6-3/.test(id) ? 2 : /Scheduler|6-3|document-6-2/.test(id) ? 1 : 0;
-  else if (lab === 7) group = /03_RTOS/.test(id) ? 2 : /02_Full|7-2/.test(id) ? 1 : 0;
+  else if (lab === 7) group = /RTOS/.test(id) ? 1 : 0;
   else if (lab === 8) group = item.type === 'summary' ? 3 : /Custom_Mission|video-8-2/.test(id) ? 2 : /document-8/.test(id) ? 1 : 0;
   if (item.type === 'summary') group = groups.length - 1;
   return groups[Math.max(0, group)] || `Phần ${index + 1}/${count}`;
@@ -64,7 +63,7 @@ const labs = LABS.map(lab => {
   }
   lessons.push({ id: `labtest-${lab.id}`, lab_id: lab.id, type: 'labtest', order_no: lessons.length, title: `Kiểm tra cuối Lab ${lab.id}`,
     content: { todos: ['TODO GV: ngân hàng 20 câu chưa được soạn/duyệt.'], bank_ready: false }, completion_rule: { kind: 'quiz_pass', pass_score: 4 }, preview_allowed: false, default_enabled: false, default_required: false });
-  return { id: lab.id, order_no: lab.id, title: lab.id === 6 ? 'Cấu trúc và vận hành đa nhiệm' : lab.title,
+  return { id: lab.id, order_no: lab.id, title: lab.title,
     objectives: lab.description, estimated_minutes: 0, groups: objectives[lab.id][0].split('|').filter(Boolean), evidence: objectives[lab.id][1], lessons };
 });
 const sourceHash = createHash('sha256');

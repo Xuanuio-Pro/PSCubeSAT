@@ -48,6 +48,7 @@ def metadata(device, credential) -> dict:
             "telemetry": f"sensors/{uid}/telemetry",
             "status": f"sensors/{uid}/status",
             "ack": f"sensors/{uid}/ack",
+            "image": f"sensors/{uid}/image",
             "commands": f"cmd/{uid}/#",
         },
     }

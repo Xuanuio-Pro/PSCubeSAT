@@ -10,9 +10,9 @@ const seed = JSON.parse(readFileSync(new URL('../fastapi-backend/app/firmware/cu
 test('seed preserves original IDs while normalizing lesson kinds and adding disabled test slots', () => {
   const lessons = seed.labs.flatMap(lab => lab.lessons);
   const originals = [0, ...Object.keys(CURRICULUM).map(Number)].flatMap(lab => getLessonsForLab(lab));
-  assert.equal(lessons.length, 93);
+  assert.equal(lessons.length, 107);
   for (const item of originals) assert.ok(lessons.some(lesson => lesson.id === item.id));
-  assert.equal(lessons.filter(item => item.type === 'practice' && item.lab_id >= 2).length, 26);
+  assert.equal(lessons.filter(item => item.type === 'practice' && item.lab_id >= 2).length, 34);
   assert.equal(lessons.find(item => item.id === 'summary-2').title, 'Tổng kết');
   assert.equal(lessons.find(item => item.id === 'components').default_required, false);
   for (const lab of seed.labs) {
@@ -25,9 +25,9 @@ test('seed preserves original IDs while normalizing lesson kinds and adding disa
 
 test('class drafts isolate both editors by user/class while keeping legacy keys unchanged', () => {
   for (const key of [sourceKey, projectKey]) {
-    assert.notEqual(key(2, 'Lab2-01a_Battery_GPIO', 'user:1:class:2'), key(2, 'Lab2-01a_Battery_GPIO', 'user:1:class:3'));
-    assert.notEqual(key(2, 'Lab2-01a_Battery_GPIO', 'user:1:class:2'), key(2, 'Lab2-01a_Battery_GPIO', 'user:2:class:2'));
-    assert.notEqual(key(2, 'Lab2-01a_Battery_GPIO'), key(2, 'Lab2-01a_Battery_GPIO', 'user:1:class:2'));
+    assert.notEqual(key(2, 'Lab2-01a_Battery_I2C', 'user:1:class:2'), key(2, 'Lab2-01a_Battery_I2C', 'user:1:class:3'));
+    assert.notEqual(key(2, 'Lab2-01a_Battery_I2C', 'user:1:class:2'), key(2, 'Lab2-01a_Battery_I2C', 'user:2:class:2'));
+    assert.notEqual(key(2, 'Lab2-01a_Battery_I2C'), key(2, 'Lab2-01a_Battery_I2C', 'user:1:class:2'));
   }
 });
 

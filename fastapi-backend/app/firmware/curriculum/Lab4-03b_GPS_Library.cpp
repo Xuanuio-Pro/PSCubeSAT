@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab4-03b_GPS_Library/blob/ac4376f4e7882f69716abb4abf68bcc278af1c09/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab4-03b_GPS_Library/blob/781bf9961dd7d0891d3ed9b56e64e955467816af/src/main.cpp
 /**
  * VÍ DỤ 2: KIỂM TRA PHÂN HỆ ĐỊNH VỊ VỆ TINH (GPS MODULE)
  * 

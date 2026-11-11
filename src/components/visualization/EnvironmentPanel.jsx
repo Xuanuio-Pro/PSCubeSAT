@@ -1,83 +1,11 @@
 import ReactECharts from './Chart';
 import { useTelemetry } from '../../contexts/telemetry-api';
+import { makeSparkOption } from './spark-option';
 
 const MAX_POINTS = 60;
 
-// ---------- helpers ----------
-function makeSparkOption({ title, unit, color, data, min = undefined, max = undefined, markLines = [] }) {
-  return {
-    backgroundColor: 'transparent',
-    grid: { top: 38, right: 12, bottom: 12, left: 12, containLabel: true },
-    title: {
-      text: title,
-      textStyle: { color: '#8b949e', fontSize: 11, fontWeight: 500 },
-      left: 10,
-      top: 8,
-    },
-    tooltip: {
-      trigger: 'axis',
-      confine: true,
-      backgroundColor: '#161b22',
-      borderColor: '#30363d',
-      textStyle: { color: '#e6edf3', fontSize: 12 },
-      formatter: (params) => {
-        const p = params[0];
-        return `<b>t = ${p.name}</b><br/>${title}: <b style="color:${color}">${p.value.toFixed(1)} ${unit}</b>`;
-      },
-    },
-    xAxis: {
-      type: 'category',
-      data: data.map(d => d.time),
-      axisLine: { lineStyle: { color: '#30363d' } },
-      axisLabel: { color: '#8b949e', fontSize: 9, hideOverlap: true },
-      splitLine: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      min: min ?? ((v) => Number.isFinite(v.min) ? Math.floor(v.min - 2) : 0),
-      max: max ?? ((v) => Number.isFinite(v.max) ? Math.ceil(v.max + 2) : 1),
-      axisLine: { lineStyle: { color: '#30363d' } },
-      axisLabel: { color: '#8b949e', fontSize: 9, formatter: `{value}` },
-      splitLine: { lineStyle: { color: '#1a1f2e' } },
-    },
-    series: [{
-      data: data.map(d => d.value),
-      type: 'line',
-      smooth: true,
-      symbol: data.length === 1 ? 'circle' : 'none',
-      symbolSize: 6,
-      lineStyle: { color, width: 2 },
-      areaStyle: {
-        color: {
-          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: color + '55' },
-            { offset: 1, color: color + '00' },
-          ],
-        },
-      },
-      ...(markLines.length > 0 ? {
-        markLine: {
-          silent: true,
-          symbol: 'none',
-          label: {
-            position: 'insideEndTop', distance: 4,
-            backgroundColor: 'rgba(255,255,255,0.94)', padding: [2, 4], borderRadius: 3,
-          },
-          data: markLines.map(({ value, label, lineColor }) => ({
-            yAxis: value,
-            label: { formatter: label, color: lineColor, fontSize: 9 },
-            lineStyle: { color: lineColor, type: 'dashed', width: 1 },
-          })),
-        },
-      } : {}),
-    }],
-    animation: true,
-    animationDuration: 300,
-  };
-}
-
-export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
+// Every reference sketch uses BMP280 (temperature + pressure); humidity is shown only when asked for.
+export default function EnvironmentPanel({ maxPoints = MAX_POINTS, metrics = ['temp', 'pres'] }) {
   const { latest: frame, history, status } = useTelemetry();
   const series = key => history.filter(sample => sample[key] !== null).slice(-maxPoints)
     .map(sample => ({ time: new Date(sample.received_at * 1000).toLocaleTimeString(), value: sample[key] }));
@@ -86,7 +14,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
   const pres = series('pressureHpa');
   const latest = { temp: frame?.temperatureC, hum: frame?.humidityPct, pres: frame?.pressureHpa };
   const display = value => value == null ? '—' : value.toFixed(1);
-  const fresh = status === 'live' && [latest.temp, latest.hum, latest.pres].some(value => value != null);
+  const fresh = status === 'live' && metrics.some(key => latest[key] != null);
 
   const charts = [
     {
@@ -135,10 +63,10 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
   ];
 
   const badges = [
-    { label: 'Nhiệt độ',   value: display(latest.temp), unit: '°C',   color: '#f85149', emoji: '🌡️' },
-    { label: 'Độ ẩm',      value: display(latest.hum),  unit: '%RH',  color: '#388bfd', emoji: '💧' },
-    { label: 'Áp suất',    value: display(latest.pres), unit: 'hPa',  color: '#a371f7', emoji: '🔵' },
-  ];
+    { key: 'temp', label: 'Nhiệt độ',   value: display(latest.temp), unit: '°C',   color: '#f85149', emoji: '🌡️' },
+    { key: 'hum', label: 'Độ ẩm',      value: display(latest.hum),  unit: '%RH',  color: '#388bfd', emoji: '💧' },
+    { key: 'pres', label: 'Áp suất',    value: display(latest.pres), unit: 'hPa',  color: '#a371f7', emoji: '🔵' },
+  ].filter(badge => metrics.includes(badge.key));
 
   return (
     <div className="card environment-panel" style={{ opacity: fresh ? 1 : 0.65 }}>
@@ -182,7 +110,7 @@ export default function EnvironmentPanel({ maxPoints = MAX_POINTS }) {
 
       {/* Sparkline charts */}
       <div className="environment-charts">
-        {charts.filter(chart => chart.key !== 'hum' || chart.data.length > 0).map(({ key, opts }) => (
+        {charts.filter(chart => metrics.includes(chart.key) && (chart.key !== 'hum' || chart.data.length > 0)).map(({ key, opts }) => (
           <ReactECharts
             key={key}
             option={opts}

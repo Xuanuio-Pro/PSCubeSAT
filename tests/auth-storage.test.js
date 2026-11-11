@@ -4,7 +4,7 @@ import { TOKEN_KEY, getAuthToken, saveAuthToken, clearAuthToken } from '../src/c
 import { loginDestination, tokenExpiresAt } from '../src/contexts/auth-session.js';
 
 test('login destination stays internal and preserves the selected exercise', () => {
-  for (const path of ['/', '/profile', '/lab0', '/lab8?lesson=Lab8-01_Custom_Mission', '/lab6?lesson=Lab6-01_Multitasking_Scheduler#editor']) assert.equal(loginDestination(path), path);
+  for (const path of ['/', '/profile', '/lab0', '/lab8?lesson=Lab8-01_Custom_Mission', '/lab3?lesson=Lab3-03_Multitasking_Scheduler#editor']) assert.equal(loginDestination(path), path);
   for (const path of [undefined, null, '//evil.test', 'https://evil.test', '/login', '/lab9', '/lab1/../../evil', '/\\evil']) assert.equal(loginDestination(path), '/');
 });
 

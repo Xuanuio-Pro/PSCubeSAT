@@ -67,3 +67,12 @@
 - UI giữ hệ thiết kế hiện có: navy #0a4174 cho thao tác, #0f172a chữ, #ffffff nội dung, #f8fafc nền phụ, #e2e8f0 đường phân chia, #b91c1c lỗi. Inter cho nhãn/nội dung, căn trái; câu hỏi có chiều rộng đọc vừa phải. GV dùng danh sách câu + form biên tập, SV dùng các lựa chọn lớn và thanh thời gian/trạng thái lưu luôn rõ. Không thêm hình trang trí hay animation vào màn hình thi.
 - Phác thảo: GV `[Lab / trạng thái / số đã duyệt] [danh sách câu | nội dung + duyệt]`; SV `[thời gian | đã lưu] [câu + 4 lựa chọn] [nộp bài]`. Đã đối chiếu với luồng học CubeSAT: ưu tiên nguồn tham chiếu, duyệt và trạng thái lưu hơn các thẻ thống kê chung chung.
 
+
+# 2026-11-11 — Cấu trúc lại Lab1, 3, 4, 6, 7 theo tổ chức PTITCube
+
+- Làm theo cấu trúc repo hiện tại của PTITCube. Lab 6 giữ lại chỉ với lắp ráp cơ khí vì không còn bài code nào trên GitHub; số Lab vẫn là 0–8.
+- Các repo "ví dụ cha" (Lab2-01, Lab3-01, Lab4-01 đến 04, Lab5-01/02) được thêm thành bài thực hành riêng, đứng đầu nhóm bài a/b tương ứng.
+- Đổi ID bài cũ sang ID mới bằng migration `0013_curriculum_restructure` (có downgrade). Tiến độ `Lab2-01a_Battery_GPIO` được ánh xạ sang `Lab2-01a_Battery_I2C` dù phần cứng đổi từ ADC sang MAX17048 (giả định: giữ nguyên vị trí học, không giữ nội dung); bản nháp trình duyệt của bài này không được chuyển.
+- Compiler vẫn ghim PTITCube-Library `218d2b6` kèm overrides. Thư viện upstream đã tiến tới `41f19ba` (EPS dùng MAX17048). Các sketch upstream đã đổi nhiều và cần thư viện mới được giữ ở bản local đã kiểm chứng, ghi rõ trong `notes` của `catalog.json`. Nâng thư viện và rebase overrides là việc riêng, chưa làm.
+- Bài mới từ upstream không thêm log Serial; panel trực quan chỉ hiện dữ liệu sketch tự in.
+- Video bài mới của Lab 1 để trống (TODO GV); tài liệu Doc 1.3 tóm lược từ README upstream.

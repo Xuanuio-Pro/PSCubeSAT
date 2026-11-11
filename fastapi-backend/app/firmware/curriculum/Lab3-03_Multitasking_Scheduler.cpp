@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab6-01_Multitasking_Scheduler/blob/e97a2946816d26b0edfa6aa2aa09b6ec29811a89/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab3-03_Multitasking_Scheduler/blob/a2e62a7e963c5cd814935c4c71d5f2ded6fa2a40/src/main.cpp
 /**
  * VÍ DỤ 1: ĐA NHIỆM (MULTITASKING) & BẢO VỆ TÀI NGUYÊN
  * 

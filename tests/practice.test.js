@@ -5,7 +5,7 @@ import { CURRICULUM } from '../src/data/curriculum.js';
 import { createPracticeDecoder, emptyActivity, reduceActivity, practiceProfile } from '../src/telemetry/practice.js';
 import { createTelemetryStore, currentReadings, telemetryStatus } from '../src/telemetry/store.js';
 import { adaptSerialLine } from '../src/telemetry/adapters.js';
-import { ORIGINAL_LAB_PANELS, visualizationPlan } from '../src/telemetry/visualization-plan.js';
+import { visualizationPlan } from '../src/telemetry/visualization-plan.js';
 
 const entry = (text, at = 10000) => ({ text, receivedAt: at, type: 'rx', origin: 'serial' });
 
@@ -35,7 +35,7 @@ for (const fixture of fixtures) test(`reference Serial output: ${fixture.id}`, (
 });
 
 test('scheduler counts observed work, pairs duration and does not claim LED or actual MQTT activity', () => {
-  const decode = createPracticeDecoder('Lab6-01_Multitasking_Scheduler');
+  const decode = createPracticeDecoder('Lab3-03_Multitasking_Scheduler');
   let activity = emptyActivity();
   const lines = [entry('[Sensor] Đang đọc dữ liệu... Nhiệt độ: 28.5C'), entry('[Network] BẮT ĐẦU gửi dữ liệu lên máy chủ...', 11000), entry('[Network] ĐÃ GỬI XONG!', 11500)];
   for (const line of lines) {
@@ -107,7 +107,7 @@ test('No Fix invalidates the marker immediately; invalid NMEA checksums never pr
 });
 
 test('diagnostic response formats map to the actual measurements and units', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   assert.equal(decode(entry('Sensor: Temp=28.50C, Press=1012.25hPa')).frame.temperatureC, 28.5);
   assert.equal(decode(entry('EPS: Battery=3.72V')).frame.voltageV, 3.72);
   assert.equal(decode(entry('GPS: Lat=21.028500, Lng=105.854200')).frame.gpsLon, 105.8542);
@@ -115,7 +115,7 @@ test('diagnostic response formats map to the actual measurements and units', () 
 });
 
 test('explicit unavailable fields clear old readings without clearing unrelated sparse measurements', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   const store = createTelemetryStore(() => 10000);
   store.setLink('connected');
   store.ingest(adaptSerialLine('{"temp":28,"pressure":1013,"battery_v":3.8,"gyro_z":1}', 'serial-local', 10000));
@@ -132,7 +132,7 @@ test('explicit unavailable fields clear old readings without clearing unrelated 
 });
 
 test('invalid metadata or coercible nested values cannot overwrite a bound device', () => {
-  const decode = createPracticeDecoder('Lab7-02_Full_Satellite_Program');
+  const decode = createPracticeDecoder('Lab7-01_Full_Satellite_Program');
   for (const metadata of [{ device_id: 'another' }, { source: 'demo' }, { type: 'command' }, { schema_version: 2 }, { device_id: false }]) {
     const result = decode(entry(JSON.stringify({ ...metadata, valid: false, temp: null })), 'bound');
     assert.equal(result.frame, null);
@@ -165,14 +165,14 @@ test('reviewed firmware log formats preserve correct units and subsystem evidenc
   assert.equal(decode(entry('[WDT] Watchdog Timer đã bật (timeout: 10s)')).events.length, 0);
   assert.equal(decode(entry('E task_wdt: Task watchdog got triggered.')).events[0].phase, 'error');
   assert.equal(decode(entry('[EVENT] No current anomaly in valid measurements.')).events[0].phase, 'recovered');
-  const scheduler = createPracticeDecoder('Lab6-01_Multitasking_Scheduler');
+  const scheduler = createPracticeDecoder('Lab3-03_Multitasking_Scheduler');
   const result = scheduler(entry('LED ON'));
   assert.equal(result.frame.ledOn, true);
   assert.ok(result.events.some(event => event.group === 'task' && event.name === 'LED' && event.illustrative === false));
 });
 
 test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter another session', () => {
-  const decode = createPracticeDecoder('Lab7-03_RTOS_Satellite_System');
+  const decode = createPracticeDecoder('Lab7-02_RTOS_Satellite_System');
   for (const prefix of ['[CMD] ', '[TX] ', '[RX] ', 'random ']) assert.equal(decode(entry(prefix + '{"temp":22}')).frame, null);
   const store = createTelemetryStore(() => 10000);
   store.setLink('connected');
@@ -188,20 +188,45 @@ test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter an
   assert.equal(store.getSnapshot().activity.events.length, 120);
   assert.equal(store.getSnapshot().latest, null);
 });
-test('all 32 exercises preserve original blocks and include their specialized visuals', () => {
+test('each exercise shows only the panels its reference sketch has data for', () => {
+  const expected = {
+    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [],
+    'Lab1-08': ['lab1Connection'], 'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'],
+    'Lab2-01': ['voltage'], 'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
+    'Lab3-01': ['storage'], 'Lab3-01a': ['storage'], 'Lab3-01b': ['storage'], 'Lab3-02': ['commands'],
+    'Lab3-03': [], 'Lab3-04': ['anomaly', 'attitude'],
+    'Lab4-01': ['environment'], 'Lab4-01a': ['environment'], 'Lab4-01b': ['environment'],
+    'Lab4-02': ['attitude'], 'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
+    'Lab4-03': ['gps'], 'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'],
+    'Lab4-04': ['camera', 'commands'], 'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
+    'Lab4-05': ['environment', 'attitude', 'gps'], 'Lab4-06': ['gps', 'camera'],
+    'Lab5-01': ['radio'], 'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
+    'Lab5-02': ['radio', 'commands'], 'Lab5-02a': ['radio', 'commands'], 'Lab5-02b': ['radio', 'commands'], 'Lab5-03': ['radio', 'commands'],
+    'Lab7-01': ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system'],
+    'Lab7-02': ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system', 'commands'],
+    'Lab8-01': ['dashboard'],
+  };
   for (const fixture of fixtures) {
-    const profile = practiceProfile(fixture.id);
-    const plan = visualizationPlan(profile);
-    for (const panel of [...(ORIGINAL_LAB_PANELS[profile.lab] ?? []), ...profile.panels, ...plan.required]) assert.ok(plan.panels.includes(panel), `${fixture.id}: ${panel}`);
-    assert.equal(plan.panels.length, new Set(plan.panels).size);
-    if (profile.commands.length && profile.lab !== 1) assert.ok(plan.panels.includes('commands'));
-    if (profile.lab === 3) assert.ok(plan.panels.includes('storage'));
-    if (profile.lab === 1) assert.deepEqual(plan.panels, /^Lab1-0[456]/.test(profile.id) ? ['lab1Connection'] : []);
+    const plan = visualizationPlan(practiceProfile(fixture.id));
+    assert.deepEqual(plan.panels, expected[fixture.id.split('_')[0]], fixture.id);
+    assert.ok(!plan.panels.includes('telemetry'), `${fixture.id}: raw telemetry table duplicates dedicated panels`);
   }
+  assert.deepEqual(visualizationPlan(practiceProfile('Lab7-01_Full_Satellite_Program')).systemRows, ['sensor', 'gps', 'eps', 'storage', 'radio']);
+});
+
+test('LoRa logs from the raw UART and the COM library become TX/RX/error radio events', () => {
+  const decode = createPracticeDecoder('Lab5-01b_Send_Telemetry_Library');
+  const phase = line => decode(entry(line)).events.find(event => event.group === 'radio')?.phase;
+  assert.equal(phase('[TX] HELLO_FROM_CUBESAT_RAW_LORA: 1200'), 'sent');
+  assert.equal(phase('Đang phát xuống mặt đất: PACKET #1 - CUBESAT TELEMETRY DATA'), 'sent');
+  assert.equal(phase('[COM] Đã gửi tin nhắn: PACKET #1'), 'sent');
+  assert.equal(phase('[COM] Nhận được tin nhắn LoRa: ping'), 'received');
+  assert.equal(phase('[RX] Nhận được bản tin thô: hello'), 'received');
+  assert.equal(phase('[WARNING] LoRa AUX busy; TX skipped, no reception confirmed.'), 'error');
 });
 
 test('Lab1 AP preserves its IP through bounded logs and errors clear old connection details', () => {
-  const decode = createPracticeDecoder('Lab1-05_WiFi_AP_Mode');
+  const decode = createPracticeDecoder('Lab1-09_WiFi_AP_Mode');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('Configuring access point...AP IP address:'); feed('192.168.4.1');
@@ -217,7 +242,7 @@ test('Lab1 AP preserves its IP through bounded logs and errors clear old connect
 });
 
 test('Lab1 web status requires valid device IP and explicit server startup; reconnect cannot reuse old IP', () => {
-  const decode = createPracticeDecoder('Lab1-06_Web_Server_LED');
+  const decode = createPracticeDecoder('Lab1-10_Web_Server_LED');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('IP address:'); feed('999.168.1.2'); feed('0.0.0.0');
@@ -243,5 +268,26 @@ test('SD shell reports and errors stay in storage and never invent successful wr
     assert.equal(result.frame, null);
   }
   for (const line of ['ERR: Directory not found', 'ERR: SD not ready', 'ERR: Unknown command']) assert.ok(decode(entry(line)).events.some(event => event.group === 'storage' && event.phase === 'error'));
-  assert.ok(decode(entry('Log entry #1')).events.some(event => event.phase === 'requested'));
+  assert.equal(decode(entry('Log entry #1 - Uptime: 3000ms')).events.length, 0);
+});
+
+test('Lab4-04b chunked Serial image becomes one validated JPEG frame; corrupt or truncated transfers never do', () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, ...Array.from({ length: 1000 }, (_, i) => i % 251), 0xff, 0xd9]);
+  const lines = (bytes = jpeg) => ['IMG_BEGIN:' + bytes.length, ...Array.from({ length: Math.ceil(bytes.length / 384) }, (_, i) => 'IMG_CHUNK:' + bytes.subarray(i * 384, i * 384 + 384).toString('base64')), 'IMG_END'];
+  const run = sequence => { const decode = createPracticeDecoder('Lab4-04b_Camera_Library'); return sequence.map(line => decode(entry(line))); };
+
+  const ok = run(lines());
+  assert.equal(ok.slice(0, -1).every(result => result.frame === null), true);
+  assert.equal(ok.at(-1).frame.imageData, 'data:image/jpeg;base64,' + jpeg.toString('base64'));
+  assert.ok(ok.at(-1).events.some(event => event.group === 'camera' && event.phase === 'saved'));
+
+  const truncated = lines().filter((_, index) => index !== 2);
+  assert.equal(run(truncated).at(-1).frame, null);
+  assert.ok(run(truncated).at(-1).events.some(event => event.group === 'camera' && event.phase === 'error'));
+  const notJpeg = lines(Buffer.from('GIF89a'.repeat(100)));
+  assert.equal(run(notJpeg).at(-1).frame, null);
+  const oversized = lines(); oversized[1] = 'IMG_CHUNK:' + Buffer.alloc(2000).toString('base64');
+  assert.equal(run(oversized).at(-1).frame, null);
+  assert.equal(run(['IMG_CHUNK:AAAA', 'IMG_END'])[1].frame, null);
+  assert.equal(run(['IMG_BEGIN:10', 'ERROR:IMG_READ', 'IMG_END'])[2].frame, null);
 });
