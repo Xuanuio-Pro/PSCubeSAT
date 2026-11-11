@@ -333,12 +333,12 @@
       "upstream_url": "https://github.com/PTITCube/Lab4-04b_Camera_Library/blob/cfa93f99b96d4be3e8354a31a3d5b191051c5451/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Use p/P. OBC MUX12/14. Unique filenames preserve prior photos. Saved SD file is not a browser preview."
+        "Use p/P. OBC MUX12/14. Unique filenames preserve prior photos. After saving, the sketch streams the saved JPEG to the browser over Serial (IMG_BEGIN/IMG_CHUNK/IMG_END)."
       ],
-      "source_sha256": "4fa3021e772f4ce69c3d522b69a84b958cd1865466db50c1cdac638646ec1f75",
+      "source_sha256": "32cdf3eca98f3d8a4ea45da06e981fa98578f99a2efd568f9f3fa22e8027c316",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "4fa3021e772f4ce69c3d522b69a84b958cd1865466db50c1cdac638646ec1f75",
+        "source_sha256": "32cdf3eca98f3d8a4ea45da06e981fa98578f99a2efd568f9f3fa22e8027c316",
         "compiler_image": "sha256:46ef9794c208af300417cf7069b5ca2eb3c727108831c9815b7e7c29bba9d119",
         "result": "passed"
       }

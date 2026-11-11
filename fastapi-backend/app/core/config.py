@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
+    # Header holding the real client IP, written by a trusted edge (e.g. "CF-Connecting-IP"
+    # behind the Cloudflare tunnel). Empty: use the proxy-resolved peer address.
+    client_ip_header: str = ""
+
     # JWT
     jwt_secret: str = Field(default="change_me", repr=False)
     jwt_expire_minutes: int = 1440

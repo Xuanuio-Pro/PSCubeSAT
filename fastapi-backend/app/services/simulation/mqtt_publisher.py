@@ -10,7 +10,7 @@ import aiomqtt
 from loguru import logger
 
 from app.core.config import get_settings
-from app.core.mqtt_transport import mqtt_tls_context
+from app.core.mqtt_transport import mqtt_error_detail, mqtt_tls_context
 
 
 class SimulationMqttPublisher:
@@ -112,7 +112,8 @@ class SimulationMqttPublisher:
                 raise
             except Exception as exc:
                 logger.warning(
-                    f"[SIM MQTT] Connection failed: {type(exc).__name__}; retry in {reconnect_delay}s"
+                    f"[SIM MQTT] Connection failed: {mqtt_error_detail(exc, self._settings)}; "
+                    f"retry in {reconnect_delay}s"
                 )
             finally:
                 self._connected.clear()

@@ -1,31 +1,43 @@
 import { acceptsSerialMetadata, adaptSerialLine, explicitNullMeasurements } from './adapters.js';
 import { reduceNetworkReport } from './network-report.js';
 
+// Panels per exercise, matched to what the reference sketch actually prints. First match wins.
+/** @type {Array<[RegExp, string[]]>} */
+const EXERCISE_PANELS = [
+  [/^Lab1-0[456]/, ['lab1Connection']],
+  [/^Lab2-/, ['voltage']],
+  [/^Lab3-01/, ['storage']],
+  [/^Lab4-01/, ['environment']],
+  [/^Lab4-02/, ['attitude']],
+  [/^Lab4-03/, ['gps']],
+  [/^Lab4-04/, ['camera']],
+  [/^Lab4-05/, ['environment', 'attitude', 'gps']],
+  [/^Lab5-01/, ['radio']],
+  [/^Lab5-0[23]/, ['radio', 'commands']],
+  [/^Lab6-02/, ['anomaly', 'attitude']],
+  [/^Lab7-01/, ['gps', 'camera']],
+  [/^Lab7-02/, ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system']],
+  [/^Lab7-03/, ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system']],
+  [/^Lab8-/, ['dashboard']],
+];
+
 // Profiles describe the shipped examples, not capabilities discovered on a board.
 export function practiceProfile(id = '') {
   const lab = Number(/^Lab(\d+)-/.exec(id)?.[1] ?? 0);
   const scheduler = id.startsWith('Lab6-01');
-  const panels = [];
-  if (lab === 2 || id.startsWith('Lab7-02') || id.startsWith('Lab7-03')) panels.push('voltage');
-  if (/^Lab4-0[15]/.test(id) || /^Lab7-0[23]/.test(id)) panels.push('environment');
-  if (/^Lab4-02a/.test(id)) panels.push('rawImu');
-  else if (/^Lab4-0[25]/.test(id) || /^Lab7-0[23]/.test(id)) panels.push('attitude');
-  if (/^Lab4-03/.test(id) || lab === 7) panels.push('gps');
-  if (/^Lab4-04/.test(id) || lab === 7) panels.push('camera');
-  if (lab === 5 || /^Lab7-0[23]/.test(id) || lab === 8) panels.push('telemetry');
-  if (id.startsWith('Lab6-02')) panels.push('environment', 'attitude', 'telemetry');
+  const panels = [...(EXERCISE_PANELS.find(([pattern]) => pattern.test(id))?.[1] ?? [])];
   let commands = [];
   if (id.startsWith('Lab1-03')) commands = ['1', '0'];
-  if (id.startsWith('Lab3-02')) commands = ['pwd', 'ls'];
-  if (/^Lab4-04(?!a)/.test(id)) commands = ['p'];
+  if (id.startsWith('Lab3-02')) commands = ['pwd', 'ls', 'mkdir demo', 'cd demo', 'touch note.txt', 'rm note.txt', 'cd ..', 'rm demo'];
+  if (id.startsWith('Lab4-04')) commands = ['p'];
   if (id.startsWith('Lab7-03')) commands = ['ping', 'status', 'uptime', 'get_sensor', 'get_eps', 'get_gps', 'pause', 'resume', 'capture', 'help'];
   const note = scheduler
     ? 'Lab6-01 dùng nhiệt độ cố định 28,5°C và mô phỏng gửi mạng bằng delay. Bản mẫu đã sửa xuất LED ON/OFF; bản gốc không có log LED. Chỉ hiển thị trạng thái LED khi nhận phản hồi.'
     : id.startsWith('Lab6-02') ? 'Bản mẫu đã sửa kiểm tra gia tốc ba trục, thời gian rơi và bật watchdog; xuất mẫu cảm biến mỗi giây. Cảnh báo là kết luận của firmware, không thay cho kiểm chứng vật lý.'
       : lab === 5 ? 'Log phát LoRa chỉ xác nhận yêu cầu gửi tại OBC. Cần phản hồi từ trạm mặt đất để xác nhận nhận thành công; USB Serial không thay thế đường lệnh LoRa.'
       : lab === 8 ? 'Mẫu Lab8 là khung chương trình. Hãy bổ sung nhiệm vụ và xuất JSON telemetry để dashboard có dữ liệu.'
-        : /^Lab4-02a/.test(id) ? 'RAW_ACCEL là số đếm thanh ghi. Không suy ra g hoặc tư thế khi chưa biết thang đo và hiệu chuẩn.'
-          : /^Lab4-04|^Lab7-01/.test(id) ? 'Ảnh lưu trên thẻ SD chưa được truyền về trình duyệt. Preview chỉ xuất hiện khi firmware gửi IMG:base64 hoặc imageData.'
+        : /^Lab4-02a/.test(id) ? 'RAW_ACCEL là số đếm thanh ghi. Góc nghiêng chỉ suy ra từ hướng vector; không quy đổi sang g khi chưa biết thang đo.'
+          : /^Lab4-04|^Lab7-01/.test(id) ? 'Ảnh lưu trên thẻ SD chưa được truyền về trình duyệt. Preview chỉ xuất hiện khi firmware gửi ảnh về: IMG:base64, IMG_BEGIN/IMG_CHUNK/IMG_END (Lab4-04b) hoặc imageData.'
             : 'Hiển thị theo dữ liệu thực nhận. Trường không được xuất hoặc quá hạn sẽ hiện —; log khởi tạo chưa chứng minh toàn bộ hệ thống hoạt động.';
   return { id, lab, scheduler, panels, commands, note };
 }
@@ -76,6 +88,7 @@ function nmeaPosition(line) {
 /** Stateful only for explicit multiline IMU headers; discarded on source/session/lesson changes. */
 export function createPracticeDecoder(exerciseId = '') {
   let axes = '';
+  let image = null; // chunked Serial JPEG in flight: { size, chunks, bytes }
   const profile = practiceProfile(exerciseId);
   return (entry, deviceId = 'serial-local') => {
     const result = { frame: null, events: [], invalidate: [] };
@@ -92,6 +105,30 @@ export function createPracticeDecoder(exerciseId = '') {
       else result.invalidate.push('gpsLat', 'gpsLon', 'gpsAlt');
       return result;
     }
+
+    // Chunked Serial image (Lab4-04b): IMG_BEGIN:<bytes>, IMG_CHUNK:<base64>..., IMG_END. Any inconsistency drops the whole image.
+    const begin = /^IMG_BEGIN:(\d{1,6})$/.exec(line);
+    if (begin) { image = { size: Number(begin[1]), chunks: [], bytes: 0 }; return result; }
+    if (line.startsWith('IMG_CHUNK:') || line === 'IMG_END') {
+      if (!image) return result;
+      if (line === 'IMG_END') {
+        const complete = image;
+        image = null;
+        const data = complete.chunks.join('');
+        const tail = atob(complete.chunks.at(-1) ?? '');
+        if (complete.bytes !== complete.size || !data.startsWith('/9j/') || tail.charCodeAt(tail.length - 2) !== 0xff || tail.charCodeAt(tail.length - 1) !== 0xd9) { event('camera', 'error'); return result; }
+        event('camera', 'saved', { text: `Đã nhận ảnh ${complete.size} byte qua Serial` });
+        result.frame = adaptSerialLine(`data:image/jpeg;base64,${data}`, deviceId, at);
+        return result;
+      }
+      const chunk = line.slice(10);
+      const length = chunk.length / 4 * 3 - (chunk.endsWith('==') ? 2 : chunk.endsWith('=') ? 1 : 0);
+      if (!/^(?:[A-Za-z0-9+/]{4})+(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(chunk) || image.bytes + length > image.size) { image = null; event('camera', 'error'); return result; }
+      image.chunks.push(chunk);
+      image.bytes += length;
+      return result;
+    }
+    if (/^ERROR:IMG_/.test(line)) { image = null; event('camera', 'error'); return result; }
 
     // Task logs are illustrative in the reference sketch; never promote them to hardware measurements.
     if ((profile.scheduler && /^\[(Sensor|Network)\]/.test(line)) || /^\[Sensor\] Đang đọc dữ liệu\.\.\. Nhiệt độ: 28\.5C$/.test(line)) {
@@ -112,12 +149,12 @@ export function createPracticeDecoder(exerciseId = '') {
     }
     if (/^hello /i.test(line)) event('serial', 'sample');
     if (/^echo:/i.test(line)) { event('serial', 'received'); return result; }
-    if (/^log entry #/.test(lower)) event('storage', 'requested');
     if (/\b(no (?:valid )?fix)\b|chua (chot|khoa)|dang (cho fix|quet tim ve tinh)/.test(lower)) {
       event('gps', 'waiting'); result.invalidate.push('gpsLat', 'gpsLon', 'gpsAlt');
     }
     if (/uu tien (camera|gps)/.test(lower)) event('mux', 'sample');
-    if (/\[tx\]|\[lora tx\]|dang phat xuong mat dat|send requested|dang gui qua lora/.test(lower)) event('radio', 'sent');
+    if (/lora aux busy|\[com\] lora config failed/.test(lower)) event('radio', 'error');
+    else if (/\[tx\]|\[lora tx\]|dang phat xuong mat dat|send requested|dang gui qua lora|^\[com\] da gui/.test(lower)) event('radio', 'sent');
     if (/\[rx\]|\[lora rx\]|\[com\].*(received|nhan)/.test(lower)) event('radio', 'received');
     if (/mqtt connected|wifi connected|http server started|ap ip address|ip address:|^\d{1,3}(?:\.\d{1,3}){3}$|so luong thiet bi dang ket noi/.test(lower)) event('network', 'reported');
     if (/^\[mqtt\] connected$/.test(lower)) event('network', 'reported');

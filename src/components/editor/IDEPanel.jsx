@@ -3,7 +3,7 @@ import BlocklyEditor from './BlocklyEditor';
 import MonacoEditor from './MonacoEditor';
 import CloudCompiler from '../serial/CloudCompiler';
 import WebFlasher from '../serial/WebFlasher';
-import { sourceKey, downloadFile, DEFAULT_ARDUINO_CODE } from './blockly-project.js';
+import { sourceKey, downloadFile, DEFAULT_ARDUINO_CODE } from './project-files.js';
 import { cppToWorkspace } from './cpp-to-blockly.js';
 
 function restoreDocument(labId, exerciseId, storageScope) {

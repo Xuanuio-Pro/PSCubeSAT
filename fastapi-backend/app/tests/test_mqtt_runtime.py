@@ -3,7 +3,9 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 import aiomqtt
+from aiomqtt.exceptions import MqttConnectError
 from fastapi import WebSocket
+from loguru import logger
 
 from app.core.config import Settings
 from app.services import mqtt_consumer
@@ -85,6 +87,31 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(asyncio.CancelledError):
                     await task
             self.assertFalse(mqtt_consumer.connection_status()["connected"])
+
+    async def test_consumer_logs_connack_reason_without_password(self):
+        logs: list[str] = []
+        sink = logger.add(logs.append, format="{message}")
+        settings = Settings(_env_file=None, mqtt_tls=False, mqtt_password="service-secret")
+        with (
+            patch.object(mqtt_consumer, "get_settings", return_value=settings),
+            patch.object(
+                mqtt_consumer.aiomqtt,
+                "Client",
+                side_effect=MqttConnectError(5),
+            ),
+        ):
+            task = asyncio.create_task(mqtt_consumer.start())
+            try:
+                await until(lambda: any("Connection failed" in line for line in logs))
+            finally:
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+                logger.remove(sink)
+        failure = next(line for line in logs if "Connection failed" in line)
+        self.assertIn("CONNACK/reason=5", failure)
+        self.assertIn("Not authorized", failure)
+        self.assertNotIn("service-secret", "".join(logs))
 
     async def test_slow_socket_cannot_block_healthy_socket(self):
         manager = ConnectionManager()

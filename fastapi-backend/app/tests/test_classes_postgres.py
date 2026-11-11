@@ -79,7 +79,7 @@ class ClassPostgresTests(unittest.IsolatedAsyncioTestCase):
                     "INSERT INTO audit_logs(actor,action,target,after) VALUES(1,'test','class:1',jsonb_build_object('kept',true))"
                 )
             )
-        await self.cli("downgrade", "-1")
+        await self.cli("downgrade", "0009_quizzes")
         async with self.engine.connect() as db:
             self.assertEqual(
                 (await db.execute(text("SELECT version_num FROM alembic_version"))).scalar_one(),

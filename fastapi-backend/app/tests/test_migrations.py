@@ -96,7 +96,7 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                 RegisterRequest(email="fresh@example.com", password="secret123")
             )
             logged_in = await AuthService(db).login_user(
-                LoginRequest(email="fresh@example.com", password="secret123")
+                LoginRequest(email="fresh@example.com", password="secret123"), "127.0.0.1"
             )
             self.assertEqual(logged_in.user.id, user.user.id)
             device = await DeviceService(db).register_new_device(

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 from aiomqtt.exceptions import MqttConnectError
 
 from app.core.config import Settings
+from app.core.mqtt_transport import mqtt_error_detail
 from scripts import mqtt_probe as probe
 
 
@@ -210,10 +211,10 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
 
     def test_credentials_redacted_and_connack_preserved(self):
         settings = config(mqtt_admin_password="admin-secret")
-        text = probe.error_detail(ValueError("service-secret admin-secret\n"), settings)
+        text = mqtt_error_detail(ValueError("service-secret admin-secret\n"), settings)
         self.assertNotIn("service-secret", text)
         self.assertNotIn("admin-secret", text)
         self.assertNotIn("\n", text)
-        detail = probe.error_detail(MqttConnectError(5), settings)
+        detail = mqtt_error_detail(MqttConnectError(5), settings)
         self.assertIn("5", detail)
         self.assertIn("authorized", detail.lower())
