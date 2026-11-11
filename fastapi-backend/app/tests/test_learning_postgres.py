@@ -35,6 +35,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
     event = learning.LearningAPITests.event
     path = learning.LearningAPITests.path
     complete = learning.LearningAPITests.complete
+    complete_lesson = learning.LearningAPITests.complete_lesson
 
     async def setup_learning(self):
         await classes.ClassAPITests.setup_client(self)
@@ -46,9 +47,10 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
         await classes.ClassAPITests.add_student(self)
         self.body = course.settings_payload(await self.draft())
         for item in self.body["lessons"]:
-            item["required"] = item["lesson_id"] == "document" or item["lesson_id"].startswith(
-                "summary-"
-            )
+            # Same fixture as test_learning: every enabled lesson gates the next one.
+            active = item["lesson_id"] == "document" or item["lesson_id"].startswith("summary-")
+            item["enabled"] = active or item["lesson_id"] == "Lab2-01a_Battery_I2C"
+            item["required"] = active
             if item["lesson_id"] == "document":
                 item["params"] = {"markdown": "Định hướng học tập."}
         await self.apply(self.body)
@@ -88,6 +90,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
             for item in body["lessons"]:
                 if item["lesson_id"] == "Lab1-01_Blink_LED":
                     item.update(
+                        enabled=True,
                         required=True,
                         params={
                             "instructions": "Thực hành nhấp nháy LED.",
@@ -95,6 +98,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
                         },
                     )
             await self.apply(body)
+            await self.complete(0)  # Lab 1 opens only after Lab 0 is completed.
             url = self.base + "/lessons/Lab1-01_Blink_LED/submissions"
             submission = {
                 "idempotency_key": "parallel-submit-first",
@@ -141,7 +145,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
                         )
                     )
                 ).all()
-            await self.cli("downgrade", "-1")
+            await self.cli("downgrade", "0009_quizzes")
             await self.cli("upgrade", "head")
             await self.assert_schema_matches()
             async with self.engine.connect() as db:
@@ -206,5 +210,5 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
                 ).all(),
                 [(2, 0), (6, 2)],
             )
-        await self.cli("downgrade", "-1")
+        await self.cli("downgrade", "0009_quizzes")
         await self.cli("upgrade", "head")

@@ -32,6 +32,7 @@ class QuizPostgresTests(unittest.IsolatedAsyncioTestCase):
     event = learning.LearningPostgresTests.event
     path = learning.LearningPostgresTests.path
     complete = learning.LearningPostgresTests.complete
+    complete_lesson = learning.LearningPostgresTests.complete_lesson
     bank = quizzes.QuizAPITests.bank
     prepare = quizzes.QuizAPITests.prepare
     start = quizzes.QuizAPITests.start
@@ -118,7 +119,8 @@ class QuizPostgresTests(unittest.IsolatedAsyncioTestCase):
                     with self.assertRaises(DBAPIError):
                         await db.execute(text(statement))
                     await nested.rollback()
-            await self.cli("downgrade", "-1")
+            # Head is an Alembic merge point, so "-1" is ambiguous; roll back past 0010 explicitly.
+            await self.cli("downgrade", "0009_quizzes")
             async with self.engine.connect() as db:
                 self.assertEqual(
                     (

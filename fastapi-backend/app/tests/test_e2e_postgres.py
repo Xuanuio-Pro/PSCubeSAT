@@ -53,7 +53,8 @@ class E2EPostgresTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(Exception):
                     await db.execute(text("UPDATE classes SET lms_mode='paused'"))
                 await nested.rollback()
-            await self.cli("downgrade", "-1")
+            # Head is an Alembic merge point, so "-1" is ambiguous; roll back past 0010 explicitly.
+            await self.cli("downgrade", "0009_quizzes")
             async with self.engine.connect() as db:
                 self.assertEqual(
                     (
