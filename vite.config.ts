@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
       const restricted = [...this.getModuleIds()].filter(id => /[\\/]src[\\/]data[\\/](curriculum|labs|lesson-reading)\.js(?:\?|$)/.test(id));
       if (restricted.length) this.error('Restricted curriculum seed files must not be bundled into the browser.');
     },
+    // Dev tools (e.g. a live design overlay) must never ship a script from another origin.
+    transformIndexHtml(html) {
+      if (/<script[^>]+src=["']?(https?:)?\/\//i.test(html)) throw new Error('index.html must not load scripts from another origin.');
+      return html;
+    },
   }],
   define: {
     global: 'window',
