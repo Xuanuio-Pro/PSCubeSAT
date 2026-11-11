@@ -22,6 +22,10 @@ if ($isRunning) {
     Write-Host 'Local PostgreSQL is already running at 127.0.0.1:5432.'
     exit 0
 }
+if (Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue) {
+    Write-Host 'Port 5432 is already served by another PostgreSQL (e.g. Docker); skipping local start.'
+    exit 0
+}
 $dbProcess = Start-Process -FilePath $runtimePath -ArgumentList @(
     '-D', ('"' + $clusterPath + '"'), '-l', ('"' + $logPath + '"'), '-w', 'start'
 ) -WindowStyle Hidden -PassThru
