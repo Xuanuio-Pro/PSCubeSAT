@@ -53,7 +53,6 @@ export default function AdminDashboardPage() {
   return <div className="admin-page-shell">
     <header className="admin-page-header">
       <div>
-        <span className="admin-page-kicker">Overview</span>
         <h1>Tổng quan hệ thống</h1>
       </div>
       <button type="button" className="admin-primary-btn" onClick={reload}>Cập nhật</button>
@@ -72,6 +71,7 @@ export default function AdminDashboardPage() {
       <h2>Tài khoản theo vai trò</h2>
       <div className="lms-table-wrap">
         <table>
+          <caption className="sr-only">Thống kê số lượng tài khoản theo vai trò và trạng thái</caption>
           <thead><tr><th>Vai trò</th><th>Đang hoạt động</th><th>Đã khóa</th></tr></thead>
           <tbody>{Object.entries(roles).map(([key, label]) => <tr key={key}><td>{label}</td><td>{data.users[key]?.active || 0}</td><td>{data.users[key]?.locked || 0}</td></tr>)}</tbody>
         </table>
@@ -82,6 +82,7 @@ export default function AdminDashboardPage() {
       <h2>Hoàn thành và Lab Test theo lab</h2>
       <p className="admin-note">{data.definitions.completion_rate} {data.definitions.average_best_score}</p>
       {!data.labs.length ? <p className="admin-empty">Chưa có lớp đang mở với chương trình đã xuất bản.</p> : <div className="lms-table-wrap"><table>
+        <caption className="sr-only">Tỷ lệ hoàn thành và điểm trung bình Lab Test theo từng lab</caption>
         <thead><tr><th>Lab</th><th>Tỷ lệ hoàn thành</th><th>SV đạt / SV có lab</th><th>Điểm Lab Test TB</th><th>SV đã thi</th></tr></thead>
         <tbody>{data.labs.map(lab => <tr key={lab.id}><td>Lab {lab.id}</td><td>{percent(lab.completion_rate)}</td><td>{lab.completed_students}/{lab.eligible_students}</td><td>{lab.average_best_score === null ? '—' : `${lab.average_best_score}/5`}</td><td>{lab.scored_students}</td></tr>)}</tbody>
       </table></div>}

@@ -15,7 +15,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [showResetHelp, setShowResetHelp] = useState(false);
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,13 +64,17 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
+              required
+              maxLength={200}
               autoComplete="username"
-              placeholder="yourname@company.com"
+              placeholder="sinhvien@ptit.edu.vn"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'login-email-error' : undefined}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          {errors.email && <div className="auth-error-text">⚠ {errors.email}</div>}
+          {errors.email && <div id="login-email-error" className="auth-error-text" role="alert">⚠ {errors.email}</div>}
         </div>
 
         <div className="auth-field">
@@ -78,8 +83,11 @@ export default function LoginPage() {
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
+              required
               autoComplete="current-password"
               placeholder="********"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'login-password-error' : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -88,11 +96,12 @@ export default function LoginPage() {
               className="auth-toggle-visibility"
               onClick={() => setShowPassword((v) => !v)}
               aria-label="Hiện/ẩn mật khẩu"
+              aria-pressed={showPassword}
             >
               <EyeIcon open={showPassword} />
             </button>
           </div>
-          {errors.password && <div className="auth-error-text">⚠ {errors.password}</div>}
+          {errors.password && <div id="login-password-error" className="auth-error-text" role="alert">⚠ {errors.password}</div>}
         </div>
 
         <div className="auth-row-between">
@@ -100,8 +109,21 @@ export default function LoginPage() {
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
             Lưu thiết bị này
           </label>
-          <a href="#">Quên mật khẩu ?</a>
+          <button
+            type="button"
+            className="auth-link-btn"
+            aria-expanded={showResetHelp}
+            onClick={() => setShowResetHelp((v) => !v)}
+          >
+            Quên mật khẩu?
+          </button>
         </div>
+
+        {showResetHelp && (
+          <p className="auth-help-notice" role="status">
+            Vui lòng liên hệ giảng viên phụ trách lớp hoặc quản trị viên hệ thống để được cấp lại mật khẩu.
+          </p>
+        )}
 
         <button type="submit" className="auth-submit-btn" disabled={submitting}>
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}

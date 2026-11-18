@@ -18,3 +18,23 @@ test('reconnect preserves the original pending request key but rejects foreign s
   assert.deepEqual(readQuizCache(storage, 'key', attempt), { dirty: { one: 'b' }, pending });
   assert.deepEqual(readQuizCache({ getItem: () => '{broken' }, 'key', attempt), { dirty: {}, pending: null });
 });
+test('offline cache validates multiple_choice, true_false, and short_answer formats', () => {
+  const attempt = {
+    items: [
+      { id: 'mc', question_type: 'multiple_choice', choices: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }] },
+      { id: 'tf', question_type: 'true_false', choices: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }] },
+      { id: 'sa', question_type: 'short_answer', choices: [] },
+    ],
+  };
+  const dirty = {
+    mc: 'a|c',
+    tf: 'a:Đ|b:S|c:S|d:Đ',
+    sa: '10',
+    invalid: 'x',
+  };
+  const storage = { getItem: () => JSON.stringify({ dirty, pending: null }) };
+  assert.deepEqual(readQuizCache(storage, 'key', attempt), {
+    dirty: { mc: 'a|c', tf: 'a:Đ|b:S|c:S|d:Đ', sa: '10' },
+    pending: null,
+  });
+});

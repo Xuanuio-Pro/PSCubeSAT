@@ -62,7 +62,9 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
   return (
     <aside className={`player-sidebar ${collapsed ? 'is-collapsed' : ''}`}>
       <div className="course-rail">
-        <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
+        <Link to="/" className="course-rail-logo-link" aria-label="Về trang chủ" title="Về trang chủ">
+          <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
+        </Link>
         <nav className="course-rail-nav" aria-label="Chọn Lab">
           {labs.map((lab) => (
             (() => {
@@ -95,7 +97,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
 
       <div className="course-menu" id="course-curriculum" inert={collapsed}>
         <div className="course-menu-header">
-          <div className="course-menu-brand"><strong>CubeSAT</strong><span>PTIT LMS</span></div>
+          <Link to="/" className="course-menu-brand" aria-label="Về trang chủ" title="Về trang chủ"><strong>CubeSAT</strong><span>PTIT LMS</span></Link>
           <button type="button" className="course-collapse-button" onClick={() => setCollapsed(true)} aria-expanded={!collapsed} aria-controls="course-curriculum" aria-label="Thu gọn thanh điều hướng" title="Thu gọn">
             <ChevronLeftIcon size={18} />
           </button>
@@ -128,7 +130,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
                       const completed = Boolean(states[lesson.id]?.completed);
                       const inProgress = !completed && Boolean(states[lesson.id]?.started_at);
                       const firstIncomplete = lessons.findIndex(item => !states[item.id]?.completed);
-                      const locked = labState.status === 'locked' || (firstIncomplete >= 0 && index > firstIncomplete && !completed);
+                      const locked = !isPrivileged && (labState.status === 'locked' || (firstIncomplete >= 0 && index > firstIncomplete && !completed));
                       const lessonStatus = completed ? 'completed' : locked ? 'locked' : inProgress || isLessonActive ? 'in-progress' : 'available';
                       return (
                         <button

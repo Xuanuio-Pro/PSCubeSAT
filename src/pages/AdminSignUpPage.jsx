@@ -46,7 +46,6 @@ export default function AdminSignUpPage() {
   return (
     <AuthLayout variant="admin">
       <div className="admin-auth-header">
-        <span className="admin-auth-kicker">Create account</span>
         <h1 className="auth-title">Khởi tạo quản trị</h1>
         <p className="auth-subtitle">Thiết lập tài khoản quản trị cho hệ thống học tập.</p>
       </div>
@@ -55,32 +54,32 @@ export default function AdminSignUpPage() {
         <div className="auth-field">
           <label htmlFor="admin-name">Tên quản trị</label>
           <div className="auth-input-wrap">
-            <input id="admin-name" name="name" value={form.name} onChange={handleChange} placeholder="Nguyễn Văn A" autoComplete="name" />
+            <input id="admin-name" name="name" required maxLength={200} value={form.name} onChange={handleChange} placeholder="Nguyễn Văn A" autoComplete="name" aria-invalid={Boolean(error)} aria-describedby={error ? 'admin-signup-error' : undefined} />
           </div>
         </div>
 
         <div className="auth-field">
           <label htmlFor="admin-email">Email</label>
           <div className="auth-input-wrap">
-            <input id="admin-email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="admin@ptit.edu.vn" autoComplete="username" />
+            <input id="admin-email" name="email" type="email" required maxLength={200} value={form.email} onChange={handleChange} placeholder="admin@ptit.edu.vn" autoComplete="username" aria-invalid={Boolean(error)} aria-describedby={error ? 'admin-signup-error' : undefined} />
           </div>
         </div>
 
         <div className="auth-field">
           <label htmlFor="admin-password">Mật khẩu</label>
           <div className="auth-input-wrap">
-            <input id="admin-password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••" autoComplete="new-password" />
+            <input id="admin-password" name="password" type="password" required minLength={6} value={form.password} onChange={handleChange} placeholder="••••••••" autoComplete="new-password" aria-invalid={Boolean(error)} aria-describedby={error ? 'admin-signup-error' : undefined} />
           </div>
         </div>
 
         <div className="auth-field">
           <label htmlFor="admin-confirm-password">Xác nhận mật khẩu</label>
           <div className="auth-input-wrap">
-            <input id="admin-confirm-password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} placeholder="••••••••" autoComplete="new-password" />
+            <input id="admin-confirm-password" name="confirmPassword" type="password" required minLength={6} value={form.confirmPassword} onChange={handleChange} placeholder="••••••••" autoComplete="new-password" aria-invalid={Boolean(error)} aria-describedby={error ? 'admin-signup-error' : undefined} />
           </div>
         </div>
 
-        {error && <div className="auth-error-text" role="alert">{error}</div>}
+        {error && <div id="admin-signup-error" className="auth-error-text" role="alert">{error}</div>}
 
         <button type="submit" className="auth-submit-btn" disabled={submitting}>
           {submitting ? 'Đang tạo…' : 'Tạo tài khoản'}

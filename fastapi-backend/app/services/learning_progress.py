@@ -52,13 +52,36 @@ async def student_member(db, access, *, lock=False, membership_id=None):
     return member
 
 
+def utc(value):
+    if value is None:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def is_summary_lesson(lesson_id: str) -> bool:
+    return str(lesson_id).startswith("summary-")
+
+
 def serialize_progress(row):
+    started_at = utc(row.started_at)
+    is_summary = is_summary_lesson(row.lesson_id)
     return {
         "lesson_id": row.lesson_id,
         "lesson_version": row.lesson_version,
         "status": row.status,
         "last_position": row.last_position,
         "watched_seconds": watched_seconds(row.watched_segments),
+        "started_at": row.started_at.isoformat() if row.started_at else None,
+        "remaining_seconds": 0
+        if is_summary
+        else (
+            max(
+                0,
+                60 - int((datetime.now(timezone.utc) - started_at).total_seconds()),
+            )
+            if started_at
+            else 60
+        ),
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
     }
 
@@ -134,9 +157,11 @@ async def restricted_config(db, access, config):
         )
         states = {item["id"]: item for item in state["lessons"]}
         for lesson in lab["lessons"]:
-            status = states[lesson["id"]]["status"]
-            lesson["progress"] = states[lesson["id"]]
-            if states[lesson["id"]]["access"] == "locked" and not satisfies(status):
+            lesson_state = states[lesson["id"]]
+            lesson["progress"] = lesson_state
+            lesson["access"] = lesson_state["access"]
+            lesson["reason"] = lesson_state["reason"]
+            if lesson_state["access"] == "locked":
                 for key in ("content", "params", "completion_rule"):
                     lesson.pop(key, None)
     config["learning_path"] = path
@@ -162,9 +187,8 @@ async def ensure_available(db, access, config, lesson_id):
         lab = next(
             lab for lab in path["labs"] if any(item["id"] == lesson_id for item in lab["lessons"])
         )
-        state = next(item["status"] for item in lab["lessons"] if item["id"] == lesson_id)
         lesson_state = next(item for item in lab["lessons"] if item["id"] == lesson_id)
-        if lesson_state["access"] == "locked" and not satisfies(state):
+        if lesson_state["access"] == "locked":
             raise LMSError(
                 403,
                 "PREREQUISITE_NOT_MET",
@@ -265,8 +289,23 @@ async def record_event(db, access, lesson_id, request):
     ):
         raise LMSError(422, "CONFIG_INVALID", "Sự kiện không phù hợp loại bài học.")
     row = await progress_row(db, config, member, lesson_id)
+    if row.started_at is None:
+        row.started_at = datetime.now(timezone.utc)
+    started_at = utc(row.started_at)
     completed = False
     if request.kind == "document_read":
+        pass
+    elif request.kind == "complete":
+        elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
+        if not is_summary_lesson(lesson_id) and elapsed < 60:
+            raise LMSError(
+                422,
+                "MINIMUM_LEARNING_TIME",
+                "Bạn cần học bài ít nhất 1 phút trước khi hoàn thành.",
+                {"remaining_seconds": max(1, int(60 - elapsed))},
+            )
+        if lesson["type"] not in {"document", "video", "practice", "labtest"}:
+            raise LMSError(422, "CONFIG_INVALID", "Loại bài học này có quy trình hoàn thành riêng.")
         completed = True
     elif request.kind == "video_confirmed":
         if not lesson["content"].get("confirmation_allowed", False):

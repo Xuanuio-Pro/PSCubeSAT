@@ -26,7 +26,6 @@ export default function AdminUsersPage() {
   return <div className="admin-page-shell">
     <header className="admin-page-header">
       <div>
-        <span className="admin-page-kicker">User management</span>
         <h1>Quản lý tài khoản</h1>
       </div>
       <button type="button" className="admin-primary-btn" onClick={reload}>Tải lại</button>

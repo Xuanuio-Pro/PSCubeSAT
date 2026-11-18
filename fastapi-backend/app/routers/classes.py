@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,11 +21,14 @@ from app.schemas.classes import (
     ClassPatch,
     ClassResponse,
     MemberAdd,
+    MemberImport,
+    MemberImportResponse,
     MemberPage,
     MemberRemove,
     MemberResponse,
 )
 from app.services import classes as service
+from app.services import student_import
 from app.services.auth import get_required_user
 from app.services.curriculum_access import lab_entry as resolve_lab_entry
 from app.services.permissions import (
@@ -120,6 +125,24 @@ async def create_class(
     return await service.create_class(db, user, request)
 
 
+@router.get("/templates/students")
+async def download_student_template(
+    format: Literal["csv", "xlsx"] = Query(default="xlsx"),
+    _user: User = Depends(require_system_role(UserRole.admin, UserRole.teacher)),
+):
+    if format == "csv":
+        return Response(
+            content=student_import.student_template_csv(),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="class-students-template.csv"'},
+        )
+    return Response(
+        content=student_import.student_template_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="class-students-template.xlsx"'},
+    )
+
+
 @router.get("/{class_id}", response_model=ClassResponse)
 async def get_class(access: ClassAccess = Depends(require_class_member())):
     return service.class_response(access.classroom, access.can_manage)
@@ -174,6 +197,15 @@ async def add_member(
     db: AsyncSession = Depends(get_db),
 ):
     return await service.add_student(db, access, str(request.email))
+
+
+@router.post("/{class_id}/members/import", response_model=MemberImportResponse)
+async def import_members(
+    request: MemberImport,
+    access: ClassAccess = Depends(manage_class),
+    db: AsyncSession = Depends(get_db),
+):
+    return await student_import.import_students(db, access, request)
 
 
 @router.delete("/{class_id}/members", status_code=204)

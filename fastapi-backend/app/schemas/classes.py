@@ -101,6 +101,28 @@ class MemberAdd(InputModel):
         return value.strip().lower() if isinstance(value, str) else value
 
 
+class MemberImport(InputModel):
+    format: Literal["csv", "xlsx"]
+    content: str = Field(min_length=1, max_length=1500000)
+
+
+class MemberImportSkip(BaseModel):
+    row: int
+    email: str
+    full_name: str | None = None
+    code: str
+    reason: str
+
+
+class MemberImportResponse(BaseModel):
+    total_rows: int
+    added_count: int
+    restored_count: int
+    already_active_count: int
+    skipped_count: int
+    skipped: list[MemberImportSkip]
+
+
 class MemberRemove(InputModel):
     user_id: int = Field(gt=0)
 

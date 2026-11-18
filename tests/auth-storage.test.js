@@ -44,3 +44,23 @@ test('remember choice controls persistence and switching/logging out removes old
     }
   }
 });
+
+test('persistent storage is available to a newly opened tab', () => {
+  const memoryStorage = () => {
+    const values = new Map();
+    return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  };
+  const previous = { localStorage: globalThis.localStorage, sessionStorage: globalThis.sessionStorage };
+  globalThis.localStorage = memoryStorage();
+  globalThis.sessionStorage = memoryStorage();
+  try {
+    saveAuthToken('default-persistent', true);
+    assert.equal(localStorage.getItem(TOKEN_KEY), 'default-persistent');
+    assert.equal(sessionStorage.getItem(TOKEN_KEY), null);
+  } finally {
+    clearAuthToken();
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+    }
+  }
+});

@@ -61,6 +61,7 @@ class LessonProgress(Base):
     status: Mapped[str] = mapped_column(Text, server_default="not_started")
     last_position: Mapped[float] = mapped_column(Float, server_default="0")
     watched_segments: Mapped[list] = mapped_column(json_type, default=list, server_default="[]")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -82,15 +82,19 @@ Triển khai server không dùng các bước này: xem [SERVER_STARTUP.md](Docs
 
 ### Lần đầu
 ```bash
-git clone https://github.com/Xuanuio-Pro/PSCubeSAT.git && cd PSCubeSAT
+git clone https://github.com/sswizzz/PSCubeSAT.git && cd PSCubeSAT
 npm install
 
 cd fastapi-backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate   |   Linux/macOS: source .venv/bin/activate
 python -m pip install -r requirements-dev.txt
+# macOS/Linux:
 cp .env.example .env          # giá trị mặc định khớp DB dev bên dưới
-cp ../.env.example ../.env    # biến frontend (tùy chọn)
+cp ../.env.example ../.env    # biến frontend và port (tùy chọn)
+# Windows PowerShell:
+Copy-Item .env.example .env
+Copy-Item ..\.env.example ..\.env
 docker build -f compiler/Dockerfile -t pscubesat-compiler:1 .   # chỉ cần khi thử biên dịch firmware
 cd ..
 
@@ -102,9 +106,15 @@ npm run curriculum:seed       # nạp giáo trình Lab 0–8 vào DB
 ### Hằng ngày
 ```bash
 npm run dev:db:docker   # nếu container DB chưa chạy (Windows có PostgreSQL portable: npm run dev:db)
-npm run dev             # tự chạy Redis/Mosquitto dev + migrate, rồi FE http://localhost:5173 và BE :8005
+npm run dev             # tự chạy Redis/Mosquitto dev + migrate, rồi FE http://localhost:5175 và BE :8005
 ```
 `npm run dev:fe` / `npm run dev:be` chạy riêng từng phần. Vite proxy `/api` và `/ws` sang BE.
+
+Mỗi clone tạo môi trường Docker riêng theo tên thư mục/project. Nếu chạy nhiều clone trên
+cùng một máy, đặt các giá trị khác nhau trong file `.env` ở thư mục gốc:
+`COMPOSE_PROJECT_NAME`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT`, `DEV_MQTT_PORT`,
+`VITE_DEV_PORT`, `VITE_BACKEND_PORT`; đồng thời đổi `PORT`, `REDIS_URL`, `DATABASE_URL`,
+`MQTT_PORT` trong `fastapi-backend/.env` cho khớp. Không commit hai file `.env`.
 
 ### Tài khoản và chế độ lớp học (LMS)
 - Đăng ký tài khoản trên giao diện (luôn là `user`). Không có API công khai tạo Admin; trên DB dev:

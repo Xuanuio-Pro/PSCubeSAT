@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
     return () => { active = false; };
   }, []);
 
-  const login = useCallback(async (email, password, remember = false) => {
+  const login = useCallback(async (email, password, remember = true) => {
     const data = await request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
-  const loginAdmin = useCallback(async (email, password, remember = false) => {
+  const loginAdmin = useCallback(async (email, password, remember = true) => {
     const data = await request('/api/admin/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -94,27 +94,27 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
-  const registerAdmin = useCallback(async (email, password, fullName) => {
+  const registerAdmin = useCallback(async (email, password, fullName, remember = true) => {
     const data = await request('/api/admin/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name: fullName || undefined }),
     });
-    saveAuthToken(data.access_token);
+    saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const register = useCallback(async (email, password, fullName) => {
+  const register = useCallback(async (email, password, fullName, remember = true) => {
     const data = await request('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name: fullName || undefined }),
     });
-    saveAuthToken(data.access_token);
+    saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const loginGoogle = useCallback(async (credential, remember = false) => {
+  const loginGoogle = useCallback(async (credential, remember = true) => {
     const data = await request('/api/auth/google', {
       method: 'POST',
       body: JSON.stringify({ credential }),

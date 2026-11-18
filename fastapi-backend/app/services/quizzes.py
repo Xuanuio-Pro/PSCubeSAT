@@ -20,7 +20,13 @@ from app.models.quiz import (
     QuizRequest,
 )
 from app.models.tables import ClassMembership
+from app.schemas.quiz import (
+    normalize_multiple_choice_answer,
+    normalize_short_answer,
+    normalize_true_false_answer,
+)
 from app.services.classes import audit
+from app.services.exam_import import PREFIX_RE, shuffle_true_false_choices
 from app.services.learning_progress import (
     ensure_available,
     member_path,
@@ -171,16 +177,31 @@ async def serialize(db, attempt, *, result=False):
     selected = await answers(db, attempt)
     public_items = []
     for item in await items(db, attempt):
+        q_type = item.snapshot.get("question_type", "single_choice")
+        raw_choices = [] if q_type == "short_answer" else item.snapshot["choices"]
+        if q_type == "true_false":
+            raw_choices = [
+                {"id": c["id"], "text": PREFIX_RE.sub("", c["text"]).strip() or c["text"]}
+                for c in raw_choices
+            ]
         public = {
             "id": item.id,
             "prompt": item.snapshot["prompt"],
-            "choices": item.snapshot["choices"],
+            "choices": raw_choices,
         }
+        if q_type != "single_choice":
+            public["question_type"] = q_type
         if reveal:
             public.update(
                 {
                     k: item.snapshot[k]
-                    for k in ("correct_choice_id", "explanation", "source_reference")
+                    for k in (
+                        "correct_choice_id",
+                        "explanation",
+                        "choice_explanations",
+                        "source_reference",
+                    )
+                    if k in item.snapshot
                 }
             )
         public_items.append(public)
@@ -283,7 +304,11 @@ async def start(db, access, lab_id, request):
             rng = secrets.SystemRandom()
             for position, question in enumerate(rng.sample(pool, 5)):
                 content = deepcopy(question.content)
-                rng.shuffle(content["choices"])
+                q_type = content.get("question_type", "single_choice")
+                if q_type == "true_false":
+                    content["choices"] = shuffle_true_false_choices(rng, content["choices"])
+                elif q_type in ("single_choice", "multiple_choice"):
+                    rng.shuffle(content["choices"])
                 db.add(
                     QuizAttemptItem(
                         id=uid(),
@@ -334,12 +359,34 @@ async def save_answers(db, attempt, request):
     if request.expected_revision != attempt.answer_revision:
         conflict()
     by_id = {q.id: q for q in await items(db, attempt)}
+    normalized_answers: dict[str, str] = {}
     for item_id, choice_id in request.answers.items():
-        if item_id not in by_id or choice_id not in {
-            c["id"] for c in by_id[item_id].snapshot["choices"]
-        }:
+        if item_id not in by_id:
             invalid("Lựa chọn không thuộc đề thi này.")
-    for item_id, choice_id in request.answers.items():
+        snapshot = by_id[item_id].snapshot
+        q_type = snapshot.get("question_type", "single_choice")
+        valid_ids = [c["id"] for c in snapshot["choices"]]
+        try:
+            if q_type == "single_choice":
+                if choice_id not in set(valid_ids):
+                    raise ValueError("Invalid single choice")
+                normalized_answers[item_id] = choice_id
+            elif q_type == "multiple_choice":
+                normalized_answers[item_id] = normalize_multiple_choice_answer(choice_id, valid_ids)
+            elif q_type == "true_false":
+                normalized_answers[item_id] = normalize_true_false_answer(
+                    choice_id, valid_ids, partial=True
+                )
+            elif q_type == "short_answer":
+                ans = normalize_short_answer(choice_id)
+                if not ans or len(ans) > 64:
+                    raise ValueError("Invalid short answer")
+                normalized_answers[item_id] = ans
+            else:
+                raise ValueError("Unknown question type")
+        except ValueError:
+            invalid("Lựa chọn không thuộc đề thi này.")
+    for item_id, choice_id in normalized_answers.items():
         row = await db.get(QuizAnswer, (attempt.id, item_id))
         if row:
             row.choice_id = choice_id

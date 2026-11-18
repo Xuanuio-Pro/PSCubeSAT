@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T04:09:30+07:00",
+  "title": "Design System: CubeSAT — PTIT LMS",
+  "extensions": {
+    "colorMeta": {
+      "cubesat-navy": {
+        "role": "primary",
+        "displayName": "Orbital Navy",
+        "canonical": "#0a4174",
+        "tonalRamp": ["#041b33", "#072c52", "#0a4174", "#0e5a9e", "#1d74c2", "#539ce0", "#9cc8f2", "#e5f1fc"]
+      },
+      "brand-primary": {
+        "role": "primary",
+        "displayName": "Sky Telemetry Cyan",
+        "canonical": "#0ea5e9",
+        "tonalRamp": ["#082f49", "#0c4a6e", "#0369a1", "#0284c7", "#0ea5e9", "#38bdf8", "#7dd3fc", "#e0f2fe"]
+      },
+      "cubesat-ink": {
+        "role": "neutral",
+        "displayName": "Deep Space Ink",
+        "canonical": "#001d39",
+        "tonalRamp": ["#001d39", "#0f2d4a", "#1d3b58", "#415e78", "#68859e", "#9bb4c9", "#d5e4f0", "#f4f9fd"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Home hero titles and primary portal headers." },
+      "headline": { "displayName": "Headline", "purpose": "Page-level H1 headings in LMS and Lab views." },
+      "title": { "displayName": "Title", "purpose": "Section panels, lab cards, and modal headers." },
+      "body": { "displayName": "Body", "purpose": "Lesson documentation, prose, and form descriptions." },
+      "label": { "displayName": "Label / Mono", "purpose": "Telemetry readouts, C++ snippets, and status badges." }
+    },
+    "shadows": [
+      {
+        "name": "panel-rest",
+        "value": "0 10px 28px -6px rgba(10, 65, 116, 0.07)",
+        "purpose": "Default elevation for LMS panels and class cards."
+      },
+      {
+        "name": "primary-glow",
+        "value": "0 8px 20px -4px rgba(14, 165, 233, 0.35)",
+        "purpose": "Primary action buttons at rest and hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Standard responsive easing for hover, drawer, and tab transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "560px" },
+      { "name": "md", "value": "760px" },
+      { "name": "lg", "value": "860px" },
+      { "name": "xl", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary CTA button used across LMS forms and Lab completion actions.",
+      "html": "<button class=\"ds-btn-primary\">Lưu cấu hình</button>",
+      "css": ".ds-btn-primary { min-height: 42px; padding: 9px 18px; border-radius: 10px; border: 1px solid transparent; background: linear-gradient(135deg, #0a4174 0%, #0d6db7 55%, #0ea5e9 100%); color: #ffffff; font-family: var(--font-sans, sans-serif); font-size: 0.88rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 20px -4px rgba(14, 165, 233, 0.35); transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms cubic-bezier(0.2, 0.8, 0.2, 1); } .ds-btn-primary:hover { background: linear-gradient(135deg, #08355e 0%, #0b5d9e 55%, #0284c7 100%); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Action Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action button for navigation, filters, and auxiliary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Tải mẫu CSV</button>",
+      "css": ".ds-btn-secondary { min-height: 42px; padding: 9px 16px; border-radius: 10px; border: 1px solid #b8d0e4; background: #ffffff; color: #0a4174; font-family: var(--font-sans, sans-serif); font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 150ms cubic-bezier(0.2, 0.8, 0.2, 1); } .ds-btn-secondary:hover { background: #eaf3fb; border-color: #0ea5e9; color: #001d39; transform: translateY(-1px); } .ds-btn-secondary:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Semantic status pill with leading indicator dot.",
+      "html": "<span class=\"ds-status-active\">Đang học</span>",
+      "css": ".ds-status-active { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: #dcfce7; color: #146c32; border: 1px solid #86efac; font-size: 0.78rem; font-weight: 700; } .ds-status-active::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }"
+    },
+    {
+      "name": "LMS Form Input",
+      "kind": "input",
+      "refersTo": "form-input",
+      "description": "Standard text input with sky-blue focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nhập tên lớp học...\" />",
+      "css": ".ds-input { width: 100%; min-height: 44px; padding: 9px 14px; border: 1px solid #b8d0e4; border-radius: 10px; background: #ffffff; color: #001d39; font-size: 0.92rem; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input:hover { border-color: #7bbde8; } .ds-input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3.5px rgba(14, 165, 233, 0.15); outline: none; }"
+    },
+    {
+      "name": "LMS Surface Panel",
+      "kind": "card",
+      "refersTo": "card-panel",
+      "description": "Primary translucent daylight container for class and lab content.",
+      "html": "<section class=\"ds-panel\"><h2>Cấu hình bài học</h2><p>Thiết lập điều kiện hoàn thành và bài kiểm tra cuối Lab.</p></section>",
+      "css": ".ds-panel { padding: 24px 26px; background: rgba(255, 255, 255, 0.94); border: 1px solid #d5e4f0; border-radius: 18px; box-shadow: 0 10px 28px -6px rgba(10, 65, 116, 0.07); color: #1d3b58; } .ds-panel h2 { margin: 0 0 8px; color: #001d39; font-size: 1.2rem; font-weight: 700; } .ds-panel p { margin: 0; color: #415e78; font-size: 0.92rem; line-height: 1.6; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Orbital Engineering Lab Bench",
+    "overview": "CubeSAT — PTIT LMS pairs bright, high-clarity daytime lab surfaces with deep aerospace navy anchors and dark-bay telemetry consoles. It serves university students programming physical CubeSat 1U kits over Web Serial alongside instructors managing class cohorts, prerequisites, and Lab Tests. Visual authority comes from technical precision, clear tabular telemetry, and unmistakable status wayfinding rather than decorative marketing chrome.",
+    "keyCharacteristics": [
+      "Daylight-first academic surfaces tinted toward aerospace blue (#f4f9fd to #ffffff), never washed-out pure gray.",
+      "Deep Orbital Navy (#0a4174) and Deep Telemetry Bay (#071526) structural anchors for navigation, code, and serial logs.",
+      "Tabular numeric discipline (font-variant-numeric: tabular-nums) across timers, telemetry readouts, scores, and lab progress.",
+      "Full-perimeter 1px semantic borders on cards and notices—never thick left/right accent stripes."
+    ],
+    "rules": [
+      {
+        "name": "The Tinted Neutral Rule",
+        "body": "Never use pure untinted grays (#64748b, #e2e8f0) on aerospace-tinted cards; all neutrals carry a cool navy undertone so text and borders belong to the same light source.",
+        "section": "colors"
+      },
+      {
+        "name": "The Text-Link Contrast Rule",
+        "body": "Never use #0ea5e9 for body-sized text on light backgrounds (2.77:1); always use --text-link (#0369a1, 5.93:1) or --cubesat-navy (#0a4174, 10.3:1).",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Telemetry Rule",
+        "body": "Every live counter, countdown clock, sensor reading, percentage, and lab index badge must declare font-variant-numeric: tabular-nums so digits never jitter during updates.",
+        "section": "typography"
+      },
+      {
+        "name": "The Perimeter Border Rule",
+        "body": "Every card, callout, and status banner uses a uniform 1px solid perimeter border paired with a subtle background tint—never a thick 3px or 4px border-left stripe.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep all user-facing UI labels, buttons, empty states, and error messages in clear, natural Vietnamese while keeping code identifiers and telemetry keys in English.",
+      "Do use semantic status tokens (--status-info-*, --status-success-*, --status-warning-*, --status-danger-*, --status-neutral-*) for badges, banners, and telemetry indicators.",
+      "Do maintain a minimum 42px–44px touch/click target on interactive controls used in classroom labs."
+    ],
+    "donts": [
+      "Don't add thick border-left or border-right accent bars (> 1px) to cards, callouts, quiz explanations, or notices.",
+      "Don't use bounce or spring overshoot curves (cubic-bezier(0.34, 1.56, 0.64, 1)); use --ease-out (cubic-bezier(0.2, 0.8, 0.2, 1)).",
+      "Don't use English uppercase decorative kickers (USER ACCESS, ADMIN ACCESS, TELEMETRY FEED) above Vietnamese headings."
+    ]
+  }
+}

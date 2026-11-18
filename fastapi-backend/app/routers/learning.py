@@ -26,7 +26,7 @@ async def path(
 ):
     config = await service.raw_config(db, access)
     if access.can_manage and membership_id is None:
-        return learning_path(config, {})
+        return learning_path(config, {}, unlocked_all=True)
     member = await service.student_member(
         db, access, membership_id=membership_id if access.can_manage else None
     )

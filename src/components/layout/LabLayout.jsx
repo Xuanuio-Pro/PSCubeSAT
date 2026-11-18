@@ -51,8 +51,11 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
   const elapsedSeconds = lessonStates[lesson.id]?.started_at
     ? Math.max(0, Math.floor((clock - Date.parse(lessonStates[lesson.id].started_at)) / 1000))
     : 0;
-  const remainingSeconds = Math.max(0, 60 - elapsedSeconds);
-  const canComplete = user?.role === 'teacher' || user?.role === 'admin'
+  const isSummaryLesson = lesson.type === 'summary' || String(lesson.id || '').startsWith('summary-');
+  const remainingSeconds = isSummaryLesson ? 0 : Math.max(0, 60 - elapsedSeconds);
+  const isPrivileged = user?.role === 'teacher' || user?.role === 'admin';
+  const canComplete = isPrivileged
+    || isSummaryLesson
     || Boolean(lessonStates[lesson.id]?.started_at && elapsedSeconds >= 60);
   const completeLesson = async () => {
     setCompleteError('');
@@ -100,8 +103,8 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
         : [...current, body]));
   }, [isAuthenticated, lab, lesson.id, lessonStates]);
   useEffect(() => {
-    if (firstIncomplete > 0 && lessonIndex > firstIncomplete) selectLesson(lessons[firstIncomplete].id);
-  }, [firstIncomplete, lessonIndex, lessons, selectLesson]);
+    if (!isPrivileged && firstIncomplete >= 0 && lessonIndex > firstIncomplete) selectLesson(lessons[firstIncomplete].id);
+  }, [isPrivileged, firstIncomplete, lessonIndex, lessons, selectLesson]);
 
   if (!lab) return <div>Lab không tồn tại</div>;
   const scopedEditor = isValidElement(editorPanel) ? cloneElement(editorPanel, {
