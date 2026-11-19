@@ -8,6 +8,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [smtpEnabled, setSmtpEnabled] = useState(null);
+  const [ttlMinutes, setTtlMinutes] = useState(30);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -15,7 +16,11 @@ export default function ForgotPasswordPage() {
   useEffect(() => {
     let active = true;
     request('/api/auth/password-reset/config')
-      .then((cfg) => { if (active) setSmtpEnabled(Boolean(cfg?.smtp_enabled)); })
+      .then((cfg) => {
+        if (!active) return;
+        setSmtpEnabled(Boolean(cfg?.smtp_enabled));
+        if (cfg?.token_ttl_minutes) setTtlMinutes(cfg.token_ttl_minutes);
+      })
       .catch(() => { if (active) setSmtpEnabled(false); });
     return () => { active = false; };
   }, []);
@@ -54,6 +59,11 @@ export default function ForgotPasswordPage() {
       {result ? (
         <div className="auth-success-notice" role="status">
           <p>{result.message}</p>
+          {result.delivery_mode === 'email' && (
+            <p style={{ marginTop: '8px', fontWeight: 400 }}>
+              Hãy kiểm tra cả thư rác (spam). Liên kết chỉ dùng được một lần và hết hạn sau {ttlMinutes} phút.
+            </p>
+          )}
           {result.delivery_mode === 'admin' && (
             <p style={{ marginTop: '8px', fontWeight: 400 }}>
               Quản trị viên sẽ cấp liên kết đặt lại dùng một lần hoặc mật khẩu tạm tại trang Quản lý tài khoản.

@@ -75,7 +75,8 @@ async def request_password_reset(
     smtp_enabled = settings.smtp_configured
     delivery_mode = "email" if smtp_enabled else "admin"
     generic_message = (
-        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email."
+        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email. "
+        "Nếu không nhận được thư sau vài phút, yêu cầu sẽ được chuyển tới quản trị viên."
         if smtp_enabled
         else "Nếu email tồn tại và đang hoạt động, yêu cầu cấp lại mật khẩu đã được gửi tới quản trị viên."
     )

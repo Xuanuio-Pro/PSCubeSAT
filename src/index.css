@@ -2599,3 +2599,15 @@ html:has(.lab-fig), body:has(.lab-fig) { overflow: hidden; height: 100%; }
 /* Thẻ tiến độ: tiêu đề giữ nguyên chỗ, phụ đề "x/y lesson..." cách xa tiêu đề hơn; thanh tiến độ lùi lại tương ứng để thẻ không đổi chiều cao */
 .fig-progress-sub { margin-top: calc(24 * var(--u)); }
 .fig-progress-track { margin-top: calc(29 * var(--u)); }
+
+.password-requirements {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted, #64748b);
+}
+.password-requirements li.is-met {
+  color: #15803d;
+}

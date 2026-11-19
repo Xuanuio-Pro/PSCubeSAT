@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import PasswordInput from '../components/common/PasswordInput';
+import PasswordRequirements from '../components/common/PasswordRequirements';
+import { validatePassword } from '../utils/passwordPolicy';
 import { useAuth } from '../contexts/auth-api';
 
 export default function AdminSignUpPage() {
@@ -24,8 +26,9 @@ export default function AdminSignUpPage() {
       setError('Vui lòng nhập tên quản trị viên.');
       return;
     }
-    if (form.password.length < 6) {
-      setError('Mật khẩu phải tối thiểu 6 ký tự.');
+    const passwordError = validatePassword(form.password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -72,15 +75,16 @@ export default function AdminSignUpPage() {
             id="admin-password"
             name="password"
             required
-            minLength={6}
+            minLength={8}
             value={form.password}
             onChange={handleChange}
             placeholder="••••••••"
             autoComplete="new-password"
             hasError={Boolean(error)}
             aria-invalid={Boolean(error)}
-            aria-describedby={error ? 'admin-signup-error' : undefined}
+            aria-describedby={error ? 'admin-password-requirements admin-signup-error' : 'admin-password-requirements'}
           />
+          <PasswordRequirements id="admin-password-requirements" value={form.password} />
         </div>
 
         <div className="auth-field">
@@ -89,7 +93,7 @@ export default function AdminSignUpPage() {
             id="admin-confirm-password"
             name="confirmPassword"
             required
-            minLength={6}
+            minLength={8}
             value={form.confirmPassword}
             onChange={handleChange}
             placeholder="••••••••"

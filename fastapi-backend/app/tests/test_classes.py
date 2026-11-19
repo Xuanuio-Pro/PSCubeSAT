@@ -142,7 +142,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
                 "/api/auth/register",
                 json={
                     "email": "new@example.com",
-                    "password": "secret123",
+                    "password": "Secret123!",
                     **extra,
                 },
             )
@@ -151,7 +151,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             "/api/auth/register",
             json={
                 "email": "new@example.com",
-                "password": "secret123",
+                "password": "Secret123!",
             },
         )
         self.assertEqual(result.status_code, 201, result.text)
@@ -388,13 +388,13 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
 
         done = await self.client.post(
             "/api/auth/reset-password",
-            json={"token": raw_token, "new_password": "newpass123"},
+            json={"token": raw_token, "new_password": "Newpass123!"},
         )
         self.assertEqual(done.status_code, 200, done.text)
         self.assertEqual(
             (
                 await self.client.post(
-                    "/api/auth/login", json={"email": "user4@example.com", "password": "newpass123"}
+                    "/api/auth/login", json={"email": "user4@example.com", "password": "Newpass123!"}
                 )
             ).status_code,
             200,

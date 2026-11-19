@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import PasswordInput from '../components/common/PasswordInput';
+import PasswordRequirements from '../components/common/PasswordRequirements';
+import { validatePassword } from '../utils/passwordPolicy';
 import { request } from '../contexts/auth-api';
 
 export default function ResetPasswordPage() {
@@ -46,12 +48,9 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 6) {
-      setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
-      return;
-    }
-    if (new TextEncoder().encode(newPassword).length > 72) {
-      setError('Mật khẩu không được vượt quá 72 byte UTF-8.');
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -108,15 +107,16 @@ export default function ResetPasswordPage() {
             <PasswordInput
               id="reset-new-password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               placeholder="********"
               hasError={Boolean(error)}
               aria-invalid={Boolean(error)}
-              aria-describedby={error ? 'reset-password-error' : undefined}
+              aria-describedby={error ? 'reset-password-requirements reset-password-error' : 'reset-password-requirements'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
+            <PasswordRequirements id="reset-password-requirements" value={newPassword} />
           </div>
 
           <div className="auth-field">
@@ -124,7 +124,7 @@ export default function ResetPasswordPage() {
             <PasswordInput
               id="reset-confirm-password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               placeholder="********"
               hasError={Boolean(error)}
