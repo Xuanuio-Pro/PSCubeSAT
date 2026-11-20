@@ -29,6 +29,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignUpPage = lazy(() => import('./pages/SignUpPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const GroundStationPage = lazy(() => import('./pages/GroundStationPage'));
 const LabQuestionsPage = lazy(() => import('./pages/LabQuestionsPage'));
@@ -132,6 +133,7 @@ export default function App() {
     <Route path="/signup" element={<AuthPage><SignUpPage /></AuthPage>} />
     <Route path="/forgot-password" element={<AuthPage><ForgotPasswordPage /></AuthPage>} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/verify-email" element={<VerifyEmailPage />} />
     <Route path="/admin/login" element={<AdminLoginPage />} />
     <Route path="/admin/signup" element={<AdminSignUpPage />} />
     <Route element={<PublicLayout />}>

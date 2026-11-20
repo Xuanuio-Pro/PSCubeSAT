@@ -81,6 +81,8 @@ RULES = (
     _rule("login", "POST", r"^/api/auth/login$", "ip", 60, 60),
     _rule("google_login", "POST", r"^/api/auth/google$", "ip", 60, 60),
     _rule("register", "POST", r"^/api/auth/register$", "ip", 30, 3600),
+    _rule("verify_email", "POST", r"^/api/auth/verify-email$", "ip", 30, 600),
+    _rule("resend_verification", "POST", r"^/api/auth/resend-verification$", "ip", 10, 600),
     _rule("forgot_password", "POST", r"^/api/auth/forgot-password$", "ip", 10, 600),
     _rule("reset_password_validate", "GET", r"^/api/auth/reset-password/validate$", "ip", 30, 600),
     _rule("reset_password", "POST", r"^/api/auth/reset-password$", "ip", 15, 600),

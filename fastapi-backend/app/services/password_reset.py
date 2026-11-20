@@ -75,7 +75,8 @@ async def request_password_reset(
     smtp_enabled = settings.smtp_configured
     delivery_mode = "email" if smtp_enabled else "admin"
     generic_message = (
-        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email."
+        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email. "
+        "Nếu không nhận được thư sau vài phút, yêu cầu sẽ được chuyển tới quản trị viên."
         if smtp_enabled
         else "Nếu email tồn tại và đang hoạt động, yêu cầu cấp lại mật khẩu đã được gửi tới quản trị viên."
     )
@@ -224,6 +225,8 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
 
     user.password_hash = await run_in_threadpool(hash_password, new_password)
     user.updated_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # the reset link proved ownership of the mailbox
     row.status = "used"
     row.used_at = now
     await revoke_open_resets(db, user.id, exclude_id=row.id)

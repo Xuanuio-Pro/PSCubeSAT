@@ -29,8 +29,10 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
+    RegisterResponse,
     UserResponse,
 )
+from app.services import email_verification
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -110,8 +112,14 @@ class AuthService:
         self.db_session = db_session
         self.user_repo = UserRepository(db_session)
 
-    async def register_user(self, request: RegisterRequest) -> AuthTokenResponse:
-        """Đăng ký tài khoản mới, trả về JWT token ngay sau khi tạo thành công."""
+    async def register_user(
+        self, request: RegisterRequest, request_origin: str | None = None
+    ) -> RegisterResponse:
+        """Đăng ký tài khoản mới.
+
+        Khi SMTP đã cấu hình, tài khoản phải xác minh email trước khi đăng nhập nên không cấp token.
+        Khi chưa có SMTP, tài khoản được coi là đã xác minh và nhận token ngay.
+        """
         email_clean = request.email.strip().lower()
 
         if await self.user_repo.check_email_exists(email_clean):
@@ -125,12 +133,14 @@ class AuthService:
             if request.full_name and request.full_name.strip()
             else email_clean.split("@")[0]
         )
+        needs_verification = email_verification.verification_required()
 
         new_user = User(
             email=email_clean,
             password_hash=await run_in_threadpool(hash_password, request.password),
             full_name=full_name_val,
             role="user",
+            email_verified_at=None if needs_verification else datetime.now(timezone.utc),
         )
 
         try:
@@ -145,6 +155,22 @@ class AuthService:
             f"[AuthService] ✅ New user registered: {mask_email(created_user.email)} (ID: {created_user.id})"
         )
 
+        if needs_verification:
+            sent = await email_verification.issue_and_send(
+                self.db_session, created_user, request_origin
+            )
+            return RegisterResponse(
+                verification_required=True,
+                email_sent=sent,
+                message=(
+                    "Đã gửi email xác minh. Hãy mở liên kết trong thư (kiểm tra cả thư rác) "
+                    "để kích hoạt tài khoản."
+                    if sent
+                    else "Tài khoản đã được tạo nhưng chưa gửi được email xác minh. "
+                    "Hãy bấm Gửi lại email sau ít phút."
+                ),
+            )
+
         token = create_access_token(
             {
                 "sub": str(created_user.id),
@@ -153,7 +179,7 @@ class AuthService:
             }
         )
 
-        return AuthTokenResponse(
+        return RegisterResponse(
             access_token=token,
             token_type="bearer",
             user=UserResponse(
@@ -190,6 +216,7 @@ class AuthService:
             password_hash=await run_in_threadpool(hash_password, request.password),
             full_name=full_name,
             role=UserRole.admin,
+            email_verified_at=datetime.now(timezone.utc),
         )
         try:
             created_admin = await self.user_repo.create(new_admin)
@@ -259,6 +286,18 @@ class AuthService:
         if require_role is None and user.role == UserRole.admin:
             raise ValueError("Tài khoản quản trị chỉ được đăng nhập từ trang quản trị.")
 
+        if (
+            user.role != UserRole.admin
+            and user.email_verified_at is None
+            and email_verification.verification_required()
+        ):
+            raise LMSError(
+                403,
+                "EMAIL_NOT_VERIFIED",
+                "Email chưa được xác minh. Hãy mở liên kết trong thư xác minh hoặc gửi lại email.",
+                {"email": user.email},
+            )
+
         logger.info(
             f"[AuthService] 🔑 User logged in: {mask_email(user.email)} ({user.role.value})"
         )
@@ -308,8 +347,11 @@ class AuthService:
                             ),
                             full_name=claims.get("name") or email.split("@")[0],
                             role="user",
+                            email_verified_at=datetime.now(timezone.utc),
                         )
                     )
+                elif user.email_verified_at is None:
+                    user.email_verified_at = datetime.now(timezone.utc)
                 self.db_session.add(GoogleIdentity(subject=claims["sub"], user_id=user.id))
                 await self.db_session.commit()
                 await self.db_session.refresh(user)

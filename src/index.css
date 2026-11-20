@@ -378,17 +378,6 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
 .admin-empty {
   margin-top: 14px; color: var(--text-muted);
 }
-.admin-confirm {
-  margin-bottom: 20px;
-}
-.admin-temp-password {
-  display: inline-block; margin: 0 8px; padding: 4px 10px; border-radius: 6px;
-  background: var(--bg-surface); border: 1px solid var(--border-strong);
-  font-family: ui-monospace, Consolas, monospace; font-size: 1rem; user-select: all;
-}
-.admin-temp-password--link {
-  display: block; margin: 8px 0 0; overflow-wrap: anywhere; font-size: 0.88rem;
-}
 .admin-reset-badge {
   display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px;
   background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;
@@ -2599,3 +2588,23 @@ html:has(.lab-fig), body:has(.lab-fig) { overflow: hidden; height: 100%; }
 /* Thẻ tiến độ: tiêu đề giữ nguyên chỗ, phụ đề "x/y lesson..." cách xa tiêu đề hơn; thanh tiến độ lùi lại tương ứng để thẻ không đổi chiều cao */
 .fig-progress-sub { margin-top: calc(24 * var(--u)); }
 .fig-progress-track { margin-top: calc(29 * var(--u)); }
+
+.password-requirements {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted, #64748b);
+}
+.password-requirements li.is-met {
+  color: #15803d;
+}
+
+.admin-danger-btn {
+  color: var(--status-danger-text);
+  border-color: var(--status-danger-border);
+}
+.admin-danger-btn:hover:not(:disabled) {
+  background: var(--status-danger-bg);
+}

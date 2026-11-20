@@ -182,3 +182,30 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Serial Monitor: gom dòng nhận được và cập nhật giao diện mỗi 80 ms (bộ giải mã vẫn nhận từng dòng ngay); thêm Tạm dừng/Tiếp tục, Sao chép, tự cuộn theo vị trí cuộn và nút "↓ Cuối". Áp dụng cho mọi bài.
 - Lab4-04b đổi tên: "Chụp ảnh bằng thư viện PTIT_Camera, lưu thẻ SD và gửi ảnh về trình duyệt qua Serial". ID không đổi.
 - Hiển thị ảnh camera qua MQTT: hoãn, kế hoạch riêng ở `Docs/MQTT_PLAN_2026-11-18.md`.
+
+## 2026-11-19 — Chính sách mật khẩu mạnh khi đặt mật khẩu mới
+- Quyết định: mật khẩu mới phải có tối thiểu 8 ký tự, ít nhất 1 chữ cái in hoa và 1 ký tự đặc biệt (không phải chữ, số hay khoảng trắng); giữ giới hạn 72 byte UTF-8. Áp dụng ở server (`validate_new_password` trong `app/schemas/auth.py`) cho đăng ký, đăng ký admin đầu tiên, đổi mật khẩu và đặt lại mật khẩu; frontend dùng `src/utils/passwordPolicy.js` để báo trước và hiển thị yêu cầu.
+- Không áp dụng cho đăng nhập: tài khoản cũ có mật khẩu yếu vẫn đăng nhập được, chỉ phải theo quy tắc mới khi đổi hoặc đặt lại. Không buộc đổi mật khẩu hàng loạt.
+- Không thêm yêu cầu chữ số hay danh sách mật khẩu phổ biến (ngoài phạm vi). `scripts/create_admin.py` (CLI) không đi qua schema nên chưa áp dụng.
+
+## 2026-11-19 — Quên mật khẩu tự phục vụ qua email
+- Quyết định: dùng luồng email có sẵn (link một lần, TTL `PASSWORD_RESET_TOKEN_TTL_MINUTES`, mặc định 30 phút) làm đường chính; bật bằng cách điền `SMTP_*` và `FRONTEND_URL` trong `fastapi-backend/.env` (mẫu ở `.env.example`) rồi khởi động lại backend. Không điền thì giữ hành vi cũ: yêu cầu chuyển về admin tại `/admin/users`.
+- Gửi mail lỗi vẫn rơi về hàng chờ admin; thông báo chung nay nói rõ khả năng đó và vẫn giống hệt với email không tồn tại để không lộ thông tin tài khoản.
+- Rủi ro: Gmail cá nhân có hạn mức thư/ngày; `FRONTEND_URL` sai sẽ làm link trong email trỏ sai. Chưa kiểm thử gửi thư thật vì chưa có thông tin SMTP.
+
+## 2026-11-20 — Xác minh email khi đăng ký
+- Quyết định: khi SMTP đã cấu hình, đăng ký tạo tài khoản chưa xác minh (`users.email_verified_at` rỗng), gửi liên kết một lần (hash trong `email_verification_tokens`, hết hạn sau `EMAIL_VERIFICATION_TTL_HOURS`, mặc định 24 giờ) và không cấp token. Đăng nhập bằng email/mật khẩu bị chặn bằng mã `EMAIL_NOT_VERIFIED` (HTTP 403) cho đến khi xác minh; chỉ báo sau khi mật khẩu đúng nên không lộ tài khoản. Mã này là mã mới ngoài danh sách dùng chung trong AGENTS.md.
+- Khi SMTP chưa cấu hình, đăng ký coi tài khoản là đã xác minh và cấp token như trước. Quy tắc chặn chỉ áp dụng khi SMTP bật, nên tắt SMTP không làm khóa người dùng đang chờ xác minh.
+- Tài khoản hiện có được backfill `email_verified_at = created_at` (migration `0020_email_verification`); đăng nhập Google, admin đầu tiên và hoàn tất đặt lại mật khẩu qua email cũng đánh dấu đã xác minh.
+- Gửi lại thư xác minh: phản hồi luôn giống nhau với email lạ; mỗi lần gửi thu hồi liên kết cũ; có giới hạn tần suất theo IP.
+- Downgrade xóa cột và bảng token (chỉ mất trạng thái xác minh mới; upgrade lại backfill tất cả là đã xác minh).
+- Test: `app/tests/conftest.py` ép `smtp_host` rỗng cho mọi test để `.env` cục bộ không làm đổi luồng hay gửi thư thật.
+
+## 2026-11-20 — Xóa tài khoản (admin)
+- Quyết định: `DELETE /api/admin/users/{id}` xóa mềm (`deleted_at`, trạng thái khóa), không xóa dòng dữ liệu, vì các khóa ngoại RESTRICT (lớp, thành viên, audit, thiết bị) và quy tắc không phá dữ liệu cũ. Phiên đăng nhập hiện có mất hiệu lực ngay, tài khoản bị gỡ khỏi mọi lớp (membership chuyển `removed`), yêu cầu đặt lại mật khẩu đang mở bị thu hồi, ghi `audit_logs` (`user.delete`, không lưu email).
+- Chỉ admin; không xóa chính mình, không xóa tài khoản admin; giảng viên còn phụ trách lớp chưa lưu trữ bị từ chối (409, trả danh sách mã lớp) để lớp không mồ côi. Tiến độ học tập, bài làm và báo cáo của tài khoản vẫn được giữ.
+- Email của tài khoản đã xóa vẫn bị giữ (chỉ mục duy nhất), nên chưa đăng ký lại được bằng email đó. Giải phóng email hoặc khôi phục tài khoản là việc riêng nếu cần.
+
+## 2026-11-20 — Không cấp thêm quyền Admin qua giao diện hoặc API
+- Quyết định: bỏ nút "Cấp quyền Admin" ở `/admin/users` và chặn ở server: `AdminUserPatch.role` chỉ nhận `teacher` hoặc `user`, gửi `admin` bị từ chối 422. Các tài khoản admin đã tạo giữ nguyên (đăng nhập, Khóa/Mở khóa, bảo vệ admin cuối cùng không đổi).
+- Admin mới chỉ tạo được qua `POST /api/admin/signup` (khi hệ thống chưa có admin) hoặc `scripts/create_admin.py`. Hạ quyền admin vẫn không có trên giao diện.

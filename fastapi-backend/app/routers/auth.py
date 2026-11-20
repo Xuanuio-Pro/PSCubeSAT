@@ -28,10 +28,14 @@ from app.schemas.auth import (
     LoginRequest,
     PasswordResetConfigResponse,
     RegisterRequest,
+    RegisterResponse,
+    ResendVerificationRequest,
     ResetPasswordConfirmRequest,
     ResetPasswordValidateResponse,
     UserResponse,
+    VerifyEmailRequest,
 )
+from app.services import email_verification
 from app.services.auth import AuthService, get_required_user
 from app.services.password_reset import (
     confirm_password_reset,
@@ -65,14 +69,29 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
     return result
 
 
-@router.post("/register", response_model=AuthTokenResponse, status_code=201)
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    """Đăng ký tài khoản người dùng mới."""
+@router.post("/register", response_model=RegisterResponse, status_code=201)
+async def register(req: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Đăng ký tài khoản người dùng mới (cần xác minh email khi hệ thống đã cấu hình SMTP)."""
     logger.info(f"[Auth] Attempting to register new user with email: {mask_email(req.email)}")
     try:
-        return await AuthService(db).register_user(req)
+        return await AuthService(db).register_user(req, request.headers.get("origin"))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/verify-email", status_code=200)
+async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    """Xác minh email bằng token dùng một lần trong thư."""
+    await email_verification.verify_token(db, req.token)
+    return {"message": "Đã xác minh email. Bạn có thể đăng nhập ngay bây giờ."}
+
+
+@router.post("/resend-verification", status_code=200)
+async def resend_verification(
+    req: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db)
+):
+    """Gửi lại thư xác minh; phản hồi luôn giống nhau dù email có tồn tại hay không."""
+    return await email_verification.resend(db, str(req.email), request.headers.get("origin"))
 
 
 @router.post("/login", response_model=AuthTokenResponse)
