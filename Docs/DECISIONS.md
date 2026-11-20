@@ -205,3 +205,7 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Quyết định: `DELETE /api/admin/users/{id}` xóa mềm (`deleted_at`, trạng thái khóa), không xóa dòng dữ liệu, vì các khóa ngoại RESTRICT (lớp, thành viên, audit, thiết bị) và quy tắc không phá dữ liệu cũ. Phiên đăng nhập hiện có mất hiệu lực ngay, tài khoản bị gỡ khỏi mọi lớp (membership chuyển `removed`), yêu cầu đặt lại mật khẩu đang mở bị thu hồi, ghi `audit_logs` (`user.delete`, không lưu email).
 - Chỉ admin; không xóa chính mình, không xóa tài khoản admin; giảng viên còn phụ trách lớp chưa lưu trữ bị từ chối (409, trả danh sách mã lớp) để lớp không mồ côi. Tiến độ học tập, bài làm và báo cáo của tài khoản vẫn được giữ.
 - Email của tài khoản đã xóa vẫn bị giữ (chỉ mục duy nhất), nên chưa đăng ký lại được bằng email đó. Giải phóng email hoặc khôi phục tài khoản là việc riêng nếu cần.
+
+## 2026-11-20 — Không cấp thêm quyền Admin qua giao diện hoặc API
+- Quyết định: bỏ nút "Cấp quyền Admin" ở `/admin/users` và chặn ở server: `AdminUserPatch.role` chỉ nhận `teacher` hoặc `user`, gửi `admin` bị từ chối 422. Các tài khoản admin đã tạo giữ nguyên (đăng nhập, Khóa/Mở khóa, bảo vệ admin cuối cùng không đổi).
+- Admin mới chỉ tạo được qua `POST /api/admin/signup` (khi hệ thống chưa có admin) hoặc `scripts/create_admin.py`. Hạ quyền admin vẫn không có trên giao diện.

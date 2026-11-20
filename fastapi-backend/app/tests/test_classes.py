@@ -129,6 +129,12 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             method, path, json=body, headers={"Authorization": f"Bearer {self.tokens[uid]}"}
         )
 
+    async def make_admin(self, uid):
+        async with self.sessions() as db:
+            user = await db.get(User, uid)
+            user.role = "admin"
+            await db.commit()
+
     async def add_student(self):
         response = await self.call(
             2, "POST", f"/api/classes/{self.class_a}/members", {"email": " USER4@example.com "}
@@ -326,7 +332,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.call(uid, "POST", url)).status_code, 403)
         self.assertEqual((await self.client.post(url)).status_code, 401)
         # Own account and other admins are never reset through this endpoint.
-        await self.call(1, "PATCH", "/api/admin/users/3", {"role": "admin"})
+        await self.make_admin(3)
         for uid in (1, 3):
             result = await self.call(1, "POST", f"/api/admin/users/{uid}/reset-password")
             self.assertEqual(result.status_code, 403, result.text)
@@ -361,7 +367,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
         for uid in (2, 4):
             self.assertEqual((await self.call(uid, "POST", link_url)).status_code, 403)
         self.assertEqual((await self.client.post(link_url)).status_code, 401)
-        await self.call(1, "PATCH", "/api/admin/users/3", {"role": "admin"})
+        await self.make_admin(3)
         for uid in (1, 3):
             self.assertEqual(
                 (await self.call(1, "POST", f"/api/admin/users/{uid}/reset-link")).status_code, 403
@@ -453,9 +459,18 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 (await self.call(1, "PATCH", "/api/admin/users/1", payload)).status_code, 403
             )
-        promoted = await self.call(1, "PATCH", "/api/admin/users/4", {"role": "admin"})
-        self.assertEqual(promoted.status_code, 200, promoted.text)
-        self.assertEqual(promoted.json()["role"], "admin")
+        # Admin can no longer be granted through the API; existing admins are unaffected.
+        refused = await self.call(1, "PATCH", "/api/admin/users/4", {"role": "admin"})
+        self.assertEqual(refused.status_code, 422, refused.text)
+        refused = await self.call(1, "PATCH", "/api/admin/users", {"user_id": 4, "role": "admin"})
+        self.assertEqual(refused.status_code, 422, refused.text)
+        async with self.sessions() as db:
+            self.assertEqual((await db.get(User, 4)).role, "user")
+        await self.make_admin(4)
+        locked = await self.call(1, "PATCH", "/api/admin/users/4", {"status": "locked"})
+        self.assertEqual(locked.status_code, 200, locked.text)
+        unlocked = await self.call(1, "PATCH", "/api/admin/users/4", {"status": "active"})
+        self.assertEqual(unlocked.json()["role"], "admin")
 
     async def test_admin_soft_deletes_student_and_closes_sessions_and_memberships(self):
         await self.add_student()
@@ -489,8 +504,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.call(2, "DELETE", "/api/admin/users/4")).status_code, 403)
         self.assertEqual((await self.call(4, "DELETE", "/api/admin/users/4")).status_code, 403)
         self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/1")).status_code, 403)
-        promoted = await self.call(1, "PATCH", "/api/admin/users/4", {"role": "admin"})
-        self.assertEqual(promoted.status_code, 200, promoted.text)
+        await self.make_admin(4)
         self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/4")).status_code, 403)
         # Teacher 2 still runs the active class A: refuse and name the class.
         blocked = await self.call(1, "DELETE", "/api/admin/users/2")

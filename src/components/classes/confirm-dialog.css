@@ -12,6 +12,7 @@
 }
 
 .confirm-dialog {
+  position: relative;
   width: min(100%, 440px);
   display: grid;
   grid-template-columns: auto 1fr;
@@ -47,6 +48,32 @@
   margin: 10px 0 0;
   font-size: 0.88rem;
   color: var(--text-muted, #4b6a85);
+}
+
+.confirm-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--status-danger-border, #fda4af);
+  background: var(--status-danger-bg, #ffe4e6);
+  color: var(--status-danger-text, #9f1239);
+  cursor: pointer;
+}
+
+.confirm-close:hover {
+  background: var(--status-danger-dot, #e11d48);
+  color: #ffffff;
+}
+
+.confirm-close:focus-visible {
+  outline: 2px solid var(--status-danger-dot, #e11d48);
+  outline-offset: 2px;
 }
 
 .confirm-icon {

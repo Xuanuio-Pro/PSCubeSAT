@@ -89,11 +89,12 @@ export default function AdminUsersPage() {
     {issued && <ConfirmDialog
       wide
       locked
+      showClose
       tone="info"
       title={issued.kind === 'link' ? 'Liên kết đặt lại mật khẩu' : 'Mật khẩu tạm'}
       message={issued.kind === 'link' ? `Liên kết dùng một lần cho ${issued.email}:` : `Mật khẩu tạm của ${issued.email}:`}
       confirmLabel={copied ? 'Đã sao chép' : issued.kind === 'link' ? 'Sao chép liên kết' : 'Sao chép'}
-      cancelLabel="Đã gửi, ẩn đi"
+      cancelLabel={null}
       onConfirm={copyIssued}
       onCancel={() => setIssued(null)}
     >
@@ -114,9 +115,7 @@ export default function AdminUsersPage() {
             </td>
             <td>{roleLabels[user.role]}</td><td><span className={`lms-status ${user.status}`}>{user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}</span></td>
             <td><div className="lms-actions">
-              {user.role === 'admin'
-                ? <span className="lms-secondary">Tài khoản quản trị</span>
-                : <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: 'admin' }, label: 'Cấp quyền quản trị cho' }); }}>Cấp quyền Admin</button>}
+              {user.role === 'admin' && <span className="lms-secondary">Tài khoản quản trị</span>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: user.role === 'teacher' ? 'user' : 'teacher' }, label: user.role === 'teacher' ? 'Thu hồi quyền giảng viên của' : 'Cấp quyền giảng viên cho' }); }}>{user.role === 'teacher' ? 'Thu hồi quyền GV' : 'Cấp quyền GV'}</button>}
               <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); }}>{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, resetLink: true, label: 'Cấp link đặt lại mật khẩu cho' }); }}>Cấp link đặt lại</button>}

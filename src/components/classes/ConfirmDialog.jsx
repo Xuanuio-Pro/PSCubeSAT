@@ -8,7 +8,7 @@ const ICONS = {
 };
 
 /** In-app replacement for window.confirm; mount it only while a question is pending. */
-export default function ConfirmDialog({ title, message, children = null, wide = false, locked = false, confirmLabel = 'Xác nhận', cancelLabel = 'Hủy', tone = 'danger', onConfirm, onCancel }) {
+export default function ConfirmDialog({ title, message, children = null, wide = false, locked = false, showClose = false, confirmLabel = 'Xác nhận', cancelLabel = 'Hủy', tone = 'danger', onConfirm, onCancel }) {
   const titleId = useId();
   const messageId = useId();
   const dialog = useRef(null);
@@ -46,6 +46,7 @@ export default function ConfirmDialog({ title, message, children = null, wide = 
   return createPortal(
     <div className="confirm-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !locked) onCancel(); }}>
       <div ref={dialog} className={`confirm-dialog confirm-${tone}${wide ? ' confirm-wide' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
+        {showClose && <button type="button" className="confirm-close" aria-label="Đóng" title="Đóng" onClick={onCancel}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>}
         <span className="confirm-icon">{ICONS[tone] || ICONS.info}</span>
         <div className="confirm-body">
           <h2 id={titleId}>{title}</h2>
@@ -53,7 +54,7 @@ export default function ConfirmDialog({ title, message, children = null, wide = 
           {children}
         </div>
         <div className="confirm-actions">
-          <button type="button" ref={cancelButton} className="confirm-cancel" onClick={onCancel}>{cancelLabel}</button>
+          {cancelLabel !== null && <button type="button" ref={cancelButton} className="confirm-cancel" onClick={onCancel}>{cancelLabel}</button>}
           <button type="button" className="confirm-ok" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
