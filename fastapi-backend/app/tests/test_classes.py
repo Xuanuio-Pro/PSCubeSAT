@@ -226,6 +226,8 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             "/api/auth/forgot-password",
             "/api/auth/reset-password/validate",
             "/api/auth/reset-password",
+            "/api/auth/verify-email",
+            "/api/auth/resend-verification",
             "/api/admin/signup",
             "/api/admin/login",
             "/api/curriculum/preview",
@@ -454,6 +456,51 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
         promoted = await self.call(1, "PATCH", "/api/admin/users/4", {"role": "admin"})
         self.assertEqual(promoted.status_code, 200, promoted.text)
         self.assertEqual(promoted.json()["role"], "admin")
+
+    async def test_admin_soft_deletes_student_and_closes_sessions_and_memberships(self):
+        await self.add_student()
+        self.assertEqual((await self.call(4, "GET", "/api/boards")).status_code, 200)
+        deleted = await self.call(1, "DELETE", "/api/admin/users/4")
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+        self.assertEqual(deleted.json(), {"user_id": 4, "deleted": True})
+        # Existing sessions stop working at once and the account leaves the admin list.
+        self.assertEqual((await self.call(4, "GET", "/api/boards")).status_code, 401)
+        listed = (await self.call(1, "GET", "/api/admin/users")).json()["items"]
+        self.assertNotIn(4, [row["id"] for row in listed])
+        async with self.sessions() as db:
+            user = await db.get(User, 4)
+            self.assertIsNotNone(user.deleted_at)  # kept, not hard-deleted
+            self.assertEqual(user.status, "locked")
+            memberships = (
+                await db.execute(
+                    select(ClassMembership).where(ClassMembership.user_id == 4)
+                )
+            ).scalars().all()
+            self.assertTrue(memberships)
+            self.assertTrue(all(m.status == "removed" and m.removed_at for m in memberships))
+            logs = (
+                await db.execute(select(AuditLog).where(AuditLog.action == "user.delete"))
+            ).scalars().all()
+            self.assertEqual(len(logs), 1)
+            self.assertEqual(logs[0].target, "user:4")
+        self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/4")).status_code, 404)
+
+    async def test_delete_user_is_admin_only_and_protects_admins_self_and_teachers(self):
+        self.assertEqual((await self.call(2, "DELETE", "/api/admin/users/4")).status_code, 403)
+        self.assertEqual((await self.call(4, "DELETE", "/api/admin/users/4")).status_code, 403)
+        self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/1")).status_code, 403)
+        promoted = await self.call(1, "PATCH", "/api/admin/users/4", {"role": "admin"})
+        self.assertEqual(promoted.status_code, 200, promoted.text)
+        self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/4")).status_code, 403)
+        # Teacher 2 still runs the active class A: refuse and name the class.
+        blocked = await self.call(1, "DELETE", "/api/admin/users/2")
+        self.assertEqual(blocked.status_code, 409, blocked.text)
+        self.assertEqual(blocked.json()["details"]["classes"], ["A"])
+        archived = await self.call(
+            2, "PATCH", f"/api/classes/{self.class_a}", {"status": "archived"}
+        )
+        self.assertEqual(archived.status_code, 200, archived.text)
+        self.assertEqual((await self.call(1, "DELETE", "/api/admin/users/2")).status_code, 200)
 
     async def test_flag_off_hides_new_apis_but_still_locks_accounts(self):
         await self.call(1, "PATCH", "/api/admin/users/4", {"status": "locked"})

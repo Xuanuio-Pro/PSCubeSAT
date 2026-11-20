@@ -7,6 +7,7 @@ import PasswordRequirements from '../components/common/PasswordRequirements';
 import { validatePassword } from '../utils/passwordPolicy';
 import { useAuth } from '../contexts/auth-api';
 import GoogleSignIn from '../components/common/GoogleSignIn';
+import ResendVerification from '../components/common/ResendVerification';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -20,6 +21,7 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(null);
 
   function validate() {
     /** @type {Record<string, string>} */
@@ -40,13 +42,35 @@ export default function SignUpPage() {
 
     setSubmitting(true);
     try {
-      await register(email.trim().toLowerCase(), password, fullName.trim());
+      const result = await register(email.trim().toLowerCase(), password, fullName.trim());
+      if (result?.verificationRequired) {
+        setPendingVerification({ email: email.trim().toLowerCase(), ...result });
+        return;
+      }
       navigate(loginDestination(location.state?.from), { replace: true });
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (pendingVerification) {
+    return (
+      <AuthLayout>
+        <h1 className="auth-title">Kiểm tra email của bạn</h1>
+        <div className="auth-success-notice" role="status">
+          <p>{pendingVerification.message}</p>
+          <p style={{ marginTop: '8px', fontWeight: 400 }}>
+            Thư được gửi tới <strong>{pendingVerification.email}</strong>. Bạn cần xác minh email trước khi đăng nhập.
+          </p>
+        </div>
+        <ResendVerification email={pendingVerification.email} initialCooldown={pendingVerification.emailSent ? 60 : 0} />
+        <p className="auth-footer-text">
+          Đã xác minh xong? <Link to="/login" state={location.state}>Đăng nhập</Link>
+        </p>
+      </AuthLayout>
+    );
   }
 
   return (

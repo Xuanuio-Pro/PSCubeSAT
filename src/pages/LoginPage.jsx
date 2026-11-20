@@ -4,6 +4,7 @@ import { loginDestination } from '../contexts/auth-session';
 import AuthLayout from '../components/common/AuthLayout';
 import PasswordInput from '../components/common/PasswordInput';
 import GoogleSignIn from '../components/common/GoogleSignIn';
+import ResendVerification from '../components/common/ResendVerification';
 import { useAuth } from '../contexts/auth-api';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
   function validate() {
     /** @type {Record<string, string>} */
@@ -30,6 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     const next = validate();
     setErrors(next);
+    setUnverifiedEmail('');
     if (Object.keys(next).length) return;
 
     setSubmitting(true);
@@ -40,6 +43,7 @@ export default function LoginPage() {
       }
       navigate(loginDestination(location.state?.from), { replace: true });
     } catch (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED') setUnverifiedEmail(email.trim().toLowerCase());
       setErrors({ password: err.message || 'Đăng nhập không thành công.' });
     } finally {
       setSubmitting(false);
@@ -89,6 +93,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           {errors.password && <div id="login-password-error" className="auth-error-text" role="alert">⚠ {errors.password}</div>}
+          {unverifiedEmail && <ResendVerification email={unverifiedEmail} />}
         </div>
 
         <div className="auth-row-between">

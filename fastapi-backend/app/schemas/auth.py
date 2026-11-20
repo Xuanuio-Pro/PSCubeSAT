@@ -86,3 +86,22 @@ class AuthTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RegisterResponse(BaseModel):
+    """Either a signed-in session (no email verification needed) or a verification notice."""
+
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+    user: Optional[UserResponse] = None
+    verification_required: bool = False
+    email_sent: bool = True
+    message: Optional[str] = None
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(..., min_length=16, max_length=512)
+
+
+class ResendVerificationRequest(EmailRequest):
+    email: EmailStr

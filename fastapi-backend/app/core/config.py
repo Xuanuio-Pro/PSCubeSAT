@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     smtp_use_ssl: bool = False
     frontend_url: str = ""
     password_reset_token_ttl_minutes: int = Field(default=30, ge=5, le=1440)
+    email_verification_ttl_hours: int = Field(default=24, ge=1, le=168)
 
     @property
     def smtp_configured(self) -> bool:

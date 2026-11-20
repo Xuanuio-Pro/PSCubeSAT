@@ -192,3 +192,16 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Quyết định: dùng luồng email có sẵn (link một lần, TTL `PASSWORD_RESET_TOKEN_TTL_MINUTES`, mặc định 30 phút) làm đường chính; bật bằng cách điền `SMTP_*` và `FRONTEND_URL` trong `fastapi-backend/.env` (mẫu ở `.env.example`) rồi khởi động lại backend. Không điền thì giữ hành vi cũ: yêu cầu chuyển về admin tại `/admin/users`.
 - Gửi mail lỗi vẫn rơi về hàng chờ admin; thông báo chung nay nói rõ khả năng đó và vẫn giống hệt với email không tồn tại để không lộ thông tin tài khoản.
 - Rủi ro: Gmail cá nhân có hạn mức thư/ngày; `FRONTEND_URL` sai sẽ làm link trong email trỏ sai. Chưa kiểm thử gửi thư thật vì chưa có thông tin SMTP.
+
+## 2026-11-20 — Xác minh email khi đăng ký
+- Quyết định: khi SMTP đã cấu hình, đăng ký tạo tài khoản chưa xác minh (`users.email_verified_at` rỗng), gửi liên kết một lần (hash trong `email_verification_tokens`, hết hạn sau `EMAIL_VERIFICATION_TTL_HOURS`, mặc định 24 giờ) và không cấp token. Đăng nhập bằng email/mật khẩu bị chặn bằng mã `EMAIL_NOT_VERIFIED` (HTTP 403) cho đến khi xác minh; chỉ báo sau khi mật khẩu đúng nên không lộ tài khoản. Mã này là mã mới ngoài danh sách dùng chung trong AGENTS.md.
+- Khi SMTP chưa cấu hình, đăng ký coi tài khoản là đã xác minh và cấp token như trước. Quy tắc chặn chỉ áp dụng khi SMTP bật, nên tắt SMTP không làm khóa người dùng đang chờ xác minh.
+- Tài khoản hiện có được backfill `email_verified_at = created_at` (migration `0020_email_verification`); đăng nhập Google, admin đầu tiên và hoàn tất đặt lại mật khẩu qua email cũng đánh dấu đã xác minh.
+- Gửi lại thư xác minh: phản hồi luôn giống nhau với email lạ; mỗi lần gửi thu hồi liên kết cũ; có giới hạn tần suất theo IP.
+- Downgrade xóa cột và bảng token (chỉ mất trạng thái xác minh mới; upgrade lại backfill tất cả là đã xác minh).
+- Test: `app/tests/conftest.py` ép `smtp_host` rỗng cho mọi test để `.env` cục bộ không làm đổi luồng hay gửi thư thật.
+
+## 2026-11-20 — Xóa tài khoản (admin)
+- Quyết định: `DELETE /api/admin/users/{id}` xóa mềm (`deleted_at`, trạng thái khóa), không xóa dòng dữ liệu, vì các khóa ngoại RESTRICT (lớp, thành viên, audit, thiết bị) và quy tắc không phá dữ liệu cũ. Phiên đăng nhập hiện có mất hiệu lực ngay, tài khoản bị gỡ khỏi mọi lớp (membership chuyển `removed`), yêu cầu đặt lại mật khẩu đang mở bị thu hồi, ghi `audit_logs` (`user.delete`, không lưu email).
+- Chỉ admin; không xóa chính mình, không xóa tài khoản admin; giảng viên còn phụ trách lớp chưa lưu trữ bị từ chối (409, trả danh sách mã lớp) để lớp không mồ côi. Tiến độ học tập, bài làm và báo cáo của tài khoản vẫn được giữ.
+- Email của tài khoản đã xóa vẫn bị giữ (chỉ mục duy nhất), nên chưa đăng ký lại được bằng email đó. Giải phóng email hoặc khôi phục tài khoản là việc riêng nếu cần.

@@ -225,6 +225,8 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
 
     user.password_hash = await run_in_threadpool(hash_password, new_password)
     user.updated_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # the reset link proved ownership of the mailbox
     row.status = "used"
     row.used_at = now
     await revoke_open_resets(db, user.id, exclude_id=row.id)

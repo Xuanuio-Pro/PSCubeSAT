@@ -17,7 +17,14 @@ from app.core.google_auth import verify_google_credential
 from app.core.logging import configure_console_encoding, mask_email
 from app.core.security import create_access_token, hash_password
 from app.db import get_db
-from app.models.db_models import Base, GoogleIdentity, PasswordResetToken, RevokedToken, User
+from app.models.db_models import (
+    Base,
+    EmailVerificationToken,
+    GoogleIdentity,
+    PasswordResetToken,
+    RevokedToken,
+    User,
+)
 from app.models.tables import AuditLog
 from app.routers import compiler, curriculum, health
 from app.routers.admin import router as admin_router
@@ -31,6 +38,10 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         lms_flag = patch.object(get_settings(), "lms_class_mode", False)
         lms_flag.start()
         self.addCleanup(lms_flag.stop)
+        # Never inherit SMTP from a local .env: tests must not send real mail or change flow.
+        smtp_off = patch.object(get_settings(), "smtp_host", "")
+        smtp_off.start()
+        self.addCleanup(smtp_off.stop)
         self.engine = create_async_engine("sqlite+aiosqlite:///:memory:")
         self.original_types = []
         for table in (User.__table__, AuditLog.__table__):
@@ -50,6 +61,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
                         RevokedToken.__table__,
                         AuditLog.__table__,
                         PasswordResetToken.__table__,
+                        EmailVerificationToken.__table__,
                     ],
                 )
             )
@@ -504,6 +516,178 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row.status, "pending")
             self.assertEqual(row.source, "admin_request")
             self.assertIsNone(row.token_hash)
+
+    # ── Email verification on sign-up ──────────────────────────────────────────
+
+    def smtp_on(self, sent):
+        """SMTP configured; captures (email, url) of every verification mail."""
+
+        async def fake_send(to_email, url, ttl_hours):
+            sent.append((to_email, url))
+
+        return (
+            patch.object(get_settings(), "smtp_host", "smtp.example.com"),
+            patch.object(get_settings(), "frontend_url", "https://lms.example.com"),
+            patch("app.services.email_verification.send_verification_email", side_effect=fake_send),
+        )
+
+    @staticmethod
+    def token_of(sent, index=-1):
+        from urllib.parse import parse_qs, urlsplit
+
+        return parse_qs(urlsplit(sent[index][1]).query)["token"][0]
+
+    async def test_register_with_smtp_requires_verification_and_blocks_login(self):
+        sent = []
+        a, b, c = self.smtp_on(sent)
+        with a, b, c:
+            res = await self.register()
+            self.assertEqual(res.status_code, 201, res.text)
+            body = res.json()
+            self.assertTrue(body["verification_required"])
+            self.assertIsNone(body["access_token"])
+            self.assertEqual(len(sent), 1)
+            self.assertTrue(sent[0][1].startswith("https://lms.example.com/verify-email?token="))
+
+            blocked = await self.login("Secret123!")
+            self.assertEqual(blocked.status_code, 403, blocked.text)
+            self.assertEqual(blocked.json()["code"], "EMAIL_NOT_VERIFIED")
+            # A wrong password must not reveal that the account exists but is unverified.
+            wrong = await self.login("Wrong123!")
+            self.assertEqual(wrong.status_code, 401)
+
+        async with self.sessions() as db:
+            user = (await db.execute(select(User))).scalar_one()
+            self.assertIsNone(user.email_verified_at)
+
+    async def test_verify_email_enables_login_and_token_is_single_use(self):
+        sent = []
+        a, b, c = self.smtp_on(sent)
+        with a, b, c:
+            await self.register()
+            token = self.token_of(sent)
+            ok = await self.client.post("/api/auth/verify-email", json={"token": token})
+            self.assertEqual(ok.status_code, 200, ok.text)
+            self.assertEqual((await self.login("Secret123!")).status_code, 200)
+            again = await self.client.post("/api/auth/verify-email", json={"token": token})
+            self.assertEqual(again.status_code, 400)
+            bad = await self.client.post("/api/auth/verify-email", json={"token": "x" * 40})
+            self.assertEqual(bad.status_code, 400)
+
+    async def test_expired_verification_token_is_rejected(self):
+        from datetime import datetime, timezone
+
+        sent = []
+        a, b, c = self.smtp_on(sent)
+        with a, b, c:
+            await self.register()
+            async with self.sessions() as db:
+                row = (await db.execute(select(EmailVerificationToken))).scalar_one()
+                row.expires_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+                await db.commit()
+            res = await self.client.post("/api/auth/verify-email", json={"token": self.token_of(sent)})
+            self.assertEqual(res.status_code, 400)
+            self.assertEqual((await self.login("Secret123!")).status_code, 403)
+
+    async def test_resend_replaces_old_link_and_does_not_enumerate(self):
+        sent = []
+        a, b, c = self.smtp_on(sent)
+        with a, b, c:
+            await self.register()
+            first = self.token_of(sent)
+            existing = await self.client.post(
+                "/api/auth/resend-verification", json={"email": "student@gmail.com"}
+            )
+            missing = await self.client.post(
+                "/api/auth/resend-verification", json={"email": "nobody@example.com"}
+            )
+            self.assertEqual(existing.status_code, 200)
+            self.assertEqual(existing.json(), missing.json())
+            self.assertEqual(len(sent), 2)  # nothing was sent to the unknown address
+            second = self.token_of(sent)
+            self.assertNotEqual(first, second)
+            old = await self.client.post("/api/auth/verify-email", json={"token": first})
+            self.assertEqual(old.status_code, 400)
+            self.assertEqual(
+                (await self.client.post("/api/auth/verify-email", json={"token": second})).status_code,
+                200,
+            )
+            # Already verified: a further resend sends nothing.
+            await self.client.post(
+                "/api/auth/resend-verification", json={"email": "student@gmail.com"}
+            )
+            self.assertEqual(len(sent), 2)
+
+    async def test_register_keeps_account_when_verification_mail_fails(self):
+        with (
+            patch.object(get_settings(), "smtp_host", "smtp.example.com"),
+            patch(
+                "app.services.email_verification.send_verification_email",
+                side_effect=OSError("smtp down"),
+            ),
+        ):
+            res = await self.register()
+        self.assertEqual(res.status_code, 201, res.text)
+        self.assertTrue(res.json()["verification_required"])
+        self.assertFalse(res.json()["email_sent"])
+        async with self.sessions() as db:
+            self.assertEqual(len((await db.execute(select(User))).scalars().all()), 1)
+            self.assertEqual(len((await db.execute(select(EmailVerificationToken))).scalars().all()), 1)
+
+    async def test_without_smtp_register_is_verified_immediately(self):
+        res = await self.register()
+        self.assertEqual(res.status_code, 201)
+        self.assertFalse(res.json()["verification_required"])
+        self.assertTrue(res.json()["access_token"])
+        async with self.sessions() as db:
+            user = (await db.execute(select(User))).scalar_one()
+            self.assertIsNotNone(user.email_verified_at)
+
+    async def test_unverified_account_can_log_in_when_smtp_is_off(self):
+        await self.register()
+        async with self.sessions() as db:
+            user = (await db.execute(select(User))).scalar_one()
+            user.email_verified_at = None
+            await db.commit()
+        self.assertEqual((await self.login("Secret123!")).status_code, 200)
+
+    async def test_legacy_verified_account_logs_in_with_smtp_on(self):
+        await self.register()  # SMTP off: stored as verified, like backfilled accounts
+        with patch.object(get_settings(), "smtp_host", "smtp.example.com"):
+            self.assertEqual((await self.login("Secret123!")).status_code, 200)
+
+    async def test_google_sign_in_marks_email_verified(self):
+        with patch.object(get_settings(), "smtp_host", "smtp.example.com"):
+            res = await self.google()
+        self.assertEqual(res.status_code, 200, res.text)
+        async with self.sessions() as db:
+            user = (await db.execute(select(User))).scalar_one()
+            self.assertIsNotNone(user.email_verified_at)
+
+    async def test_password_reset_confirmation_marks_email_verified(self):
+        sent = []
+        a, b, c = self.smtp_on(sent)
+        reset_urls = []
+
+        async def fake_reset(to_email, url, ttl):
+            reset_urls.append(url)
+
+        with (
+            a,
+            b,
+            c,
+            patch("app.services.password_reset.send_password_reset_email", side_effect=fake_reset),
+        ):
+            await self.register()
+            await self.client.post("/api/auth/forgot-password", json={"email": "student@gmail.com"})
+            from urllib.parse import parse_qs, urlsplit
+
+            token = parse_qs(urlsplit(reset_urls[0]).query)["token"][0]
+            done = await self.client.post(
+                "/api/auth/reset-password", json={"token": token, "new_password": "Newsecret123!"}
+            )
+            self.assertEqual(done.status_code, 200, done.text)
+            self.assertEqual((await self.login("Newsecret123!")).status_code, 200)
 
 
 class GoogleVerificationTests(unittest.IsolatedAsyncioTestCase):

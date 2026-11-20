@@ -83,3 +83,13 @@ Log backend ghi `[PasswordReset] Sent reset email for ...` khi gửi thành côn
 - Endpoint quên mật khẩu có giới hạn tần suất theo IP.
 - Tài khoản quản trị (`admin`) không đặt lại bằng luồng này khi SMTP tắt; khi SMTP bật, liên kết chỉ gửi tới email của chính tài khoản đó.
 - Trang `/admin/users` vẫn dùng được để cấp liên kết hoặc mật khẩu tạm cho trường hợp ngoại lệ (người dùng không còn truy cập email).
+
+## 7. Xác minh email khi đăng ký
+
+Khi SMTP đã bật, đăng ký không đăng nhập ngay: người dùng nhận thư có liên kết `FRONTEND_URL/verify-email?token=...` và phải bấm trước khi đăng nhập được.
+
+- Thời hạn liên kết: `EMAIL_VERIFICATION_TTL_HOURS` (mặc định 24 giờ), dùng một lần. Trang đăng ký và đăng nhập đều có nút "Gửi lại email xác minh" (chờ 60 giây giữa các lần).
+- Chưa xác minh mà đăng nhập: báo "Email chưa được xác minh" (mã `EMAIL_NOT_VERIFIED`).
+- Tài khoản có từ trước khi bật tính năng được coi là đã xác minh; đăng nhập bằng Google luôn đã xác minh.
+- Tắt SMTP (để trống `SMTP_HOST`) thì đăng ký quay về luồng cũ, vào thẳng không cần xác minh.
+- Nếu gửi thư lỗi lúc đăng ký, tài khoản vẫn được tạo; người dùng bấm "Gửi lại email" sau khi sửa lỗi SMTP.
