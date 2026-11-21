@@ -298,6 +298,17 @@ class AuthService:
                 {"email": user.email},
             )
 
+        from app.services.password_reset import revoke_open_resets
+
+        revoked_count = await revoke_open_resets(self.db_session, user.id)
+        if revoked_count:
+            await self.db_session.commit()
+            logger.info(
+                "[AuthService] Cleared {} open password reset request(s) after password login for user_id={}",
+                revoked_count,
+                user.id,
+            )
+
         logger.info(
             f"[AuthService] 🔑 User logged in: {mask_email(user.email)} ({user.role.value})"
         )

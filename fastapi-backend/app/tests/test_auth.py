@@ -30,10 +30,12 @@ from app.routers import compiler, curriculum, health
 from app.routers.admin import router as admin_router
 from app.routers.auth import router
 from app.services.auth import LOGIN_FAILURES, PAIR_FAILURES
+from app.services.password_reset import _reset_smtp_failure_state
 
 
 class AuthTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        _reset_smtp_failure_state()
         # These tests cover the legacy (non-class) path; do not inherit LMS_CLASS_MODE from a local .env.
         lms_flag = patch.object(get_settings(), "lms_class_mode", False)
         lms_flag.start()
@@ -496,6 +498,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_forgot_password_smtp_error_falls_back_to_admin_queue(self):
         await self.register("student@gmail.com", "Secret123!")
+        await self.register("student2@gmail.com", "Secret123!")
         with (
             patch.object(get_settings(), "smtp_host", "smtp.example.com"),
             patch(
@@ -509,13 +512,116 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
             missing = await self.client.post(
                 "/api/auth/forgot-password", json={"email": "nobody@example.com"}
             )
+            res2 = await self.client.post(
+                "/api/auth/forgot-password", json={"email": "student2@gmail.com"}
+            )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json(), missing.json())
+        self.assertEqual(res.json(), res2.json())
+        self.assertEqual(res.json()["delivery_mode"], "smtp_error")
+        self.assertNotIn("admin_contact_email", res.json())
+        async with self.sessions() as db:
+            rows = (
+                await db.execute(select(PasswordResetToken).order_by(PasswordResetToken.id))
+            ).scalars().all()
+            self.assertEqual(len(rows), 2)
+            for row in rows:
+                self.assertEqual(row.status, "pending")
+                self.assertEqual(row.source, "admin_request")
+                self.assertIsNone(row.token_hash)
+
+    async def test_forgot_password_manual_admin_channel_when_smtp_enabled(self):
+        await self.register("student@gmail.com", "Secret123!")
+        await self.client.post(
+            "/api/admin/signup",
+            json={"email": "admin@ptit.edu.vn", "password": "Secret123!", "full_name": "Admin"},
+        )
+        cfg = await self.client.get("/api/auth/password-reset/config")
+        self.assertEqual(cfg.status_code, 200)
+        self.assertNotIn("admin_contact_email", cfg.json())
+
+        send_mock = AsyncMock()
+        with (
+            patch.object(get_settings(), "smtp_host", "smtp.example.com"),
+            patch("app.services.password_reset.send_password_reset_email", send_mock),
+        ):
+            res = await self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": "student@gmail.com", "channel": "admin"},
+            )
+            missing = await self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": "nobody@example.com", "channel": "admin"},
+            )
+            admin_res = await self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": "admin@ptit.edu.vn", "channel": "admin"},
+            )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json(), missing.json())
+        self.assertEqual(res.json(), admin_res.json())
+        self.assertEqual(res.json()["delivery_mode"], "admin")
+        send_mock.assert_not_awaited()
+        async with self.sessions() as db:
+            rows = (await db.execute(select(PasswordResetToken))).scalars().all()
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].status, "pending")
+            self.assertEqual(rows[0].source, "admin_request")
+            self.assertIsNone(rows[0].token_hash)
+
+    async def test_password_login_revokes_open_reset_requests(self):
+        from urllib.parse import parse_qs, urlsplit
+
+        await self.register("student@gmail.com", "Secret123!")
+        forgot = await self.client.post(
+            "/api/auth/forgot-password", json={"email": "student@gmail.com"}
+        )
+        self.assertEqual(forgot.status_code, 200)
+
+        # Wrong password and Google Sign-In must keep the pending admin reset request open.
+        self.assertEqual((await self.login("Wrong123!")).status_code, 401)
+        self.assertEqual((await self.google(sub="g-student-1")).status_code, 200)
         async with self.sessions() as db:
             row = (await db.execute(select(PasswordResetToken))).scalar_one()
             self.assertEqual(row.status, "pending")
-            self.assertEqual(row.source, "admin_request")
-            self.assertIsNone(row.token_hash)
+
+        # Remembering the password and logging in revokes the pending request.
+        self.assertEqual((await self.login("Secret123!")).status_code, 200)
+        async with self.sessions() as db:
+            row = (await db.execute(select(PasswordResetToken))).scalar_one()
+            self.assertEqual(row.status, "revoked")
+
+        # An issued email reset link is also revoked once the user logs in with their password.
+        sent = []
+
+        async def fake_send(to_email, reset_url, ttl_minutes):
+            sent.append((to_email, reset_url, ttl_minutes))
+
+        with (
+            patch.object(get_settings(), "smtp_host", "smtp.example.com"),
+            patch.object(get_settings(), "frontend_url", "https://lms.example.com"),
+            patch("app.services.password_reset.send_password_reset_email", side_effect=fake_send),
+        ):
+            res = await self.client.post(
+                "/api/auth/forgot-password", json={"email": "student@gmail.com"}
+            )
+            self.assertEqual(res.status_code, 200)
+            raw_token = parse_qs(urlsplit(sent[0][1]).query)["token"][0]
+            self.assertEqual(
+                (await self.client.get(f"/api/auth/reset-password/validate?token={raw_token}")).status_code,
+                200,
+            )
+            self.assertEqual((await self.login("Secret123!")).status_code, 200)
+            self.assertEqual(
+                (await self.client.get(f"/api/auth/reset-password/validate?token={raw_token}")).status_code,
+                400,
+            )
+        async with self.sessions() as db:
+            rows = (
+                await db.execute(select(PasswordResetToken).order_by(PasswordResetToken.id))
+            ).scalars().all()
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(all(r.status == "revoked" for r in rows))
 
     # ── Email verification on sign-up ──────────────────────────────────────────
 

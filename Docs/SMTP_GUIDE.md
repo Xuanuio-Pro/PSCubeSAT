@@ -8,7 +8,7 @@ Khi bật SMTP, người dùng bấm **Quên mật khẩu**, nhập email và nh
 2. Backend tạo token dùng một lần (lưu dạng hash, hết hạn sau `PASSWORD_RESET_TOKEN_TTL_MINUTES`, mặc định 30 phút) và gửi thư chứa liên kết `FRONTEND_URL/reset-password?token=...`.
 3. Người dùng mở liên kết, đặt mật khẩu mới (tối thiểu 8 ký tự, 1 chữ in hoa, 1 ký tự đặc biệt).
 4. Phản hồi của trang luôn giống nhau dù email có tồn tại hay không, để không lộ tài khoản nào có thật.
-5. Nếu gửi thư lỗi, yêu cầu tự chuyển về hàng chờ admin (không bị mất).
+5. Nếu gửi thư lỗi hoặc người dùng bấm **Gửi yêu cầu tới quản trị viên**, yêu cầu tự chuyển về hàng chờ admin (không bị mất). Nếu người dùng nhớ lại mật khẩu và đăng nhập thành công bằng mật khẩu, yêu cầu chờ cấp lại (và liên kết đặt lại cũ chưa dùng) sẽ tự động bị hủy; đăng nhập bằng Google vẫn giữ nguyên yêu cầu chờ.
 
 ## 2. Biến cấu hình
 
@@ -72,7 +72,7 @@ Kết quả mong đợi: `{"smtp_enabled":true,"token_ttl_minutes":30}`.
 | Gmail báo "Username and Password not accepted" | Dùng mật khẩu Gmail chính hoặc chưa bật xác minh 2 bước | Tạo App Password |
 | Thư vào thư rác | Gửi từ Gmail cá nhân | Nhắc người dùng kiểm tra spam; lâu dài dùng SMTP của trường |
 | Liên kết trong thư trỏ sai địa chỉ | `FRONTEND_URL` sai | Sửa rồi khởi động lại backend |
-| Yêu cầu nằm trong hàng chờ admin dù đã bật SMTP | Lần gửi thư đó lỗi nên tự chuyển dự phòng | Admin cấp liên kết hoặc mật khẩu tạm tại `/admin/users`, đồng thời sửa lỗi SMTP |
+| Yêu cầu nằm trong hàng chờ admin dù đã bật SMTP | Lần gửi thư đó lỗi nên tự chuyển dự phòng, hoặc người dùng chọn **Gửi yêu cầu tới quản trị viên** | Giao diện thông báo sự cố email và hướng dẫn chờ xử lý (hoặc chuyển sang form **Gửi yêu cầu tới quản trị viên** ngay trên `/forgot-password`). Admin cấp liên kết hoặc mật khẩu tạm tại `/admin/users`, đồng thời sửa lỗi SMTP |
 
 Log backend ghi `[PasswordReset] Sent reset email for ...` khi gửi thành công (email được che bớt) và `SMTP delivery failed ... falling back to admin queue` khi lỗi.
 

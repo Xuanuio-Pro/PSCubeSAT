@@ -161,6 +161,7 @@ async def forgot_password(
         str(req.email),
         client_ip(request.scope),
         request.headers.get("origin"),
+        req.channel,
     )
 
 

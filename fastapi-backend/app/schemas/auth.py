@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -53,6 +53,7 @@ class GoogleLoginRequest(BaseModel):
 
 class ForgotPasswordRequest(EmailRequest):
     email: EmailStr
+    channel: Literal["email", "admin"] = "email"
 
 
 class ResetPasswordConfirmRequest(PasswordRequest):

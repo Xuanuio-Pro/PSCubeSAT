@@ -73,6 +73,9 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
         self.redis_patch.start()
         self.flag_patch = patch.object(get_settings(), "lms_class_mode", True)
         self.flag_patch.start()
+        # Never inherit SMTP from a local .env: tests must not send real mail or require email_verification_tokens.
+        self.smtp_patch = patch.object(get_settings(), "smtp_host", "")
+        self.smtp_patch.start()
         self.client = AsyncClient(transport=ASGITransport(app=self.app), base_url="http://test")
         async with self.sessions() as db:
             password = hash_password("secret123")
@@ -120,6 +123,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
         await self.client.aclose()
         self.redis_patch.stop()
         self.flag_patch.stop()
+        self.smtp_patch.stop()
         await self.engine.dispose()
         for column, original in self.original_types:
             column.type = original
@@ -415,6 +419,32 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             ).scalar_one()
             self.assertEqual((log.actor, log.target), (1, "user:4"))
             self.assertNotIn(raw_token, f"{log.before}{log.after}")
+
+    async def test_admin_pending_reset_cleared_after_user_password_login(self):
+        with patch.object(get_settings(), "smtp_host", ""):
+            forgot = await self.client.post(
+                "/api/auth/forgot-password", json={"email": "user4@example.com"}
+            )
+            self.assertEqual(forgot.status_code, 200)
+            queued = await self.call(1, "GET", "/api/admin/users?pending_reset=true")
+            self.assertEqual(queued.status_code, 200, queued.text)
+            self.assertEqual(queued.json()["total"], 1)
+            self.assertEqual(queued.json()["items"][0]["id"], 4)
+            self.assertTrue(queued.json()["items"][0]["pending_password_reset"])
+
+            login = await self.client.post(
+                "/api/auth/login", json={"email": "user4@example.com", "password": "secret123"}
+            )
+            self.assertEqual(login.status_code, 200, login.text)
+
+        after_login = await self.call(1, "GET", "/api/admin/users?pending_reset=true")
+        self.assertEqual(after_login.status_code, 200)
+        self.assertEqual(after_login.json()["total"], 0)
+        user_list = await self.call(1, "GET", "/api/admin/users?search=user4@example.com")
+        self.assertEqual(user_list.status_code, 200)
+        self.assertEqual(user_list.json()["total"], 1)
+        self.assertFalse(user_list.json()["items"][0]["pending_password_reset"])
+        self.assertIsNone(user_list.json()["items"][0]["reset_requested_at"])
 
     async def test_student_cannot_manage_or_list_other_students(self):
         await self.add_student()

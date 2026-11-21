@@ -1634,6 +1634,20 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   border: 1px solid #86efac; background: #f0fdf4; color: #166534;
   font-size: 0.88rem; line-height: 1.55; font-weight: 500;
 }
+.auth-warning-notice {
+  margin-bottom: 16px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #fed7aa; background: #fffbeb; color: #9a3412;
+  font-size: 0.88rem; line-height: 1.55; font-weight: 500;
+}
+.auth-inline-help {
+  margin-top: 14px; text-align: center; font-size: 0.82rem; color: #64748b;
+}
+.auth-inline-toggle {
+  background: none; border: none; padding: 0; color: #0a4174;
+  font-weight: 600; text-decoration: underline; cursor: pointer;
+  font-size: inherit; font-family: inherit;
+}
+.auth-inline-toggle:hover { color: #072e52; }
 .auth-submit-spaced { margin-top: 8px; }
 
 @media (max-width: 860px) {
