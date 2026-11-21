@@ -1,10 +1,12 @@
 """Teacher-only authoring; published editions never change in place."""
 
+import asyncio
 import json
 from copy import deepcopy
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from uuid import uuid4
+from weakref import WeakKeyDictionary
 
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -12,6 +14,7 @@ from sqlalchemy import func, select
 from app.core.lms_errors import LMSError
 from app.models.curriculum import ClassCourseVersion, CourseVersion, Lesson
 from app.models.quiz import QuestionBank, QuestionVersion, QuizAttemptItem, QuizPolicy
+from app.models.tables import Classroom
 from app.schemas.quiz import QuestionInput, normalized
 from app.services.classes import audit
 from app.services.exam_import import (
@@ -21,6 +24,7 @@ from app.services.exam_import import (
     parse_exam_text,
     parse_xlsx_questions,
 )
+from app.services.sample_questions import default_policy, sample_questions_for
 
 
 def uid():
@@ -70,41 +74,77 @@ async def current_course_id(db, access):
     return course_id
 
 
-async def seed_banks(db, access, course_id):
-    incompatible = (
+_SEED_LOCKS: WeakKeyDictionary = WeakKeyDictionary()
+
+
+def _seed_lock(class_id: int) -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    locks = _SEED_LOCKS.get(loop)
+    if locks is None:
+        locks = {}
+        _SEED_LOCKS[loop] = locks
+    lock = locks.get(class_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        locks[class_id] = lock
+    return lock
+
+
+async def seed_banks(db, access, course_id, *, commit=False):
+    async with _seed_lock(access.classroom.id):
         await db.execute(
-            select(QuestionBank.id)
-            .where(
-                QuestionBank.class_id == access.classroom.id,
-                QuestionBank.course_version_id != course_id,
-            )
-            .limit(1)
+            select(Classroom.id).where(Classroom.id == access.classroom.id).with_for_update()
         )
-    ).scalar_one_or_none()
-    if incompatible:
-        invalid("Lớp đã có ngân hàng cho phiên bản giáo trình khác. Hãy tạo lớp mới.")
-    existing = set(
-        (
+        incompatible = (
             await db.execute(
-                select(QuestionBank.lesson_id).where(QuestionBank.class_id == access.classroom.id)
+                select(QuestionBank.id)
+                .where(
+                    QuestionBank.class_id == access.classroom.id,
+                    QuestionBank.course_version_id != course_id,
+                )
+                .limit(1)
             )
-        ).scalars()
-    )
-    quiz_lessons = (
-        await db.execute(
-            select(Lesson.id, Lesson.lab_id).where(
-                Lesson.course_version_id == course_id, Lesson.type == "quiz"
-            )
+        ).scalar_one_or_none()
+        if incompatible:
+            invalid("Lớp đã có ngân hàng cho phiên bản giáo trình khác. Hãy tạo lớp mới.")
+        existing = set(
+            (
+                await db.execute(
+                    select(QuestionBank.lesson_id).where(
+                        QuestionBank.class_id == access.classroom.id
+                    )
+                )
+            ).scalars()
         )
-    ).all()
-    # One Lab Test bank per lab plus one bank per quiz lesson of this course version.
-    targets = [(f"labtest-{lab_id}", lab_id) for lab_id in range(9)] + [
-        (lesson_id, lab_id) for lesson_id, lab_id in quiz_lessons
-    ]
-    for key, lab_id in targets:
-        if key not in existing:
-            db.add(
-                QuestionBank(
+        quiz_lessons = (
+            await db.execute(
+                select(Lesson.id, Lesson.lab_id)
+                .where(Lesson.course_version_id == course_id, Lesson.type == "quiz")
+                .order_by(Lesson.lab_id, Lesson.order_no, Lesson.id)
+            )
+        ).all()
+        per_lab_count: dict[int, int] = {}
+        quiz_indices: dict[str, int] = {}
+        for lesson_id, lab_id in quiz_lessons:
+            idx = per_lab_count.get(lab_id, 0)
+            quiz_indices[lesson_id] = idx
+            per_lab_count[lab_id] = idx + 1
+
+        # One Lab Test bank per lab plus one bank per quiz lesson of this course version.
+        targets = [(f"labtest-{lab_id}", lab_id) for lab_id in range(9)] + [
+            (lesson_id, lab_id) for lesson_id, lab_id in quiz_lessons
+        ]
+        seeded_at = datetime.now(timezone.utc)
+        for key, lab_id in targets:
+            need_bank = key not in existing
+            need_policy = await db.get(QuizPolicy, (access.classroom.id, key)) is None
+            samples = (
+                sample_questions_for(lab_id, key, quiz_index=quiz_indices.get(key, 0))
+                if (need_bank or need_policy)
+                else []
+            )
+            if need_bank:
+                bank = QuestionBank(
                     id=uid(),
                     class_id=access.classroom.id,
                     course_version_id=course_id,
@@ -113,13 +153,33 @@ async def seed_banks(db, access, course_id):
                     version=1,
                     created_by=access.user.id,
                 )
-            )
-        if await db.get(QuizPolicy, (access.classroom.id, key)) is None:
-            defaults = {} if is_labtest(key) else {"num_questions": 3, "pass_score": 2}
-            db.add(
-                QuizPolicy(class_id=access.classroom.id, lesson_id=key, lab_id=lab_id, **defaults)
-            )
-    await db.flush()
+                db.add(bank)
+                await db.flush()
+                for sample in samples:
+                    db.add(
+                        QuestionVersion(
+                            id=uid(),
+                            bank_id=bank.id,
+                            question_id=uid(),
+                            content=sample,
+                            status="approved",
+                            reviewer=access.user.id,
+                            reviewed_at=seeded_at,
+                        )
+                    )
+            if need_policy:
+                defaults = default_policy(
+                    "labtest" if is_labtest(key) else "quiz",
+                    sample_count=len(samples) or None,
+                )
+                db.add(
+                    QuizPolicy(
+                        class_id=access.classroom.id, lesson_id=key, lab_id=lab_id, **defaults
+                    )
+                )
+        await db.flush()
+        if commit:
+            await db.commit()
 
 
 async def latest_bank(db, access, key):
@@ -141,8 +201,7 @@ async def bank_for(db, access, target, expected=None, *, editable=False):
     if bank is None and (not isinstance(target, int) or 0 <= target <= 8):
         course_id = await current_course_id(db, access)
         if course_id:
-            await seed_banks(db, access, course_id)
-            await db.commit()
+            await seed_banks(db, access, course_id, commit=True)
             bank = await latest_bank(db, access, key)
     if bank is None:
         invalid("Lưu cấu hình giáo trình trước khi soạn ngân hàng.")
@@ -302,9 +361,7 @@ async def change_question(db, access, target, request, question_id=None, action=
     return await view(db, access, target)
 
 
-async def publish(db, access, target, request):
-    bank = await bank_for(db, access, target, request.expected_revision, editable=True)
-    policy = await db.get(QuizPolicy, (access.classroom.id, bank.lesson_id))
+async def publish_bank_row(db, actor_id, bank, policy):
     approved = [q for q in await questions(db, bank.id) if q.status == "approved"]
     need = required_questions(bank.lesson_id, policy)
     if len(approved) < need:
@@ -319,13 +376,80 @@ async def publish(db, access, target, request):
         QuestionInput.model_validate(q.content)
         if not q.reviewer:
             invalid("Câu đã duyệt cần người duyệt.")
-    bank.status, bank.published_by = "published", access.user.id
+    bank.status, bank.published_by = "published", actor_id
     bank.revision += 1
     policy.bank_id = bank.id
     policy.revision += 1
-    audit(db, access.user.id, "bank.publish", bank.id, None, {"version": bank.version})
+    audit(db, actor_id, "bank.publish", bank.id, None, {"version": bank.version})
+
+
+async def publish(db, access, target, request):
+    bank = await bank_for(db, access, target, request.expected_revision, editable=True)
+    policy = await db.get(QuizPolicy, (access.classroom.id, bank.lesson_id))
+    await publish_bank_row(db, access.user.id, bank, policy)
     await db.commit()
     return await view(db, access, target)
+
+
+async def quiz_index_for(db, course_version_id, lab_id, lesson_id):
+    if is_labtest(lesson_id):
+        return 0
+    quiz_ids = list(
+        (
+            await db.execute(
+                select(Lesson.id)
+                .where(
+                    Lesson.course_version_id == course_version_id,
+                    Lesson.lab_id == lab_id,
+                    Lesson.type == "quiz",
+                )
+                .order_by(Lesson.order_no, Lesson.id)
+            )
+        ).scalars()
+    )
+    return quiz_ids.index(lesson_id) if lesson_id in quiz_ids else 0
+
+
+async def load_samples(db, access, target, request):
+    bank = await bank_for(db, access, target, request.expected_revision, editable=True)
+    quiz_index = await quiz_index_for(db, bank.course_version_id, bank.lab_id, bank.lesson_id)
+    samples = sample_questions_for(bank.lab_id, bank.lesson_id, quiz_index=quiz_index)
+    rows = await questions(db, bank.id)
+    active_prompts = [normalized(q.content["prompt"]) for q in rows if q.status != "retired"]
+    to_add = []
+    for sample in samples:
+        prompt = normalized(sample["prompt"])
+        if any(SequenceMatcher(None, prompt, old).ratio() >= 0.9 for old in active_prompts):
+            continue
+        active_prompts.append(prompt)
+        to_add.append(sample)
+    if len(rows) + len(to_add) > 200:
+        invalid("Mỗi phiên bản ngân hàng chứa tối đa 200 câu nháp.")
+    if to_add:
+        seeded_at = datetime.now(timezone.utc)
+        for sample in to_add:
+            db.add(
+                QuestionVersion(
+                    id=uid(),
+                    bank_id=bank.id,
+                    question_id=uid(),
+                    content=sample,
+                    status="approved",
+                    reviewer=access.user.id,
+                    reviewed_at=seeded_at,
+                )
+            )
+        bank.revision += 1
+        audit(
+            db,
+            access.user.id,
+            "question.load_samples",
+            bank.id,
+            None,
+            {"added": len(to_add)},
+        )
+        await db.commit()
+    return {**await view(db, access, target), "added_count": len(to_add)}
 
 
 async def fork(db, access, target, request):

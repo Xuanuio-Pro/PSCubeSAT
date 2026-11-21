@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { Notice } from '../components/classes/LmsCommon';
@@ -228,6 +228,17 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
     }
   }
 
+  async function loadSamples() {
+    const result = await mutate(url + '/load-samples', { expected_revision: bank.revision });
+    if (result) {
+      setNotice({
+        message: result.added_count > 0
+          ? `Đã nạp ${result.added_count} câu hỏi mẫu đã duyệt vào ngân hàng.`
+          : 'Các câu hỏi mẫu đã có sẵn trong ngân hàng.',
+      });
+    }
+  }
+
   async function importFile(event) {
     event.preventDefault();
     if (!questionFile || questionFile.size > 1000000) {
@@ -265,6 +276,11 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
     <Notice {...notice} />
     <div className="lms-actions">
       <button type="button" disabled={busy} onClick={reload}>Tải lại ngân hàng</button>
+      {draft && (
+        <button type="button" disabled={busy} onClick={loadSamples}>
+          Nạp câu hỏi mẫu
+        </button>
+      )}
       {draft && bank.questions.some(q => q.status === 'draft') && (
         <button type="button" disabled={busy} onClick={approveAllDrafts}>
           Duyệt tất cả câu nháp ({bank.questions.filter(q => q.status === 'draft').length})
@@ -481,18 +497,62 @@ function TeacherResults({ base }) {
     <section className="lms-panel"><h2>Tỷ lệ đúng theo phiên bản câu</h2><button onClick={stats.reload}>Cập nhật thống kê</button><Notice error={stats.error} />{!stats.data?.length ? <p>Chưa có lượt đã chấm.</p> : <div className="lms-table-wrap"><table><caption className="sr-only">Tỷ lệ trả lời đúng theo từng phiên bản câu hỏi</caption><thead><tr><th>Câu hỏi</th><th>Lượt đúng / Tổng</th><th>Tỷ lệ đúng</th></tr></thead><tbody>{stats.data.map(row => <tr key={row.question_version_id}><td>{row.prompt}<small> {row.question_version_id.slice(0, 8)}</small></td><td>{row.correct}/{row.total}</td><td>{Math.round(row.correct_ratio * 100)}%</td></tr>)}</tbody></table></div>}</section></>;
 }
 
-export function InlineQuestionBank({ classId, labId, lessonId = null, onPublished = null }) {
+export function InlineQuestionBank({
+  classId,
+  labId,
+  lessonId = null,
+  onPublished = null,
+  onBankChange = null,
+  refreshKey = 0,
+}) {
   const url = bankBase(classId, labId, lessonId) + '/question-bank';
   const { data: bank, loading, error, reload } = useLmsResource(url);
   const [questionFile, setQuestionFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState({});
+  const onBankChangeRef = useRef(onBankChange);
+  onBankChangeRef.current = onBankChange;
+  const prevRefreshKey = useRef(refreshKey);
+
+  useEffect(() => {
+    if (bank && onBankChangeRef.current) {
+      onBankChangeRef.current(lessonId || `labtest-${labId}`, bank);
+    }
+  }, [bank, labId, lessonId]);
+
+  useEffect(() => {
+    if (refreshKey !== prevRefreshKey.current) {
+      prevRefreshKey.current = refreshKey;
+      reload();
+    }
+  }, [refreshKey, reload]);
 
   if (loading) return <p role="status">Đang tải ngân hàng câu hỏi {lessonId ? lessonId : `Lab ${labId}`}…</p>;
   if (error) return <><Notice error={error} /><button type="button" onClick={reload}>Thử lại</button></>;
 
   const draft = bank.status === 'draft';
   const draftCount = bank.questions.filter(q => q.status === 'draft').length;
+
+  async function loadSamples() {
+    setBusy(true);
+    setNotice({});
+    try {
+      const result = await request(url + '/load-samples', {
+        method: 'POST',
+        body: JSON.stringify({ expected_revision: bank.revision }),
+      });
+      setNotice({
+        message: result.added_count > 0
+          ? `Đã nạp ${result.added_count} câu hỏi mẫu đã duyệt vào ngân hàng.`
+          : 'Các câu hỏi mẫu đã có sẵn trong ngân hàng.',
+      });
+      reload();
+    } catch (err) {
+      setNotice({ error: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleImport(event) {
     event.preventDefault();
@@ -568,6 +628,7 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
           <strong>Thêm file câu hỏi & đáp án ({lessonId ? lessonId : `Lab Test ${labId}`})</strong>
           <span className="lms-secondary">
             Phiên bản {bank.version} · {labels[bank.status]} · Đã duyệt <strong>{bank.approved_count}</strong> câu (tổng {bank.questions.length} câu)
+            {draft && bank.approved_count > 0 && draftCount === 0 && ' · Sẵn sàng tự xuất bản cùng cấu hình lớp'}
           </span>
           <span className="lms-secondary">
             <strong>Mẫu file (đã gồm đáp án đúng và giải thích từng đáp án):</strong>{' '}
@@ -592,13 +653,16 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
             </label>
             <button className="lms-primary" disabled={busy || !questionFile}>Thêm file câu hỏi</button>
           </form>
-          {(draftCount > 0 || bankReady(bank)) && (
-            <div className="lms-actions" style={{ marginTop: '10px' }}>
-              {draftCount > 0 && (
-                <button type="button" disabled={busy} onClick={approveAll}>
-                  Duyệt tất cả câu nháp ({draftCount})
-                </button>
-              )}
+          <div className="lms-actions" style={{ marginTop: '10px' }}>
+            <button type="button" disabled={busy} onClick={loadSamples}>
+              Nạp câu hỏi mẫu
+            </button>
+            {draftCount > 0 && (
+              <button type="button" disabled={busy} onClick={approveAll}>
+                Duyệt tất cả câu nháp ({draftCount})
+              </button>
+            )}
+            {(draftCount > 0 || bankReady(bank)) && (
               <button
                 type="button"
                 className="lms-primary"
@@ -607,8 +671,8 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
               >
                 Xuất bản {bank.approved_count} câu đã duyệt
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </>
       ) : (
         <p className="lms-secondary" style={{ marginTop: '8px' }}>

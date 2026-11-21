@@ -1,5 +1,13 @@
 # Nhật ký quyết định
 
+## 21/11/2026 — Nạp sẵn câu hỏi mẫu cho Quiz (3 câu) và Lab Test (10 câu) khi cấu hình lớp
+
+- **Nguồn câu hỏi mẫu chỉ ở server:** đặt tệp gốc `fastapi-backend/app/firmware/curriculum/default-question-bank.csv` (10 câu từ mẫu CSV chuẩn, không đưa vào `seed.json` hay bundle frontend). Khi cần thay đề mẫu cho từng lab/bài sau này, chỉ cần đặt file phía server theo thứ tự ưu tiên: `lab{N}/{lesson_id}.csv|json` → `lab{N}/{quiz|labtest}.csv|json` → `default-question-bank.csv`. File khung rỗng (như `{"questions": []}`) tự rơi xuống mức tiếp theo.
+- **Xoay vòng cho quiz và 10 câu cho Lab Test:** trong fallback (hoặc file `lab{N}/quiz.*`), mỗi bài `quiz` theo thứ tự trong lab nhận 3 câu xoay vòng `(quiz_index * 3) % N` (không trùng trong một bài); mỗi `labtest` nhận đủ 10 câu.
+- **Trạng thái khởi tạo & mặc định lớp mới:** `seed_banks` (khóa hàng lớp chống race) khởi tạo ngân hàng ở `draft` với các câu mẫu ở `approved` (gắn `reviewer` là giảng viên/quản trị viên tạo), giúp giảng viên thêm/sửa/xóa câu ngay mà không cần fork. Chính sách mặc định: quiz 3 câu (đạt 2/3, 10 phút, 3 lượt), Lab Test 10 câu (đạt 8/10, 15 phút, 3 lượt). Các bài `quiz` và `labtest` của lớp mới mặc định `enabled=true`, `required=true`.
+- **Tự xuất bản cùng cấu hình lớp & chặn câu nháp:** khi xuất bản cấu hình chương trình lớp, mọi bài `quiz`/`labtest` đang bật thuộc lab đang bật nếu có ngân hàng `draft` với `>= 1` câu đã duyệt và `0` câu nháp sẽ được tự động xuất bản trong cùng transaction (`bank.publish`). Nếu còn câu nháp chưa duyệt, xuất bản bị chặn với mã `QUIZ_DRAFT_UNAPPROVED` để giảng viên không bỏ sót câu mới thêm. Thêm `POST .../question-bank/load-samples` (nạp bổ sung câu mẫu chưa có, không ghi đè/trùng câu hiện có) và nút "Nạp câu hỏi mẫu" trên UI.
+- **Migration `0021_default_sample_quiz_banks`:** nạp 1 lần vào các ngân hàng `draft` đang trống (0 câu) của lớp cũ và cập nhật policy `labtest-*` chưa tùy chỉnh (5/4/10 phút → 10/8/15 phút); không đụng tới ngân hàng đã có câu, ngân hàng đã xuất bản hay `class_lesson_settings` cũ. `downgrade` giữ nguyên dữ liệu để không làm mất nội dung soạn thảo.
+
 ## 19/11/2026 — Áp giao diện mới của Quân (`quanna1402:fix/frontend-v1`)
 
 - Commit của Quân gộp 282 file trên nền `main` cũ. Phần thay đổi thực, tính so với `develop` (`2adb3ab`), được áp bằng 3-way merge. Chỉ lấy đúng phạm vi: trang loading, sidebar các lab, giao diện Lab 0 (nền, thẻ có tab nổi, icon, font) và các asset đi kèm.

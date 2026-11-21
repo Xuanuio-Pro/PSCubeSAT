@@ -167,7 +167,10 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         for item in body["lessons"]:
             if item["lesson_id"] == "video-1-1":
                 item.update(enabled=True, required=True)
-            if item["lesson_id"].startswith("document-4-") or item["lesson_id"] == "summary-4":
+            if item["lesson_id"].startswith("document-4-") or item["lesson_id"] in {
+                "summary-4",
+                "labtest-4",
+            }:
                 item["required"] = False
         saved = await self.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)
@@ -182,7 +185,7 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         before = (await self.call(4, "GET", f"/api/classes/{self.class_a}/curriculum")).json()
         body = settings_payload(await self.draft())
         for item in body["lessons"]:
-            if item["lesson_id"] in ("document-2-1", "Lab2-01a_Battery_I2C"):
+            if item["lesson_id"] in ("document-2-1", "Lab2-01a_Battery_I2C", "labtest-2"):
                 item.update(enabled=False, required=False)
         saved = await self.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)

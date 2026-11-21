@@ -59,8 +59,11 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200, response.text)
 
     async def prepare(self, count=5, reveal="after_attempts"):
+        from sqlalchemy import delete
+
         bank = await self.bank()
         async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
             for index in range(count):
                 db.add(
                     QuestionVersion(
@@ -126,7 +129,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionVersion))).scalar_one(),
-                0,
+                138,  # 16 * 3 rotating quiz samples + 9 * 10 Lab Test samples
             )
         for count in (0,):
             async with self.sessions() as db:
@@ -184,7 +187,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         for _ in range(3):
             attempt = (await self.start()).json()
             await self.correct(attempt)
-            future = now() + timedelta(minutes=11)
+            future = now() + timedelta(minutes=16)
             with patch("app.services.quizzes.now", return_value=future):
                 late = await self.call(
                     4,
@@ -249,6 +252,12 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_crud_import_review_and_ai_hidden(self):
+        from sqlalchemy import delete
+
+        bank = await self.bank()
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
         bank = await self.bank()
         self.assertFalse(bank["ai_available"])
         content = question()
@@ -340,7 +349,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         await self.learning.complete(0)
         attempt = (await self.start()).json()
         await self.correct(attempt)
-        future = now() + timedelta(minutes=11)
+        future = now() + timedelta(minutes=16)
         with (
             patch("app.services.quizzes.now", return_value=future),
             patch("app.services.question_generation.now", return_value=future),
@@ -381,6 +390,12 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         writer.writeheader()
         writer.writerow(row)
         bank = await self.bank()
+        from sqlalchemy import delete
+
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
+        bank = await self.bank()
         response = await self.call(
             2,
             "POST",
@@ -412,8 +427,14 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changed.status_code, 422)
 
     async def test_four_question_types_import_and_student_attempt_grading(self):
+        from sqlalchemy import delete
+
         from app.services.exam_import import SAMPLE_EXAM_TEXT
 
+        bank = await self.bank()
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
         bank = await self.bank()
         imported = await self.call(
             2,

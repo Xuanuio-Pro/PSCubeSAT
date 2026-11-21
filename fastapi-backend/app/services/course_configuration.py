@@ -8,10 +8,11 @@ from sqlalchemy import delete, func, select
 from app.core.lms_errors import LMSError
 from app.models.curriculum import ClassCourseVersion, ClassLessonSetting, CourseVersion, Lab, Lesson
 from app.models.learning import Prerequisite
-from app.models.quiz import QuestionBank, QuizPolicy
-from app.models.tables import ClassMembership, MembershipRole, MembershipStatus
+from app.models.quiz import QuestionBank, QuestionVersion, QuizPolicy
+from app.models.tables import ClassMembership, Classroom, MembershipRole, MembershipStatus
 from app.services.classes import audit
 from app.services.learning_rules import BRANCHING
+from app.services.sample_questions import default_policy
 
 ALLOWED_PARAMS = {
     "video": {
@@ -85,12 +86,13 @@ async def course_data(db, version_id):
 
 
 def defaults(lesson):
-    enabled = lesson.type not in {"labtest", "quiz"} and (
-        lesson.type != "video" or bool(lesson.content.get("url"))
+    enabled = lesson.type != "video" or bool(lesson.content.get("url"))
+    required = lesson.type in {"labtest", "quiz"} or (
+        lesson.type == "document" and bool(lesson.content.get("markdown"))
     )
     return {
         "enabled": enabled,
-        "required": lesson.type == "document" and bool(lesson.content.get("markdown")),
+        "required": required,
         "order_no": lesson.order_no,
         "params": {},
     }
@@ -138,6 +140,33 @@ async def configuration(
             )
         ).all()
     }
+    latest_banks: dict[str, QuestionBank] = {}
+    bank_counts: dict[str, dict[str, int]] = {}
+    if access.can_manage and not student_view:
+        for bank in (
+            await db.execute(
+                select(QuestionBank)
+                .where(
+                    QuestionBank.class_id == access.classroom.id,
+                    QuestionBank.course_version_id == version_id,
+                )
+                .order_by(QuestionBank.version.desc())
+            )
+        ).scalars():
+            latest_banks.setdefault(bank.lesson_id, bank)
+        if latest_banks:
+            for bank_id, q_status, cnt in (
+                await db.execute(
+                    select(
+                        QuestionVersion.bank_id,
+                        QuestionVersion.status,
+                        func.count(QuestionVersion.id),
+                    )
+                    .where(QuestionVersion.bank_id.in_([b.id for b in latest_banks.values()]))
+                    .group_by(QuestionVersion.bank_id, QuestionVersion.status)
+                )
+            ).all():
+                bank_counts.setdefault(bank_id, {})[q_status] = cnt
     settings = {}
     if row:
         settings = {
@@ -199,10 +228,11 @@ async def configuration(
             content = safe_content(
                 lesson.content, lesson.type, manager=access.can_manage and not student_view
             )
-            if lesson.type in ("labtest", "quiz") and lesson.id in quiz_policies:
-                content.update(
+            if lesson.type in ("labtest", "quiz"):
+                policy_row = quiz_policies.get(lesson.id)
+                policy_values = (
                     {
-                        key: getattr(quiz_policies[lesson.id], key)
+                        key: getattr(policy_row, key)
                         for key in (
                             "time_limit_minutes",
                             "pass_score",
@@ -210,12 +240,29 @@ async def configuration(
                             "num_questions",
                         )
                     }
+                    if policy_row
+                    else default_policy(lesson.type)
                 )
+                content.update(policy_values)
             content.update(
                 {k: v for k, v in values["params"].items() if k in ALLOWED_PARAMS[lesson.type]}
             )
             if lesson.type in ("labtest", "quiz"):
                 content["bank_ready"] = quiz_banks.get(lesson.id) == version_id
+                if access.can_manage and not student_view:
+                    bank = latest_banks.get(lesson.id)
+                    counts = bank_counts.get(bank.id, {}) if bank else {}
+                    approved_count = counts.get("approved", 0)
+                    draft_count = counts.get("draft", 0)
+                    content["bank_status"] = bank.status if bank else "uninitialized"
+                    content["bank_approved_count"] = approved_count
+                    content["bank_draft_count"] = draft_count
+                    content["bank_auto_publishable"] = (
+                        bank is not None
+                        and bank.status == "draft"
+                        and approved_count >= 1
+                        and draft_count == 0
+                    )
             if not access.can_manage or student_view:
                 content.pop("todos", None)
             output["lessons"].append(
@@ -429,22 +476,44 @@ def validate_configuration(config):
                 }
             )
         for lesson in lab["lessons"]:
-            if (
-                lab["enabled"]
-                and lesson["enabled"]
-                and lesson["type"] == "quiz"
-                and not lesson["content"].get("bank_ready")
-            ):
-                # A quiz completes only by passing, so an enabled quiz without questions would
-                # lock every later lesson of the lab.
-                errors.append(
-                    {
-                        "lab_id": lab["id"],
-                        "lesson_id": lesson["id"],
-                        "code": "QUIZ_BANK_NOT_READY",
-                        "message": "Bài câu hỏi đang bật nhưng chưa có ngân hàng câu hỏi đã duyệt và xuất bản.",
-                    }
+            if lab["enabled"] and lesson["enabled"] and lesson["type"] in ("quiz", "labtest"):
+                content = lesson["content"]
+                draft_count = content.get("bank_draft_count", 0)
+                publishable = bool(
+                    content.get("bank_ready") or content.get("bank_auto_publishable")
                 )
+                if draft_count > 0:
+                    errors.append(
+                        {
+                            "lab_id": lab["id"],
+                            "lesson_id": lesson["id"],
+                            "code": "QUIZ_DRAFT_UNAPPROVED",
+                            "message": (
+                                f"Bài có {draft_count} câu hỏi nháp chưa duyệt. "
+                                "Hãy duyệt hoặc xóa câu nháp trước khi xuất bản."
+                            ),
+                        }
+                    )
+                elif lesson["type"] == "quiz" and not publishable:
+                    # A quiz completes only by passing, so an enabled quiz without questions would
+                    # lock every later lesson of the lab.
+                    errors.append(
+                        {
+                            "lab_id": lab["id"],
+                            "lesson_id": lesson["id"],
+                            "code": "QUIZ_BANK_NOT_READY",
+                            "message": "Bài câu hỏi đang bật nhưng chưa có ngân hàng câu hỏi đã duyệt và xuất bản.",
+                        }
+                    )
+                elif lesson["type"] == "labtest" and not publishable:
+                    errors.append(
+                        {
+                            "lab_id": lab["id"],
+                            "lesson_id": lesson["id"],
+                            "code": "CONTENT_MISSING",
+                            "message": "Bài bắt buộc thiếu nội dung, URL hoặc ngân hàng đã duyệt.",
+                        }
+                    )
             if not lab["enabled"] or not lesson["enabled"] or not lesson["required"]:
                 continue
             content = lesson["content"]
@@ -464,8 +533,6 @@ def validate_configuration(config):
                 and not (
                     content.get("instructions", "").strip() and content.get("rubric", "").strip()
                 )
-                or lesson["type"] == "labtest"
-                and not content.get("bank_ready")
             )
             if missing:
                 errors.append(
@@ -499,6 +566,10 @@ def validate_configuration(config):
 
 
 async def publish(db, access, expected_version, dry_run):
+    if not dry_run:
+        await db.execute(
+            select(Classroom.id).where(Classroom.id == access.classroom.id).with_for_update()
+        )
     row = await latest(db, access.classroom.id, "draft")
     if row is None or row.version != expected_version:
         raise LMSError(
@@ -508,6 +579,13 @@ async def publish(db, access, expected_version, dry_run):
     errors = validate_configuration(config)
     if errors:
         invalid(errors)
+    auto_publish_lesson_ids = [
+        lesson["id"]
+        for lab in config["labs"]
+        if lab["enabled"]
+        for lesson in lab["lessons"]
+        if lesson["enabled"] and lesson["content"].get("bank_auto_publishable")
+    ]
     count = (
         await db.execute(
             select(func.count())
@@ -519,8 +597,32 @@ async def publish(db, access, expected_version, dry_run):
             )
         )
     ).scalar_one()
-    response = {"dry_run": dry_run, "affected_students": count, "version": row.version}
+    response = {
+        "dry_run": dry_run,
+        "affected_students": count,
+        "version": row.version,
+        "auto_publish_banks": auto_publish_lesson_ids,
+    }
     if not dry_run:
+        if auto_publish_lesson_ids:
+            from app.services.question_banks import latest_bank, publish_bank_row
+
+            for lesson_id in auto_publish_lesson_ids:
+                bank = await latest_bank(db, access, lesson_id)
+                if (
+                    bank is None
+                    or bank.status != "draft"
+                    or bank.course_version_id != row.course_version_id
+                ):
+                    raise LMSError(
+                        409,
+                        "VERSION_CONFLICT",
+                        "Ngân hàng câu hỏi đã thay đổi. Hãy tải lại cấu hình.",
+                    )
+                policy = await db.get(QuizPolicy, (row.class_id, lesson_id))
+                if policy is None:
+                    raise LMSError(409, "BANK_NOT_READY", "Thiếu chính sách ngân hàng câu hỏi.")
+                await publish_bank_row(db, access.user.id, bank, policy)
         for item in (
             await db.execute(
                 select(ClassLessonSetting).where(

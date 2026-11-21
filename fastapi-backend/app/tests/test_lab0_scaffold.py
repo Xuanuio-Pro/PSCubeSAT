@@ -40,11 +40,13 @@ class Lab0ScaffoldTests(unittest.TestCase):
         self.assertIn("'quiz'", str(constraint.sqltext))
         self.assertIn("quiz", ALLOWED_PARAMS)
 
-    def test_quiz_is_disabled_and_optional_by_default(self):
-        quiz = SimpleNamespace(type="quiz", content={}, order_no=2)
-        self.assertEqual(
-            defaults(quiz), {"enabled": False, "required": False, "order_no": 2, "params": {}}
-        )
+    def test_quiz_and_labtest_are_enabled_and_required_by_default(self):
+        for kind, order_no in (("quiz", 2), ("labtest", 9)):
+            lesson = SimpleNamespace(type=kind, content={}, order_no=order_no)
+            self.assertEqual(
+                defaults(lesson),
+                {"enabled": True, "required": True, "order_no": order_no, "params": {}},
+            )
 
     def test_quiz_content_never_exposes_answers(self):
         content = {"bank_key": "quiz-0-1", "bank_ready": False, "questions": [{"answer": "a"}]}
