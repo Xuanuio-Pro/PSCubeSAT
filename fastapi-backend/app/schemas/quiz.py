@@ -169,7 +169,8 @@ class PolicyInput(RevisionInput):
     num_questions: int = Field(default=5, ge=1, le=200)
     time_limit_minutes: int = Field(default=10, ge=1, le=180)
     pass_score: int = Field(default=4, ge=1, le=200)
-    max_attempts: int = Field(default=3, ge=1, le=100)
+    max_attempts: int | None = Field(default=5, ge=1, le=100)
+    cooldown_minutes: int = Field(default=0, ge=0, le=1440)
     score_rule: Literal["highest"] = "highest"
     reveal_policy: Literal["after_pass", "after_attempts", "after_close", "immediate", "never"] = (
         "after_pass"

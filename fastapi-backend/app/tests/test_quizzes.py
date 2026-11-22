@@ -51,10 +51,15 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
 
-    async def set_reveal(self, reveal):
+    async def set_reveal(self, reveal, *, max_attempts=3, cooldown_minutes=0):
         bank = await self.bank()
         policy = {k: v for k, v in bank["policy"].items() if k != "revision"}
-        policy.update(expected_revision=bank["policy"]["revision"], reveal_policy=reveal)
+        policy.update(
+            expected_revision=bank["policy"]["revision"],
+            reveal_policy=reveal,
+            max_attempts=max_attempts,
+            cooldown_minutes=cooldown_minutes,
+        )
         response = await self.call(2, "PUT", self.base + "/labs/0/quiz-policy", policy)
         self.assertEqual(response.status_code, 200, response.text)
 
@@ -82,9 +87,8 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         )
         if response.status_code != 200:
             return response
-        # The default is now `after_pass`; most fixtures here exercise the stricter older rule.
-        if reveal != "after_pass":
-            await self.set_reveal(reveal)
+        # These legacy-limit tests exercise hard-cap (3 attempts, no cooldown) behavior.
+        await self.set_reveal(reveal, max_attempts=3, cooldown_minutes=0)
         self.assertEqual(response.status_code, 200, response.text)
         body = deepcopy(self.learning.body)
         for item in body["lessons"]:

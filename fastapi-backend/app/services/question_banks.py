@@ -233,6 +233,7 @@ def policy_json(policy):
             "time_limit_minutes",
             "pass_score",
             "max_attempts",
+            "cooldown_minutes",
             "score_rule",
             "reveal_policy",
         )

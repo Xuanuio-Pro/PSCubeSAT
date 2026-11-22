@@ -119,11 +119,23 @@ class SampleQuestionLoaderTests(unittest.TestCase):
     def test_default_policy_helper(self):
         self.assertEqual(
             default_policy("quiz"),
-            {"num_questions": 3, "pass_score": 2, "time_limit_minutes": 10, "max_attempts": 3},
+            {
+                "num_questions": 3,
+                "pass_score": 2,
+                "time_limit_minutes": 10,
+                "max_attempts": None,
+                "cooldown_minutes": 0,
+            },
         )
         self.assertEqual(
             default_policy("labtest"),
-            {"num_questions": 10, "pass_score": 8, "time_limit_minutes": 15, "max_attempts": 3},
+            {
+                "num_questions": 10,
+                "pass_score": 8,
+                "time_limit_minutes": 15,
+                "max_attempts": 5,
+                "cooldown_minutes": 30,
+            },
         )
         self.assertEqual(default_policy("labtest", sample_count=4)["pass_score"], 4)
 
@@ -151,12 +163,24 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(q01["enabled"])
         self.assertTrue(q01["required"])
         self.assertEqual(
-            (q01["content"]["time_limit_minutes"], q01["content"]["pass_score"]), (10, 2)
+            (
+                q01["content"]["time_limit_minutes"],
+                q01["content"]["pass_score"],
+                q01["content"]["max_attempts"],
+                q01["content"]["cooldown_minutes"],
+            ),
+            (10, 2, None, 0),
         )
         self.assertTrue(lt0["enabled"])
         self.assertTrue(lt0["required"])
         self.assertEqual(
-            (lt0["content"]["time_limit_minutes"], lt0["content"]["pass_score"]), (15, 8)
+            (
+                lt0["content"]["time_limit_minutes"],
+                lt0["content"]["pass_score"],
+                lt0["content"]["max_attempts"],
+                lt0["content"]["cooldown_minutes"],
+            ),
+            (15, 8, 5, 30),
         )
 
         # Concurrent bank GETs (like opening ClassCurriculumPage) seed safely with no duplicates.
@@ -174,8 +198,12 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(bank["status"], "draft")
             self.assertEqual(bank["approved_count"], 3)
             self.assertTrue(all(q["status"] == "approved" for q in bank["questions"]))
+            self.assertIsNone(bank["policy"]["max_attempts"])
+            self.assertEqual(bank["policy"]["cooldown_minutes"], 0)
         self.assertEqual(lt_bank["status"], "draft")
         self.assertEqual(lt_bank["approved_count"], 10)
+        self.assertEqual(lt_bank["policy"]["max_attempts"], 5)
+        self.assertEqual(lt_bank["policy"]["cooldown_minutes"], 30)
 
         prompts = (
             {q["prompt"] for q in b1["questions"]}

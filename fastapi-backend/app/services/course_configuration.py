@@ -25,8 +25,20 @@ ALLOWED_PARAMS = {
     },
     "document": {"markdown", "estimated_minutes"},
     "practice": {"instructions", "rubric", "board", "evidence", "estimated_minutes"},
-    "labtest": {"time_limit_minutes", "max_attempts", "pass_score", "estimated_minutes"},
-    "quiz": {"time_limit_minutes", "max_attempts", "pass_score", "estimated_minutes"},
+    "labtest": {
+        "time_limit_minutes",
+        "max_attempts",
+        "cooldown_minutes",
+        "pass_score",
+        "estimated_minutes",
+    },
+    "quiz": {
+        "time_limit_minutes",
+        "max_attempts",
+        "cooldown_minutes",
+        "pass_score",
+        "estimated_minutes",
+    },
 }
 
 
@@ -237,6 +249,7 @@ async def configuration(
                             "time_limit_minutes",
                             "pass_score",
                             "max_attempts",
+                            "cooldown_minutes",
                             "num_questions",
                         )
                     }
@@ -308,11 +321,14 @@ def validate_params(lesson, params):
             valid = type(value) is bool
         elif key == "tracking_mode":
             valid = value in ("native", "confirmation")
-        elif key in {"estimated_minutes", "time_limit_minutes", "max_attempts", "pass_score"}:
+        elif key == "max_attempts":
+            valid = value is None or (type(value) is int and 0 < value <= 100)
+        elif key == "cooldown_minutes":
+            valid = type(value) is int and 0 <= value <= 1440
+        elif key in {"estimated_minutes", "time_limit_minutes", "pass_score"}:
             valid = type(value) is int and 0 < value <= {
                 "pass_score": 200,
                 "time_limit_minutes": 180,
-                "max_attempts": 100,
             }.get(key, 10000)
         if key == "board" and value not in ("esp32", "esp32s3"):
             valid = False

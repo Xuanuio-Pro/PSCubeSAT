@@ -4,6 +4,15 @@ import { Notice } from './LmsCommon';
 import { acknowledge, quizCacheKey, quizTabId, readQuizCache } from './quiz-storage';
 import './quiz.css';
 
+function formatCountdown(totalSeconds) {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const hrs = Math.floor(safe / 3600);
+  const mins = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+  if (hrs > 0) return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 export default function QuizPanel({ classId, labId, lessonId = null, title = '', onRefresh, policySummary }) {
   const { user } = useAuth();
   const [attempt, setAttempt] = useState(null);
@@ -14,8 +23,9 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
   const [draftText, setDraftText] = useState({});
   const [conflict, setConflict] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [tabId] = useState(() => quizTabId(sessionStorage));
-  const state = useRef({ attempt: null, dirty: {}, pending: null, conflict: false, working: false, deadline: 0, lastSync: 0 });
+  const state = useRef({ attempt: null, dirty: {}, pending: null, conflict: false, working: false, deadline: 0, cooldownDeadline: 0, lastSync: 0 });
   const startKey = useRef(null);
   const base = lessonId
     ? `/api/classes/${classId}/lessons/${encodeURIComponent(lessonId)}/attempts`
@@ -33,8 +43,17 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
   const receive = useCallback(next => {
     state.current.attempt = next;
     state.current.lastSync = performance.now();
-    state.current.deadline = performance.now() + Date.parse(next.expires_at) - Date.parse(next.server_now);
-    setSeconds(Math.max(0, Math.ceil((Date.parse(next.expires_at) - Date.parse(next.server_now)) / 1000)));
+    const serverNowMs = Date.parse(next.server_now);
+    state.current.deadline = performance.now() + Date.parse(next.expires_at) - serverNowMs;
+    setSeconds(Math.max(0, Math.ceil((Date.parse(next.expires_at) - serverNowMs) / 1000)));
+    if (next.status !== 'active' && next.cooldown_until) {
+      const cdMs = Math.max(0, Date.parse(next.cooldown_until) - serverNowMs);
+      state.current.cooldownDeadline = cdMs > 0 ? performance.now() + cdMs : 0;
+      setCooldownSeconds(Math.ceil(cdMs / 1000));
+    } else {
+      state.current.cooldownDeadline = 0;
+      setCooldownSeconds(0);
+    }
     if (next.status !== 'active') {
       state.current.dirty = {}; state.current.pending = null;
       setDraftText({});
@@ -88,7 +107,22 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
   useEffect(() => {
     const tick = async () => {
       const current = state.current;
-      if (!current.attempt || current.attempt.status !== 'active') return;
+      if (!current.attempt) return;
+      if (current.attempt.status !== 'active') {
+        if (current.cooldownDeadline > 0) {
+          const cdRemaining = Math.max(0, Math.ceil((current.cooldownDeadline - performance.now()) / 1000));
+          setCooldownSeconds(cdRemaining);
+          if (cdRemaining === 0 && !current.working) {
+            current.cooldownDeadline = 0;
+            current.working = true;
+            try {
+              receive(await request(`/api/attempts/${current.attempt.id}/result`));
+            } catch (error) { setNotice({ error: error.status ? error.message : 'Đang chờ kết nối để cập nhật lượt thi.' }); }
+            finally { current.working = false; }
+          }
+        }
+        return;
+      }
       const remaining = Math.max(0, Math.ceil((current.deadline - performance.now()) / 1000));
       setSeconds(remaining);
       if (current.working || current.conflict && remaining > 0) return;
@@ -144,14 +178,35 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
   if (loading) return <p role="status">Đang khôi phục lượt thi…</p>;
   const active = attempt?.status === 'active';
   const selections = { ...attempt?.answers, ...dirty };
+  const unlimitedSummary = policySummary.max_attempts == null;
+  const cooldownSummary = Number(policySummary.cooldown_minutes || 0);
+  const summaryAttemptsText = unlimitedSummary
+    ? 'Không giới hạn lượt làm.'
+    : cooldownSummary > 0
+      ? `Mỗi đợt tối đa ${policySummary.max_attempts} lượt (hết lượt chờ ${cooldownSummary} phút để làm đợt tiếp theo).`
+      : `Số lượt tối đa: ${policySummary.max_attempts}.`;
+  const attemptSubline = attempt
+    ? attempt.unlimited_attempts
+      ? 'Không giới hạn lượt làm'
+      : active
+        ? `Còn ${attempt.remaining_attempts} lượt sau lượt này`
+        : cooldownSeconds > 0
+          ? `Hết ${attempt.policy.max_attempts} lượt · Mở lại sau ${formatCountdown(cooldownSeconds)}`
+          : `Còn ${attempt.remaining_attempts} lượt trong đợt này`
+    : '';
   return <section className="quiz-panel" aria-label={lessonId ? `Câu hỏi ${title || lessonId}` : `Bài kiểm tra Lab ${labId}`}>
     <Notice {...notice} />
-    {!attempt && <><h3>{lessonId ? (title || 'Câu hỏi kiểm tra') : `Kiểm tra cuối Lab ${labId}`}</h3><p>Đề gồm toàn bộ câu hỏi giáo viên đã duyệt, thời gian {policySummary.time_limit_minutes} phút, đạt từ {policySummary.pass_score} câu đúng. Số lượt tiêu chuẩn: {policySummary.max_attempts}.</p><p>Thời gian bắt đầu tính ngay khi bạn mở đề; tải lại trang sẽ giữ nguyên lượt thi.</p><button className="lms-primary" onClick={start} disabled={busy}>Bắt đầu làm bài</button></>}
+    {!attempt && <><h3>{lessonId ? (title || 'Câu hỏi kiểm tra') : `Kiểm tra cuối Lab ${labId}`}</h3><p>Đề gồm toàn bộ câu hỏi giáo viên đã duyệt, thời gian {policySummary.time_limit_minutes} phút, đạt từ {policySummary.pass_score} câu đúng. {summaryAttemptsText}</p><p>Thời gian bắt đầu tính ngay khi bạn mở đề; tải lại trang sẽ giữ nguyên lượt thi.</p><button className="lms-primary" onClick={start} disabled={busy}>Bắt đầu làm bài</button></>}
     {attempt && <>
-      <div className="quiz-status"><div><strong>Lượt {attempt.number}</strong><p>Đạt từ {attempt.policy.pass_score}/{attempt.items.length} · Còn {attempt.remaining_attempts} lượt sau lượt này</p></div>
+      <div className="quiz-status"><div><strong>Lượt {attempt.number}</strong><p>Đạt từ {attempt.policy.pass_score}/{attempt.items.length} · {attemptSubline}</p></div>
         {active ? <div><strong className="quiz-clock" aria-label="Thời gian còn lại">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</strong><p role="status">{Object.keys(dirty).length ? 'Đang chờ lưu…' : 'Đã lưu trên server'}</p></div>
           : <div><strong className="quiz-score">{attempt.score}/{attempt.items.length}</strong><p>{attempt.passed ? 'Đã đạt' : 'Chưa đạt'} · Cao nhất {attempt.highest_score}/{attempt.items.length}</p></div>}
       </div>
+      {!active && !attempt.passed && !attempt.can_retry && cooldownSeconds > 0 && (
+        <p className="lms-notice" role="status">
+          Bạn đã hết {attempt.policy.max_attempts} lượt trong đợt này và chưa đạt. Hãy ôn lại tài liệu và làm lại sau <strong>{formatCountdown(cooldownSeconds)}</strong>.
+        </p>
+      )}
       {conflict && <div className="lms-confirm"><p>Giữ lựa chọn vừa sửa trên thiết bị này hay tải lựa chọn đã lưu từ tab khác?</p><div className="lms-actions"><button disabled={busy} onClick={() => resolve(true)}>Giữ lựa chọn trên thiết bị</button><button disabled={busy} onClick={() => resolve(false)}>Dùng bản đã lưu trên server</button></div></div>}
       {!active && <p>{attempt.status === 'expired' ? 'Hết thời gian làm bài. ' : ''}{attempt.revealed ? 'Đáp án được công bố theo cấu hình của giảng viên.' : 'Đáp án và giải thích chưa được công bố.'}</p>}
       {attempt.items.map((item, index) => {
@@ -262,7 +317,7 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
         </fieldset>;
       })}
       {active ? <div className="quiz-footer"><p>Đã chọn {Object.keys(selections).length}/{attempt.items.length} câu. Hết giờ, server chấm phần đã lưu.</p><button className="lms-primary" disabled={busy || conflict || seconds === 0} onClick={submit}>{busy ? 'Đang nộp…' : 'Nộp bài'}</button></div>
-        : <div className="lms-actions"><button disabled={busy} onClick={() => resolve(false)}>Cập nhật kết quả</button>{attempt.remaining_attempts > 0 && !attempt.revealed && <button onClick={start} disabled={busy}>Làm lượt tiếp theo</button>}</div>}
+        : <div className="lms-actions"><button disabled={busy} onClick={() => resolve(false)}>Cập nhật kết quả</button>{attempt.can_retry && <button className="lms-primary" onClick={start} disabled={busy}>{attempt.unlimited_attempts ? 'Làm lại ngay' : 'Làm lượt tiếp theo'}</button>}</div>}
     </>}
   </section>;
 }

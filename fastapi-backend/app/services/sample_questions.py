@@ -26,18 +26,20 @@ DEFAULT_POLICIES = {
         "num_questions": 3,
         "pass_score": 2,
         "time_limit_minutes": 10,
-        "max_attempts": 3,
+        "max_attempts": None,
+        "cooldown_minutes": 0,
     },
     "labtest": {
         "num_questions": 10,
         "pass_score": 8,
         "time_limit_minutes": 15,
-        "max_attempts": 3,
+        "max_attempts": 5,
+        "cooldown_minutes": 30,
     },
 }
 
 
-def default_policy(kind: str, sample_count: int | None = None) -> dict[str, int]:
+def default_policy(kind: str, sample_count: int | None = None) -> dict[str, int | None]:
     """Return default QuizPolicy values for a lesson quiz or Lab Test."""
     base = dict(DEFAULT_POLICIES["labtest" if kind == "labtest" else "quiz"])
     if sample_count is not None and sample_count > 0:

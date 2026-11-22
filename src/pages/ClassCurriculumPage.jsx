@@ -11,8 +11,18 @@ const fields = {
   video: [['url', 'URL video (HTTPS)', 'url'], ['watch_ratio', 'Tỷ lệ xem cần đạt (0–1)', 'number'], ['duration_seconds', 'Thời lượng video (giây)', 'number'], ['tracking_mode', 'Cách ghi nhận video', 'tracking'], ['confirmation_allowed', 'Cho phép SV xác nhận đã xem', 'boolean']],
   document: [['markdown', 'Nội dung tài liệu (Markdown)', 'textarea']],
   practice: [['instructions', 'Hướng dẫn thực hành', 'textarea'], ['rubric', 'Tiêu chí chấm', 'textarea'], ['evidence', 'Minh chứng đầu ra', 'textarea'], ['board', 'Bo mạch', 'board']],
-  quiz: [['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'], ['max_attempts', 'Số lượt làm tối đa', 'number'], ['pass_score', 'Số câu đúng để đạt', 'number']],
-  labtest: [['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'], ['max_attempts', 'Số lượt làm tối đa', 'number'], ['pass_score', 'Số câu đúng tối thiểu để đạt', 'number']],
+  quiz: [
+    ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
+    ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
+    ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
+    ['pass_score', 'Số câu đúng để đạt', 'number'],
+  ],
+  labtest: [
+    ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
+    ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
+    ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
+    ['pass_score', 'Số câu đúng tối thiểu để đạt', 'number'],
+  ],
 };
 
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
@@ -116,15 +126,67 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
         <Notice {...importNotice} />
       </div>}
       <div className="lms-form-grid">{[...fields[lesson.type], ['estimated_minutes', 'Thời lượng dự kiến (phút)', 'number']].map(([key, label, kind]) => {
-        const value = lesson.params[key] ?? lesson.content[key] ?? '';
+        const hasParam = Object.prototype.hasOwnProperty.call(lesson.params, key);
+        const value = hasParam ? lesson.params[key] : (lesson.content[key] ?? '');
+        if (kind === 'attempts') {
+          const isUnlimited = value === null;
+          const fallbackAttempts = lesson.type === 'labtest' ? 5 : 3;
+          return <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>{label}</span>
+            <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                checked={isUnlimited}
+                onChange={event => {
+                  const nextParams = { ...lesson.params };
+                  if (event.target.checked) {
+                    nextParams.max_attempts = null;
+                    nextParams.cooldown_minutes = 0;
+                  } else {
+                    nextParams.max_attempts = fallbackAttempts;
+                  }
+                  onChange({ ...lesson, params: nextParams });
+                }}
+              />
+              <span>Không giới hạn lượt</span>
+            </label>
+            {!isUnlimited && (
+              <input
+                type="number"
+                aria-label={label}
+                min={1}
+                max={100}
+                step="1"
+                value={value === '' ? '' : value}
+                onChange={event => param(key, event.target.value === '' ? '' : Number(event.target.value))}
+              />
+            )}
+          </div>;
+        }
+        if (kind === 'cooldown') {
+          const effectiveAttempts = Object.prototype.hasOwnProperty.call(lesson.params, 'max_attempts')
+            ? lesson.params.max_attempts
+            : lesson.content.max_attempts;
+          const isUnlimited = effectiveAttempts === null;
+          return <label key={key}>{label}
+            <input
+              type="number"
+              min={0}
+              max={1440}
+              step="1"
+              disabled={isUnlimited}
+              value={isUnlimited ? 0 : (value === '' ? '' : value)}
+              onChange={event => param(key, event.target.value === '' ? '' : Number(event.target.value))}
+            />
+            <small className="lms-secondary">0 = khóa hẳn khi hết lượt; mặc định Lab Test là 30 phút.</small>
+          </label>;
+        }
         const numberBounds = key === 'watch_ratio'
           ? { min: 0, max: 1, step: '0.05' }
           : key === 'pass_score'
           ? { min: 1, max: 200, step: '1' }
           : key === 'time_limit_minutes'
           ? { min: 1, max: 180, step: '1' }
-          : key === 'max_attempts'
-          ? { min: 1, max: 100, step: '1' }
           : { min: 0, max: 7200, step: '1' };
         return <label key={key} className={kind === 'textarea' ? 'lms-wide' : ''}>{label}
           {kind === 'boolean' ? <input type="checkbox" checked={!!value} onChange={event => param(key, event.target.checked)} />

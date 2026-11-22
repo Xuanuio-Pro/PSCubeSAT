@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import secrets
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import and_, case, func, select
 
 from app.core.lms_errors import LMSError
+from app.models.curriculum import ClassCourseVersion, ClassLessonSetting
 from app.models.learning import ProgressEvent
 from app.models.quiz import (
     QuestionBank,
@@ -92,16 +94,202 @@ async def attempt_rows(db, member_id, version):
     )
 
 
-async def allowance(db, member_id, version, base):
-    extra = (
+def finished_at(attempt):
+    if attempt.status == "expired":
+        return utc(attempt.expires_at)
+    return utc(attempt.submitted_at or attempt.expires_at or attempt.started_at)
+
+
+async def grant_rows(db, member_id, version):
+    return list(
+        (
+            await db.execute(
+                select(QuizAttemptGrant)
+                .where(
+                    QuizAttemptGrant.membership_id == member_id,
+                    QuizAttemptGrant.lesson_version == version,
+                )
+                .order_by(QuizAttemptGrant.created_at, QuizAttemptGrant.idempotency_key)
+            )
+        ).scalars()
+    )
+
+
+async def effective_retry_policy(db, class_id, lesson_id, fallback_policy=None):
+    fallback = fallback_policy or {}
+    policy = await db.get(QuizPolicy, (class_id, lesson_id))
+    published = (
         await db.execute(
-            select(func.coalesce(func.sum(QuizAttemptGrant.extra_attempts), 0)).where(
-                QuizAttemptGrant.membership_id == member_id,
-                QuizAttemptGrant.lesson_version == version,
+            select(ClassCourseVersion)
+            .where(
+                ClassCourseVersion.class_id == class_id,
+                ClassCourseVersion.status == "published",
+            )
+            .order_by(ClassCourseVersion.version.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    setting = None
+    if published is not None:
+        setting = (
+            await db.execute(
+                select(ClassLessonSetting).where(
+                    ClassLessonSetting.class_id == class_id,
+                    ClassLessonSetting.version == published.version,
+                    ClassLessonSetting.lesson_id == lesson_id,
+                )
+            )
+        ).scalar_one_or_none()
+    params = setting.params if setting else {}
+    max_attempts = (
+        params["max_attempts"]
+        if "max_attempts" in params
+        else (policy.max_attempts if policy else fallback.get("max_attempts"))
+    )
+    cooldown_minutes = (
+        params["cooldown_minutes"]
+        if "cooldown_minutes" in params
+        else (policy.cooldown_minutes if policy else fallback.get("cooldown_minutes", 0))
+    )
+    reveal_policy = policy.reveal_policy if policy else fallback.get("reveal_policy", "after_pass")
+    closes_at = policy.closes_at if policy else fallback.get("closes_at")
+    return {
+        "max_attempts": max_attempts,
+        "cooldown_minutes": int(cooldown_minutes or 0),
+        "reveal_policy": reveal_policy,
+        "closes_at": closes_at,
+    }
+
+
+def compute_retry_state(
+    rows,
+    grants,
+    *,
+    max_attempts,
+    cooldown_minutes,
+    reveal_policy,
+    closes_at,
+    current_time,
+):
+    current_time = utc(current_time)
+    has_active = any(a.status == "active" for a in rows)
+    has_passed = any(
+        a.status != "active" and a.score is not None and a.score >= a.policy["pass_score"]
+        for a in rows
+    )
+    close_dt = (
+        utc(datetime.fromisoformat(closes_at))
+        if isinstance(closes_at, str)
+        else utc(closes_at)
+        if closes_at is not None
+        else None
+    )
+    closed = close_dt is not None and current_time >= close_dt
+    unlimited = max_attempts is None
+    cooldown = int(cooldown_minutes or 0)
+    repeatable = unlimited or cooldown > 0
+
+    if closed:
+        locked = True
+    elif reveal_policy == "after_pass" and has_passed:
+        locked = True
+    elif reveal_policy == "immediate" and any(a.revealed_at for a in rows):
+        locked = True
+    elif not repeatable and any(a.revealed_at for a in rows):
+        locked = True
+    elif repeatable and any(
+        a.revealed_at
+        and (
+            a.policy.get("reveal_policy") in ("immediate", "after_close")
+            or (
+                a.score is not None
+                and a.score >= a.policy["pass_score"]
+                and a.policy.get("reveal_policy") == "after_pass"
             )
         )
-    ).scalar_one()
-    return base + extra
+        for a in rows
+    ):
+        locked = True
+    else:
+        locked = False
+
+    cooldown_until = None
+    cooldown_remaining_seconds = 0
+
+    if unlimited:
+        remaining_attempts = None
+        can_start = not has_active and not locked
+    elif cooldown == 0:
+        limit = max_attempts + sum(g.extra_attempts for g in grants)
+        remaining_attempts = max(0, limit - len(rows))
+        can_start = not has_active and not locked and remaining_attempts > 0
+    else:
+        ordered_grants = sorted(grants, key=lambda g: (utc(g.created_at), g.idempotency_key))
+        grant_idx = 0
+        used_in_batch = 0
+        batch_limit = max_attempts
+        batch_end = None
+        cooldown_delta = timedelta(minutes=cooldown)
+
+        def apply_grant(grant):
+            nonlocal used_in_batch, batch_limit, batch_end
+            grant_time = utc(grant.created_at)
+            if batch_end is not None and grant_time >= batch_end + cooldown_delta:
+                used_in_batch = 0
+                batch_limit = max_attempts
+                batch_end = None
+            batch_limit += grant.extra_attempts
+            if used_in_batch < batch_limit:
+                batch_end = None
+
+        for attempt in rows:
+            attempt_start = utc(attempt.started_at)
+            while (
+                grant_idx < len(ordered_grants)
+                and utc(ordered_grants[grant_idx].created_at) <= attempt_start
+            ):
+                apply_grant(ordered_grants[grant_idx])
+                grant_idx += 1
+            if batch_end is not None and attempt_start >= batch_end + cooldown_delta:
+                used_in_batch = 0
+                batch_limit = max_attempts
+                batch_end = None
+            used_in_batch += 1
+            if attempt.status != "active" and used_in_batch >= batch_limit:
+                batch_end = finished_at(attempt)
+
+        while grant_idx < len(ordered_grants):
+            apply_grant(ordered_grants[grant_idx])
+            grant_idx += 1
+
+        if not has_active and batch_end is not None:
+            until = batch_end + cooldown_delta
+            if current_time >= until:
+                used_in_batch = 0
+                batch_limit = max_attempts
+                batch_end = None
+            else:
+                cooldown_until = until
+                cooldown_remaining_seconds = max(
+                    1, math.ceil((until - current_time).total_seconds())
+                )
+
+        remaining_attempts = max(0, batch_limit - used_in_batch)
+        can_start = (
+            not has_active and not locked and remaining_attempts > 0 and cooldown_until is None
+        )
+
+    return {
+        "remaining_attempts": remaining_attempts,
+        "unlimited": unlimited,
+        "cooldown_minutes": cooldown,
+        "cooldown_until": cooldown_until,
+        "cooldown_remaining_seconds": cooldown_remaining_seconds,
+        "can_start": can_start,
+        "locked": locked,
+        "has_passed": has_passed,
+        "repeatable": repeatable,
+    }
 
 
 async def receipt(db, key, member_id, payload):
@@ -163,31 +351,37 @@ async def finalize(db, attempt, *, submit=False):
 
 async def serialize(db, attempt, *, result=False):
     all_attempts = await attempt_rows(db, attempt.membership_id, attempt.lesson_version)
-    limit = await allowance(
-        db, attempt.membership_id, attempt.lesson_version, attempt.policy["max_attempts"]
-    )
+    grants = await grant_rows(db, attempt.membership_id, attempt.lesson_version)
+    eff = await effective_retry_policy(db, attempt.class_id, attempt.lesson_id, attempt.policy)
+    current = now()
+    retry = compute_retry_state(all_attempts, grants, **eff, current_time=current)
     finished = attempt.status != "active"
     reveal = False
     if result and finished:
         rule = attempt.policy["reveal_policy"]
         close = attempt.policy.get("closes_at")
-        attempts_done = len(all_attempts) >= limit and not any(
-            a.status == "active" for a in all_attempts
+        attempt_repeatable = (
+            attempt.policy.get("max_attempts") is None
+            or int(attempt.policy.get("cooldown_minutes") or 0) > 0
+        )
+        attempts_done = (
+            (not attempt_repeatable)
+            and (not retry["unlimited"])
+            and (retry["remaining_attempts"] == 0)
+            and not any(a.status == "active" for a in all_attempts)
         )
         passed_now = attempt.score is not None and attempt.score >= attempt.policy["pass_score"]
         reveal = (
-            rule == "immediate"
-            or rule == "after_attempts"
-            and attempts_done
-            # Passing opens the explanations at once; a failed attempt waits until the tries run out.
-            or rule == "after_pass"
-            and (passed_now or attempts_done)
-            or rule == "after_close"
-            and close
-            and now() >= utc(datetime.fromisoformat(close))
+            attempt.revealed_at is not None
+            or rule == "immediate"
+            or (rule == "after_attempts" and attempts_done)
+            # Passing opens explanations at once; failed attempts stay hidden while retakes/cooldown exist.
+            or (rule == "after_pass" and (passed_now or attempts_done))
+            or (rule == "after_close" and close and current >= utc(datetime.fromisoformat(close)))
         )
         if reveal and attempt.revealed_at is None:
-            attempt.revealed_at = now()
+            attempt.revealed_at = current
+            retry = compute_retry_state(all_attempts, grants, **eff, current_time=current)
     selected = await answers(db, attempt)
     public_items = []
     for item in await items(db, attempt):
@@ -236,7 +430,12 @@ async def serialize(db, attempt, *, result=False):
         "score": attempt.score if finished else None,
         "passed": finished and attempt.score >= attempt.policy["pass_score"],
         "highest_score": max((a.score for a in all_attempts if a.score is not None), default=None),
-        "remaining_attempts": max(0, limit - len(all_attempts)),
+        "remaining_attempts": retry["remaining_attempts"],
+        "unlimited_attempts": retry["unlimited"],
+        "can_retry": retry["can_start"],
+        "cooldown_minutes": retry["cooldown_minutes"],
+        "cooldown_until": retry["cooldown_until"].isoformat() if retry["cooldown_until"] else None,
+        "cooldown_remaining_seconds": retry["cooldown_remaining_seconds"],
         "revealed": bool(reveal),
     }
 
@@ -283,23 +482,53 @@ async def start(db, access, target, request):
             ):
                 raise LMSError(409, "BANK_NOT_READY", "Ngân hàng chưa sẵn sàng.")
             snapshot = policy_json(policy)
-            # Class configuration may explicitly override these three settings.
+            # Class configuration may explicitly override these settings (including None for unlimited).
             snapshot.update(
                 {
                     k: lesson["params"][k]
-                    for k in ("time_limit_minutes", "pass_score", "max_attempts")
+                    for k in (
+                        "time_limit_minutes",
+                        "pass_score",
+                        "max_attempts",
+                        "cooldown_minutes",
+                    )
                     if k in lesson["params"]
                 }
             )
-            limit = await allowance(db, member.id, version, snapshot["max_attempts"])
-            if len(rows) >= limit or any(a.revealed_at for a in rows):
+            current = now()
+            grants = await grant_rows(db, member.id, version)
+            retry = compute_retry_state(
+                rows,
+                grants,
+                max_attempts=snapshot["max_attempts"],
+                cooldown_minutes=snapshot.get("cooldown_minutes", 0),
+                reveal_policy=snapshot["reveal_policy"],
+                closes_at=policy.closes_at,
+                current_time=current,
+            )
+            if not retry["can_start"]:
+                if retry["cooldown_until"]:
+                    raise LMSError(
+                        409,
+                        "ATTEMPT_LIMIT_REACHED",
+                        (
+                            f"Đã hết {snapshot['max_attempts']} lượt trong đợt này. "
+                            "Vui lòng chờ để làm đợt tiếp theo."
+                        ),
+                        {
+                            "cooldown_until": retry["cooldown_until"].isoformat(),
+                            "retry_after_seconds": retry["cooldown_remaining_seconds"],
+                        },
+                    )
+                if policy.closes_at and current >= utc(policy.closes_at):
+                    raise LMSError(409, "ATTEMPT_EXPIRED", "Bài test đã đóng.")
                 raise LMSError(
                     409, "ATTEMPT_LIMIT_REACHED", "Đã hết lượt thi hoặc đáp án đã được công bố."
                 )
-            deadline = now() + timedelta(minutes=snapshot["time_limit_minutes"])
+            deadline = current + timedelta(minutes=snapshot["time_limit_minutes"])
             if policy.closes_at:
                 deadline = min(deadline, utc(policy.closes_at))
-                if deadline <= now():
+                if deadline <= current:
                     raise LMSError(409, "ATTEMPT_EXPIRED", "Bài test đã đóng.")
             pool = [q for q in await questions(db, bank.id) if q.status == "approved"]
             if not pool:
@@ -467,7 +696,10 @@ async def grant(db, access, target, request):
             conflict()
     else:
         rows = await attempt_rows(db, member.id, version)
-        if any(a.revealed_at for a in rows):
+        grants = await grant_rows(db, member.id, version)
+        eff = await effective_retry_policy(db, access.classroom.id, lesson["id"])
+        retry = compute_retry_state(rows, grants, **eff, current_time=now())
+        if retry["locked"]:
             invalid("Đã công bố đáp án; không cấp thêm lượt trên cùng bài test.")
         db.add(
             QuizAttemptGrant(

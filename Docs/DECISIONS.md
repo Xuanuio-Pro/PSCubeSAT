@@ -1,5 +1,12 @@
 # Nhật ký quyết định
 
+## 22/11/2026 — Không giới hạn lượt Quiz và đợt 5 lượt / chờ 30 phút cho Lab Test
+
+- **Mặc định mới:** bài `quiz` không giới hạn số lượt làm (`max_attempts = NULL`, `cooldown_minutes = 0`) để sinh viên có thể làm lại ngay đến khi đạt mà không bị kẹt tiến trình sang bài tiếp theo; bài `labtest` giới hạn **5 lượt mỗi đợt** và **chờ 30 phút** (`max_attempts = 5`, `cooldown_minutes = 30`) khi hết đợt chưa đạt.
+- **Công bố đáp án khi có thời gian chờ:** với chính sách `after_pass` / `after_attempts`, nếu bài có `cooldown_minutes > 0` (hoặc không giới hạn lượt), đáp án và giải thích **không** công bố khi hết đợt mà chưa đạt (tránh lộ đáp án trước khi làm lại); chỉ công bố khi sinh viên đạt điểm (và khóa làm lại), khi đóng bài (`after_close`) hoặc khi giảng viên đặt `cooldown_minutes = 0`.
+- **Cơ chế tính thời gian chờ & cấp thêm lượt:** thời gian chờ tính theo đồng hồ server từ mốc kết thúc lượt cuối của đợt (`expires_at` nếu hết giờ, ngược lại `submitted_at`). Hết thời gian chờ tự mở đợt `max_attempts` lượt mới (lặp lại đến khi đạt). Giảng viên cấp thêm lượt (`attempt-grants`) trong lúc chờ sẽ mở khóa ngay cho đúng số lượt được cấp; nếu dùng hết vẫn chưa đạt thì bắt đầu chu kỳ chờ mới.
+- **Tùy chỉnh của giảng viên & mở kẹt dữ liệu cũ:** giảng viên có thể bật/tắt không giới hạn lượt và chỉnh `cooldown_minutes` (`0..1440`) ở cả Cấu hình chương trình và Chính sách bài test. Migration `0022_quiz_attempts_and_cooldown` cập nhật các `quiz_policies` còn ở mặc định cũ (`max_attempts = 3`) sang mặc định mới mà không ghi đè cấu hình đã tùy chỉnh; với sinh viên chưa đạt từng bị ghi `revealed_at` do luật 3 lượt cũ trên bài nay chuyển sang không giới hạn/có thời gian chờ, hệ thống bỏ qua cờ khóa đó để sinh viên làm lại mà vẫn giữ nguyên bản ghi `quiz_attempts` cũ.
+
 ## 21/11/2026 — Nạp sẵn câu hỏi mẫu cho Quiz (3 câu) và Lab Test (10 câu) khi cấu hình lớp
 
 - **Nguồn câu hỏi mẫu chỉ ở server:** đặt tệp gốc `fastapi-backend/app/firmware/curriculum/default-question-bank.csv` (10 câu từ mẫu CSV chuẩn, không đưa vào `seed.json` hay bundle frontend). Khi cần thay đề mẫu cho từng lab/bài sau này, chỉ cần đặt file phía server theo thứ tự ưu tiên: `lab{N}/{lesson_id}.csv|json` → `lab{N}/{quiz|labtest}.csv|json` → `default-question-bank.csv`. File khung rỗng (như `{"questions": []}`) tự rơi xuống mức tiếp theo.

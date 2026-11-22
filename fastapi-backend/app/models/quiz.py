@@ -68,7 +68,9 @@ class QuizPolicy(Base):
     __table_args__ = (
         CheckConstraint(
             "num_questions BETWEEN 1 AND 200 AND pass_score BETWEEN 1 AND 200"
-            " AND time_limit_minutes BETWEEN 1 AND 180 AND max_attempts BETWEEN 1 AND 100",
+            " AND time_limit_minutes BETWEEN 1 AND 180"
+            " AND (max_attempts IS NULL OR max_attempts BETWEEN 1 AND 100)"
+            " AND cooldown_minutes BETWEEN 0 AND 1440",
             name="ck_quiz_policy",
         ),
     )
@@ -84,7 +86,8 @@ class QuizPolicy(Base):
     num_questions: Mapped[int] = mapped_column(Integer, server_default="5")
     time_limit_minutes: Mapped[int] = mapped_column(Integer, server_default="10")
     pass_score: Mapped[int] = mapped_column(Integer, server_default="4")
-    max_attempts: Mapped[int] = mapped_column(Integer, server_default="3")
+    max_attempts: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cooldown_minutes: Mapped[int] = mapped_column(Integer, server_default="0")
     score_rule: Mapped[str] = mapped_column(Text, server_default="highest")
     reveal_policy: Mapped[str] = mapped_column(Text, server_default="after_pass")
     closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -451,12 +451,52 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
 }
 
 function PolicyForm({ initial, busy, onSave }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState({ cooldown_minutes: 0, ...initial });
   const [close, setClose] = useState(initial.closes_at ? new Date(Date.parse(initial.closes_at) - new Date(initial.closes_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
+  const isUnlimited = value.max_attempts === null;
   return <details className="lms-panel"><summary><h2>Chính sách bài test</h2></summary><p>Áp dụng cho lượt mới. Tham số riêng trong cấu hình chương trình đã xuất bản được ưu tiên. Các lượt đang thi giữ chính sách ban đầu.</p>
-    <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
-      {[['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200], ['max_attempts', 'Số lượt tối đa', 100]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key]} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
-      <label>Công bố đáp án<select value={value.reveal_policy} onChange={event => setValue(current => ({ ...current, reveal_policy: event.target.value }))}><option value="after_pass">Khi đạt điểm tối thiểu (hoặc hết lượt)</option><option value="after_attempts">Sau khi hết lượt</option><option value="after_close">Sau khi đóng bài test</option><option value="immediate">Ngay sau nộp (không thi lại sau khi xem)</option><option value="never">Không công bố</option></select></label>
+    <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, cooldown_minutes: isUnlimited ? 0 : Number(fields.cooldown_minutes || 0), expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
+      {[['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key]} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>Số lượt làm mỗi đợt</span>
+        <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+          <input
+            type="checkbox"
+            checked={isUnlimited}
+            onChange={event => setValue(current => ({
+              ...current,
+              max_attempts: event.target.checked ? null : 5,
+              cooldown_minutes: event.target.checked ? 0 : (current.cooldown_minutes ?? 30),
+            }))}
+          />
+          <span>Không giới hạn lượt</span>
+        </label>
+        {!isUnlimited && (
+          <input
+            type="number"
+            aria-label="Số lượt làm mỗi đợt"
+            min={1}
+            max={100}
+            required
+            value={value.max_attempts ?? 5}
+            onChange={event => setValue(current => ({ ...current, max_attempts: Number(event.target.value) }))}
+          />
+        )}
+      </div>
+      <label>
+        Thời gian chờ khi hết lượt (phút)
+        <input
+          type="number"
+          min={0}
+          max={1440}
+          required
+          disabled={isUnlimited}
+          value={isUnlimited ? 0 : (value.cooldown_minutes ?? 0)}
+          onChange={event => setValue(current => ({ ...current, cooldown_minutes: Number(event.target.value) }))}
+        />
+        <small className="lms-secondary">0 = khóa hẳn khi hết lượt; &gt; 0 = mở đợt mới sau thời gian chờ.</small>
+      </label>
+      <label>Công bố đáp án<select value={value.reveal_policy} onChange={event => setValue(current => ({ ...current, reveal_policy: event.target.value }))}><option value="after_pass">Khi đạt điểm tối thiểu (hoặc khóa hẳn khi hết lượt)</option><option value="after_attempts">Sau khi hết lượt (nếu không có thời gian chờ)</option><option value="after_close">Sau khi đóng bài test</option><option value="immediate">Ngay sau nộp (không thi lại sau khi xem)</option><option value="never">Không công bố</option></select></label>
       <label>Đóng bài test (giờ địa phương)<input type="datetime-local" value={close} required={value.reveal_policy === 'after_close'} onChange={event => setClose(event.target.value)} /></label>
     </div><button disabled={busy}>Lưu chính sách</button></form></details>;
 }
