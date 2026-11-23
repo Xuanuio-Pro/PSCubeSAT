@@ -67,7 +67,7 @@ async def current_course_id(db, access):
             await db.execute(
                 select(CourseVersion.id)
                 .where(CourseVersion.status == "published")
-                .order_by(CourseVersion.created_at.desc())
+                .order_by(CourseVersion.version.desc(), CourseVersion.created_at.desc())
                 .limit(1)
             )
         ).scalar_one_or_none()
@@ -90,31 +90,80 @@ def _seed_lock(class_id: int) -> asyncio.Lock:
     return lock
 
 
+async def _seed_lesson_bank_and_policy(
+    db,
+    *,
+    class_id: int,
+    actor_id: int,
+    course_version_id: str,
+    lab_id: int,
+    key: str,
+    version: int,
+    quiz_index: int,
+    need_bank: bool,
+    need_policy: bool,
+    seeded_at: datetime,
+):
+    samples = (
+        sample_questions_for(lab_id, key, quiz_index=quiz_index)
+        if (need_bank or need_policy)
+        else []
+    )
+    if need_bank:
+        bank = QuestionBank(
+            id=uid(),
+            class_id=class_id,
+            course_version_id=course_version_id,
+            lab_id=lab_id,
+            lesson_id=key,
+            version=version,
+            created_by=actor_id,
+        )
+        db.add(bank)
+        await db.flush()
+        for sample in samples:
+            db.add(
+                QuestionVersion(
+                    id=uid(),
+                    bank_id=bank.id,
+                    question_id=uid(),
+                    content=sample,
+                    status="approved",
+                    reviewer=actor_id,
+                    reviewed_at=seeded_at,
+                )
+            )
+    if need_policy:
+        defaults = default_policy(
+            "labtest" if is_labtest(key) else "quiz",
+            sample_count=len(samples) or None,
+        )
+        db.add(QuizPolicy(class_id=class_id, lesson_id=key, lab_id=lab_id, **defaults))
+
+
 async def seed_banks(db, access, course_id, *, commit=False):
     async with _seed_lock(access.classroom.id):
         await db.execute(
             select(Classroom.id).where(Classroom.id == access.classroom.id).with_for_update()
         )
-        incompatible = (
-            await db.execute(
-                select(QuestionBank.id)
-                .where(
-                    QuestionBank.class_id == access.classroom.id,
-                    QuestionBank.course_version_id != course_id,
-                )
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        if incompatible:
-            invalid("Lớp đã có ngân hàng cho phiên bản giáo trình khác. Hãy tạo lớp mới.")
         existing = set(
             (
                 await db.execute(
                     select(QuestionBank.lesson_id).where(
-                        QuestionBank.class_id == access.classroom.id
+                        QuestionBank.class_id == access.classroom.id,
+                        QuestionBank.course_version_id == course_id,
                     )
                 )
             ).scalars()
+        )
+        max_versions = dict(
+            (
+                await db.execute(
+                    select(QuestionBank.lesson_id, func.max(QuestionBank.version))
+                    .where(QuestionBank.class_id == access.classroom.id)
+                    .group_by(QuestionBank.lesson_id)
+                )
+            ).all()
         )
         quiz_lessons = (
             await db.execute(
@@ -138,48 +187,209 @@ async def seed_banks(db, access, course_id, *, commit=False):
         for key, lab_id in targets:
             need_bank = key not in existing
             need_policy = await db.get(QuizPolicy, (access.classroom.id, key)) is None
-            samples = (
-                sample_questions_for(lab_id, key, quiz_index=quiz_indices.get(key, 0))
-                if (need_bank or need_policy)
-                else []
+            await _seed_lesson_bank_and_policy(
+                db,
+                class_id=access.classroom.id,
+                actor_id=access.user.id,
+                course_version_id=course_id,
+                lab_id=lab_id,
+                key=key,
+                version=(max_versions.get(key) or 0) + 1,
+                quiz_index=quiz_indices.get(key, 0),
+                need_bank=need_bank,
+                need_policy=need_policy,
+                seeded_at=seeded_at,
             )
-            if need_bank:
-                bank = QuestionBank(
-                    id=uid(),
-                    class_id=access.classroom.id,
-                    course_version_id=course_id,
-                    lab_id=lab_id,
-                    lesson_id=key,
-                    version=1,
-                    created_by=access.user.id,
-                )
-                db.add(bank)
-                await db.flush()
-                for sample in samples:
-                    db.add(
-                        QuestionVersion(
-                            id=uid(),
-                            bank_id=bank.id,
-                            question_id=uid(),
-                            content=sample,
-                            status="approved",
-                            reviewer=access.user.id,
-                            reviewed_at=seeded_at,
-                        )
-                    )
-            if need_policy:
-                defaults = default_policy(
-                    "labtest" if is_labtest(key) else "quiz",
-                    sample_count=len(samples) or None,
-                )
-                db.add(
-                    QuizPolicy(
-                        class_id=access.classroom.id, lesson_id=key, lab_id=lab_id, **defaults
-                    )
-                )
         await db.flush()
         if commit:
             await db.commit()
+
+
+async def _clone_bank_to_course_version(
+    db, old_bank, *, target_course_version_id: str, lab_id: int, next_version: int, actor_id: int
+):
+    """Copy a bank onto a new course version cleanly without mutating published source rows."""
+    old_questions = await questions(db, old_bank.id)
+    new_bank = QuestionBank(
+        id=uid(),
+        class_id=old_bank.class_id,
+        course_version_id=target_course_version_id,
+        lab_id=lab_id,
+        lesson_id=old_bank.lesson_id,
+        version=next_version,
+        revision=1,
+        status="draft",
+        reason=old_bank.reason or "",
+        created_by=old_bank.created_by,
+    )
+    db.add(new_bank)
+    await db.flush()
+    for q in old_questions:
+        db.add(
+            QuestionVersion(
+                id=uid(),
+                bank_id=new_bank.id,
+                question_id=q.question_id,
+                content=deepcopy(q.content),
+                status=q.status,
+                reviewer=q.reviewer,
+                reviewed_at=q.reviewed_at,
+            )
+        )
+    await db.flush()
+    if old_bank.status == "published":
+        new_bank.status = "published"
+        new_bank.published_by = old_bank.published_by or actor_id
+        await db.flush()
+    return new_bank
+
+
+async def upgrade_banks_for_course_version(
+    db, class_id: int, actor_id: int, target_course_version_id: str, labs, lessons
+):
+    """Clone existing banks onto `target_course_version_id` and seed missing quiz/labtest banks."""
+    async with _seed_lock(class_id):
+        all_banks = list(
+            (
+                await db.execute(
+                    select(QuestionBank)
+                    .where(QuestionBank.class_id == class_id)
+                    .order_by(QuestionBank.lesson_id, QuestionBank.version.desc())
+                )
+            ).scalars()
+        )
+        by_key: dict[str, list[QuestionBank]] = {}
+        for bank in all_banks:
+            by_key.setdefault(bank.lesson_id, []).append(bank)
+
+        quiz_lessons = sorted(
+            (item for item in lessons if item.type == "quiz"),
+            key=lambda item: (item.lab_id, item.order_no, item.id),
+        )
+        per_lab_count: dict[int, int] = {}
+        quiz_indices: dict[str, int] = {}
+        for item in quiz_lessons:
+            idx = per_lab_count.get(item.lab_id, 0)
+            quiz_indices[item.id] = idx
+            per_lab_count[item.lab_id] = idx + 1
+
+        targets = [(f"labtest-{lab.id}", lab.id) for lab in labs] + [
+            (item.id, item.lab_id) for item in quiz_lessons
+        ]
+        seeded_at = datetime.now(timezone.utc)
+        for key, lab_id in targets:
+            banks_for_key = by_key.get(key, [])
+            policy = await db.get(QuizPolicy, (class_id, key))
+            target_banks = [
+                b for b in banks_for_key if b.course_version_id == target_course_version_id
+            ]
+            if target_banks:
+                if policy and policy.bank_id:
+                    linked = next((b for b in banks_for_key if b.id == policy.bank_id), None)
+                    target_pub = next((b for b in target_banks if b.status == "published"), None)
+                    if (
+                        linked
+                        and linked.course_version_id != target_course_version_id
+                        and target_pub
+                    ):
+                        policy.bank_id = target_pub.id
+                if policy is None:
+                    await _seed_lesson_bank_and_policy(
+                        db,
+                        class_id=class_id,
+                        actor_id=actor_id,
+                        course_version_id=target_course_version_id,
+                        lab_id=lab_id,
+                        key=key,
+                        version=(banks_for_key[0].version if banks_for_key else 0) + 1,
+                        quiz_index=quiz_indices.get(key, 0),
+                        need_bank=False,
+                        need_policy=True,
+                        seeded_at=seeded_at,
+                    )
+                continue
+
+            if banks_for_key:
+                next_ver = banks_for_key[0].version + 1
+                latest_old = banks_for_key[0]
+                pub_old = (
+                    next(
+                        (
+                            b
+                            for b in banks_for_key
+                            if b.id == policy.bank_id and b.status == "published"
+                        ),
+                        None,
+                    )
+                    if policy and policy.bank_id
+                    else None
+                )
+                if pub_old is None and latest_old.status == "published":
+                    pub_old = latest_old
+                if pub_old is not None and pub_old.id != latest_old.id:
+                    cloned_pub = await _clone_bank_to_course_version(
+                        db,
+                        pub_old,
+                        target_course_version_id=target_course_version_id,
+                        lab_id=lab_id,
+                        next_version=next_ver,
+                        actor_id=actor_id,
+                    )
+                    next_ver += 1
+                    if policy and policy.bank_id == pub_old.id:
+                        policy.bank_id = cloned_pub.id
+                    await _clone_bank_to_course_version(
+                        db,
+                        latest_old,
+                        target_course_version_id=target_course_version_id,
+                        lab_id=lab_id,
+                        next_version=next_ver,
+                        actor_id=actor_id,
+                    )
+                else:
+                    cloned = await _clone_bank_to_course_version(
+                        db,
+                        latest_old,
+                        target_course_version_id=target_course_version_id,
+                        lab_id=lab_id,
+                        next_version=next_ver,
+                        actor_id=actor_id,
+                    )
+                    if (
+                        latest_old.status == "published"
+                        and policy
+                        and policy.bank_id == latest_old.id
+                    ):
+                        policy.bank_id = cloned.id
+                if policy is None:
+                    await _seed_lesson_bank_and_policy(
+                        db,
+                        class_id=class_id,
+                        actor_id=actor_id,
+                        course_version_id=target_course_version_id,
+                        lab_id=lab_id,
+                        key=key,
+                        version=next_ver,
+                        quiz_index=quiz_indices.get(key, 0),
+                        need_bank=False,
+                        need_policy=True,
+                        seeded_at=seeded_at,
+                    )
+            else:
+                await _seed_lesson_bank_and_policy(
+                    db,
+                    class_id=class_id,
+                    actor_id=actor_id,
+                    course_version_id=target_course_version_id,
+                    lab_id=lab_id,
+                    key=key,
+                    version=1,
+                    quiz_index=quiz_indices.get(key, 0),
+                    need_bank=True,
+                    need_policy=policy is None,
+                    seeded_at=seeded_at,
+                )
+        await db.flush()
 
 
 async def latest_bank(db, access, key):
@@ -382,6 +592,7 @@ async def publish_bank_row(db, actor_id, bank, policy):
     policy.bank_id = bank.id
     policy.revision += 1
     audit(db, actor_id, "bank.publish", bank.id, None, {"version": bank.version})
+    await db.flush()
 
 
 async def publish(db, access, target, request):

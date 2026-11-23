@@ -157,7 +157,19 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         draft_res = await self.call(2, "GET", f"{self.base}/curriculum?draft=true")
         self.assertEqual(draft_res.status_code, 200, draft_res.text)
         draft = draft_res.json()
+        self.assertEqual(
+            [sum(1 for item in lab["lessons"] if item["enabled"]) for lab in draft["labs"]],
+            [10, 31, 12, 23, 35, 15, 12, 14, 12],
+        )
         lab0 = draft["labs"][0]
+        lab1 = draft["labs"][1]
+        self.assertEqual(sum(1 for item in lab0["lessons"] if item["enabled"]), 10)
+        self.assertEqual(len(lab0["lessons"]), 10)
+        self.assertEqual(sum(1 for item in lab1["lessons"] if item["enabled"]), 31)
+        self.assertEqual(len(lab1["lessons"]), 31)
+        video11 = next(item for item in lab1["lessons"] if item["id"] == "video-1-1")
+        self.assertTrue(video11["enabled"])
+        self.assertFalse(video11["required"])
         q01 = next(item for item in lab0["lessons"] if item["id"] == "quiz-0-1")
         lt0 = next(item for item in lab0["lessons"] if item["id"] == "labtest-0")
         self.assertTrue(q01["enabled"])
@@ -190,11 +202,13 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
             self.call(2, "GET", f"{self.base}/lessons/quiz-0-3/question-bank"),
             self.call(2, "GET", f"{self.base}/labs/0/question-bank"),
             self.call(2, "GET", f"{self.base}/labs/1/question-bank"),
+            self.call(2, "GET", f"{self.base}/lessons/quiz-doc-2-1/question-bank"),
+            self.call(2, "GET", f"{self.base}/lessons/quiz-practice-4-mux/question-bank"),
         )
         for res in responses:
             self.assertEqual(res.status_code, 200, res.text)
-        b1, b2, b3, lt_bank, _ = [res.json() for res in responses]
-        for bank in (b1, b2, b3):
+        b1, b2, b3, lt_bank, _, q21_bank, q4mux_bank = [res.json() for res in responses]
+        for bank in (b1, b2, b3, q21_bank, q4mux_bank):
             self.assertEqual(bank["status"], "draft")
             self.assertEqual(bank["approved_count"], 3)
             self.assertTrue(all(q["status"] == "approved" for q in bank["questions"]))

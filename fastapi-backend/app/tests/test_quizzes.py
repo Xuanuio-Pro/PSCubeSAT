@@ -129,11 +129,11 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         async with self.sessions() as db:
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionBank))).scalar_one(),
-                25,  # 9 Lab Test banks + 16 quiz lessons (quiz-0-1..3, quiz-1-1..13)
+                69,  # 9 Lab Test banks + 60 quiz lessons across Lab 0-8
             )
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionVersion))).scalar_one(),
-                138,  # 16 * 3 rotating quiz samples + 9 * 10 Lab Test samples
+                270,  # 60 * 3 rotating quiz samples + 9 * 10 Lab Test samples
             )
         for count in (0,):
             async with self.sessions() as db:

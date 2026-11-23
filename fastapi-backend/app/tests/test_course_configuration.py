@@ -134,14 +134,8 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
                 (await db.execute(select(func.count()).select_from(CourseVersion))).scalar_one(), 1
             )
             lessons = list((await db.execute(select(Lesson))).scalars())
-            self.assertEqual(len(lessons), 135)
-            # Lab 2-8 checkpoint pages (checkpointId) live only in the legacy view.
-            original = {
-                item["id"]
-                for lab in read_seed()["legacy"]
-                for item in lab["lessons"]
-                if not (item["type"] == "quiz" and item.get("checkpointId"))
-            }
+            self.assertEqual(len(lessons), 164)
+            original = {item["id"] for lab in read_seed()["legacy"] for item in lab["lessons"]}
             self.assertEqual(
                 {item.id for item in lessons}, original | {f"labtest-{i}" for i in range(9)}
             )
@@ -149,8 +143,9 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
                 {item.type for item in lessons},
                 {"video", "document", "practice", "quiz", "labtest"},
             )
+            self.assertEqual(len([item for item in lessons if item.type == "quiz"]), 60)
             self.assertEqual(
-                len([item for item in lessons if item.type == "practice" and item.lab_id >= 2]), 29
+                len([item for item in lessons if item.type == "practice" and item.lab_id >= 2]), 20
             )
             self.assertEqual(
                 next(item for item in lessons if item.id == "summary-2").type, "document"
@@ -161,16 +156,14 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
 
     async def test_publish_collects_all_three_required_errors(self):
         config = await self.draft()
+        lab4_ids = {item["id"] for item in config["labs"][4]["lessons"]}
         body = settings_payload(config)
         body["labs"][2]["enabled"] = False
         body["labs"][3]["prerequisites"] = [2]
         for item in body["lessons"]:
             if item["lesson_id"] == "video-1-1":
                 item.update(enabled=True, required=True)
-            if item["lesson_id"].startswith("document-4-") or item["lesson_id"] in {
-                "summary-4",
-                "labtest-4",
-            }:
+            if item["lesson_id"] in lab4_ids:
                 item["required"] = False
         saved = await self.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)
@@ -185,7 +178,7 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         before = (await self.call(4, "GET", f"/api/classes/{self.class_a}/curriculum")).json()
         body = settings_payload(await self.draft())
         for item in body["lessons"]:
-            if item["lesson_id"] in ("document-2-1", "Lab2-01a_Battery_I2C", "labtest-2"):
+            if item["lesson_id"] in ("document-2-1", "practice-2-max17048", "labtest-2"):
                 item.update(enabled=False, required=False)
         saved = await self.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)
@@ -202,9 +195,21 @@ class CurriculumAPITests(unittest.IsolatedAsyncioTestCase):
         after = (await self.call(4, "GET", f"/api/classes/{self.class_a}/curriculum")).json()
         ids = {item["id"] for lab in after["labs"] for item in lab["lessons"]}
         self.assertNotIn("document-2-1", ids)
-        self.assertNotIn("Lab2-01a_Battery_I2C", ids)
+        self.assertNotIn("practice-2-max17048", ids)
         source = f"/api/curriculum/exercises/Lab2-01a_Battery_I2C/source?class_id={self.class_a}"
         self.assertEqual((await self.call(4, "GET", source)).status_code, 403)
+        ex_list = (
+            await self.call(4, "GET", f"/api/curriculum/exercises?class_id={self.class_a}")
+        ).json()
+        ex_ids = {item["id"] for item in ex_list["exercises"]}
+        self.assertNotIn("Lab2-01a_Battery_I2C", ex_ids)
+        self.assertNotIn("Lab1-01_Blink_LED", ex_ids)  # Locked until prior Lab 1 docs complete.
+        teacher_ex = (
+            await self.call(2, "GET", f"/api/curriculum/exercises?class_id={self.class_a}")
+        ).json()
+        teacher_ex_ids = {item["id"] for item in teacher_ex["exercises"]}
+        self.assertNotIn("Lab2-01a_Battery_I2C", teacher_ex_ids)
+        self.assertIn("Lab1-01_Blink_LED", teacher_ex_ids)
         self.assertNotIn("labtest-2", ids)
         self.assertNotIn(0, {lab["id"] for lab in after["labs"]})
 

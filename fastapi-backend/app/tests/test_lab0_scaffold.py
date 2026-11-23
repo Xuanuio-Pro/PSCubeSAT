@@ -48,6 +48,13 @@ class Lab0ScaffoldTests(unittest.TestCase):
                 {"enabled": True, "required": True, "order_no": order_no, "params": {}},
             )
 
+    def test_video_is_enabled_and_optional_by_default(self):
+        lesson = SimpleNamespace(type="video", content={"url": ""}, order_no=0)
+        self.assertEqual(
+            defaults(lesson),
+            {"enabled": True, "required": False, "order_no": 0, "params": {}},
+        )
+
     def test_quiz_content_never_exposes_answers(self):
         content = {"bank_key": "quiz-0-1", "bank_ready": False, "questions": [{"answer": "a"}]}
         self.assertEqual(safe_content(content, "quiz"), {"bank_ready": False})

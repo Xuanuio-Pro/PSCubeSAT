@@ -2622,3 +2622,88 @@ html:has(.lab-fig), body:has(.lab-fig) { overflow: hidden; height: 100%; }
 .admin-danger-btn:hover:not(:disabled) {
   background: var(--status-danger-bg);
 }
+
+/* Thanh chọn bài thực hành con trong các mục thực hành gộp */
+.practice-subtabs-wrap {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(9, 65, 116, 0.14);
+}
+.practice-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.practice-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(9, 65, 116, 0.2);
+  background: #f3f7fb;
+  color: #094174;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.practice-subtab:hover {
+  background: #e5eff9;
+  border-color: #1a619b;
+}
+.practice-subtab.is-active {
+  background: linear-gradient(90deg, #19206e 0%, #1a619b 100%);
+  border-color: #19206e;
+  color: #fff;
+}
+.practice-subtab-index {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(9, 65, 116, 0.12);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.practice-subtab.is-active .practice-subtab-index {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+.practice-subtab code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+}
+.practice-subtab-desc {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #334155;
+}
+.practice-brief-active {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(26, 97, 155, 0.08);
+  color: #094174;
+  font-size: 0.86rem;
+}
+.curriculum-subexercises {
+  margin: 8px 0 12px;
+  padding: 10px 14px 10px 28px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #334155;
+}
+.curriculum-subexercises li + li {
+  margin-top: 4px;
+}

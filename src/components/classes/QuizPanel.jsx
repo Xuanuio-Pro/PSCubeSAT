@@ -196,7 +196,7 @@ export default function QuizPanel({ classId, labId, lessonId = null, title = '',
     : '';
   return <section className="quiz-panel" aria-label={lessonId ? `Câu hỏi ${title || lessonId}` : `Bài kiểm tra Lab ${labId}`}>
     <Notice {...notice} />
-    {!attempt && <><h3>{lessonId ? (title || 'Câu hỏi kiểm tra') : `Kiểm tra cuối Lab ${labId}`}</h3><p>Đề gồm toàn bộ câu hỏi giáo viên đã duyệt, thời gian {policySummary.time_limit_minutes} phút, đạt từ {policySummary.pass_score} câu đúng. {summaryAttemptsText}</p><p>Thời gian bắt đầu tính ngay khi bạn mở đề; tải lại trang sẽ giữ nguyên lượt thi.</p><button className="lms-primary" onClick={start} disabled={busy}>Bắt đầu làm bài</button></>}
+    {!attempt && <><h3>{lessonId ? (title || 'Câu hỏi kiểm tra') : `Kiểm tra cuối Lab ${labId}`}</h3>{policySummary.description && <p className="lms-secondary">{policySummary.description}</p>}<p>Đề gồm toàn bộ câu hỏi giáo viên đã duyệt, thời gian {policySummary.time_limit_minutes} phút, đạt từ {policySummary.pass_score} câu đúng. {summaryAttemptsText}</p><p>Thời gian bắt đầu tính ngay khi bạn mở đề; tải lại trang sẽ giữ nguyên lượt thi.</p><button className="lms-primary" onClick={start} disabled={busy}>Bắt đầu làm bài</button></>}
     {attempt && <>
       <div className="quiz-status"><div><strong>Lượt {attempt.number}</strong><p>Đạt từ {attempt.policy.pass_score}/{attempt.items.length} · {attemptSubline}</p></div>
         {active ? <div><strong className="quiz-clock" aria-label="Thời gian còn lại">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</strong><p role="status">{Object.keys(dirty).length ? 'Đang chờ lưu…' : 'Đã lưu trên server'}</p></div>

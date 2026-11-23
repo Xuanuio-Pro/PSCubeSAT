@@ -366,7 +366,7 @@ class QuizCooldownAPITests(unittest.IsolatedAsyncioTestCase):
         await self.learning.complete(0)
         attempt_url = f"{self.base}/labs/0/attempts"
 
-        t_base = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        t_base = datetime.now(timezone.utc) - timedelta(minutes=10)
         for i in range(5):
             with patch("app.services.quizzes.now", return_value=t_base + timedelta(minutes=i)):
                 res = await self.submit_attempt(attempt_url, pass_all=False)
@@ -416,7 +416,7 @@ class QuizCooldownAPITests(unittest.IsolatedAsyncioTestCase):
         await self.enable_lab0("labtest-0")
         await self.learning.complete(0)
         attempt_url = f"{self.base}/labs/0/attempts"
-        t_base = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        t_base = datetime.now(timezone.utc) - timedelta(minutes=10)
 
         for i in range(5):
             with patch("app.services.quizzes.now", return_value=t_base + timedelta(minutes=i)):

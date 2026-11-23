@@ -1,5 +1,34 @@
 # Nhật ký quyết định
 
+## 23/11/2026 — Gộp 11 nhóm thực hành nhiều bài con (179 → 164 bài học)
+
+- **Gộp đúng theo mục cấp 1 của README (26 bài con → 11 bài thực hành cha):**
+  - Hợp nhất 11 mục thực hành có nhiều sketch con thành 11 bài `practice` cha trong `src/data/curriculum.js` và `seed.json`, đưa tổng số bài toàn khóa Lab 0–8 từ 179 về **164 bài** (`[10, 31, 12, 23, 35, 15, 12, 14, 12]`): `practice-1-led` (3 bài), `practice-1-button` (2), `practice-1-uart` (2), `practice-1-wifi` (3), `practice-2-max17048` (2), `practice-3-sd` (2), `practice-4-bmp280` (2), `practice-4-imu` (2), `practice-4-nmea-raw` (2), `practice-4-camera` (2), `practice-5-lora` (4).
+  - Chuẩn hóa tiêu đề hiển thị sidebar của 13 bài thực hành đơn khớp tên đề mục README (như `Thực hành Component 74HC595 & LED 7 Đoạn`, `Thực hành Component Tiết Kiệm Điện`, …) trong khi giữ nguyên ID kỹ thuật (`Lab1-06_7_Segment_LED`, `Lab2-02_Power_Saving`, …) và toàn bộ 39 bài thực hành phần cứng. Sửa luôn lỗi tiền tố `Lab1-10` / `Lab1-11` trong `Lab1ConnectionNotice.jsx`.
+- **Tab bài con bên trong bài học & giữ nguyên draft/tải mẫu/nạp:**
+  - Cả `/classes/.../learn` (`ClassLearningPage`) và `/labN` (`LabLayout`) dùng chung `PracticeExerciseTabs` để chuyển qua lại từng bài con; mỗi bài con giữ nguyên khóa nháp `localStorage` C++/Blockly riêng, tải file `.ino` riêng, biên dịch/flash và bộ giải mã trực quan `TelemetryContext`. Liên kết sâu `?lesson=<childId>` tự chuyển về bài cha và mở đúng tab con tương ứng.
+  - Phía server (`curriculum_access.py`, `/api/curriculum/exercises`), truy cập `.ino` hoặc compile bằng ID bài con đi qua kiểm quyền bật bài & tiên quyết của bài cha.
+- **Nộp gộp một lượt & quy tắc nâng cấp an toàn:**
+  - Khi sinh viên nộp bài trên bài thực hành gộp, client tự động gộp mã C++ đã lưu của tất cả các bài con theo tiêu đề `// === <exercise_id> ===` vào một `PracticeSubmission` để giảng viên chấm một lần.
+  - Khi nâng cấp lớp từ giáo trình 179 bài cũ lên 164 bài (`upgrade_class_to_course_version`), `LessonProgress` của nhóm gộp chỉ chuyển `completed` khi **tất cả** bài con đã `completed`/`waived`; nếu mới xong một phần thì chuyển `in_progress` và giữ lịch sử bài nộp kèm tiêu đề bài con.
+  - `npm run db:seed` mặc định chạy `app.services.curriculum_seed --quiet --sync-classes` với `enable_all_lessons=False` (có thêm cờ tùy chọn `--enable-all-lessons`) để tự động nâng cấp mọi lớp còn ở phiên bản giáo trình cũ khi khởi động/triển khai mà vẫn giữ nguyên lựa chọn bật/tắt bài của giảng viên trên các lớp đã ở bản mới nhất; lớp tạo mới mặc định dùng `latest_published_course_version` (164 bài gộp).
+
+## 23/11/2026 — Chuẩn hóa toàn bộ khung Lab 0–8 theo README (179 bài) & đưa 44 Quiz Lab 2–8 lên `/classes`
+
+- **Khung rỗng Lab 0–8 (179 bài học khớp 100% README):**
+  - Bổ sung thư mục khung rỗng phía server `fastapi-backend/app/firmware/curriculum/lab2/` … `lab8/` (các file `video-*.json` để `url: ""` và `doc-*.md` rỗng để fallback về mô tả ngắn trong `lesson-reading.js` cho tới khi giảng viên điền nội dung thật) và cập nhật `LAB_FILES` trong `scripts/export-curriculum.mjs`.
+  - Đưa toàn bộ **44 bài Câu hỏi kiểm tra (`quiz-doc-*`, `quiz-practice-*`) của Lab 2–8** vào `seed.json` và `/classes` như bài `quiz` thật do server chấm điểm (tổng **60 bài `quiz` + 9 bài `labtest`** trên toàn 9 Lab: `10, 37, 13, 24, 39, 18, 12, 14, 12` = **179 bài**). Vẫn giữ `checkpointId` trên đối tượng nguồn để giao diện legacy hoạt động không hồi quy; bỏ bước tự sắp xếp lại theo nhóm ở `export-curriculum.mjs` để giữ đúng thứ tự README (bao gồm việc đưa nhóm `Video 4.5` → `Doc 4.6 (74HC4066)` → `Lab4-05_Camera_Multiplexer` lên trước `Doc 4.7` → `Lab4-06_Read_All_Sensors` ở Lab 4).
+  - Lớp tạo mới và lớp đồng bộ mặc định bật 100% cả 9 Lab và 179/179 bài học (`course_configuration.defaults`); các bài `quiz` và `labtest` tự nạp sẵn 3/10 câu mẫu từ `default-question-bank.csv` (trừ câu trả lời không bao giờ nằm trong bundle hay `seed.json`) để xuất bản được ngay, giảng viên toàn quyền bật/tắt hoặc sửa từng bài sau.
+- **Thống nhất 12 ID kỹ thuật bài thực hành khớp tên README (`0023_readme_id_alignment`):**
+  - Đổi tên ID kỹ thuật + file `.cpp` + `catalog.json` cho 8 bài Lab 1 (`Lab1-04_Button`…`Lab1-11_Web_Server_LED`), `Lab3-04_Watchdog_Timer`, 2 bài Lab 4 đảo số/vị trí (`Lab4-05_Camera_Multiplexer`, `Lab4-06_Read_All_Sensors`) và `Lab5-03_Ground_Station_Demo` — trong khi giữ nguyên `upstream_url` / `repositoryUrl` trỏ về các kho GitHub thật để tránh liên kết hỏng và giữ nguyên nội dung/hash `.cpp` đã kiểm chứng biên dịch.
+  - Migration `0023_readme_id_alignment` chuyển khóa `lesson_progress` trong `lab_progress` (có `downgrade` đầy đủ theo thứ tự đảo ngược tránh va chạm); `PRACTICE_ID_RENAMES` trong `course_configuration.py` chuyển tiếp cấu hình và `LessonProgress`/`PracticeSubmission` khi nâng cấp lớp; `LEGACY_EXERCISES` trong `project-files.js` giữ đọc lại được bản nháp trình duyệt đã lưu theo bất kỳ ID cũ nào.
+
+## 23/11/2026 — Đồng bộ số bài tối đa giữa các lớp & cập nhật Lab 1 (37 bài)
+
+- **Mặc định bật 100% số bài mỗi lab (`course_configuration.defaults`):** mọi bài học của từng lab (bao gồm cả các bài `video` chưa gắn URL, với `required=false` cho video) mặc định `enabled=true` để lớp mới tạo tự động có đủ số bài bật tối đa giống nhau; giảng viên vẫn có thể bật/tắt riêng từng bài sau đó.
+- **Nâng cấp phiên bản giáo trình cho các lớp hiện có (`upgrade_class_to_course_version` & `--sync-classes`):** không sửa đè các bản ghi `class_course_versions`, `class_lesson_settings`, `prerequisites`, `question_banks` đã xuất bản (tôn trọng immutability triggers); tạo `version + 1` ở trạng thái `draft`, nhân bản/giữ nguyên ngân hàng câu hỏi đã soạn, nạp câu hỏi mẫu cho bài mới phát sinh, sao chép `lesson_progress` / `practice_submissions` / `completion_overrides` theo `lesson_id`, rồi tự xuất bản lại nếu lớp trước đó đang ở trạng thái `published`. Bổ sung nút "Cập nhật lên giáo trình mới nhất" (`POST /api/classes/{class_id}/upgrade-course-version`) để tránh lệch phiên bản về sau.
+- **Chuẩn hóa danh sách & tên hiển thị Lab 1 (37 bài):** cập nhật mục tiêu, nhóm nội dung và tiêu đề/mô tả Lab 1 theo đề cương chuẩn; giữ nguyên ID kỹ thuật cũ của 8 bài thực hành (`Lab1-03_Button`…`Lab1-10_Web_Server_LED`) để bảo toàn tiến độ/bản nháp trình duyệt và khớp repo upstream, trong khi nhãn và tiêu đề hiển thị đánh số liên tiếp `Lab1-04_Button`…`Lab1-11_Web_Server_LED`. Khắc phục mapping `'doc-1-3'`/`'doc-1-4'` trong `export-curriculum.mjs` và xuất lại `seed.json`.
+
 ## 22/11/2026 — Không giới hạn lượt Quiz và đợt 5 lượt / chờ 30 phút cho Lab Test
 
 - **Mặc định mới:** bài `quiz` không giới hạn số lượt làm (`max_attempts = NULL`, `cooldown_minutes = 0`) để sinh viên có thể làm lại ngay đến khi đạt mà không bị kẹt tiến trình sang bài tiếp theo; bài `labtest` giới hạn **5 lượt mỗi đợt** và **chờ 30 phút** (`max_attempts = 5`, `cooldown_minutes = 30`) khi hết đợt chưa đạt.

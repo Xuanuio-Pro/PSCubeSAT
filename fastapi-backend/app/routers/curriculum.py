@@ -41,13 +41,18 @@ async def exercises(
             config = await configuration(db, access, student_view=True)
         else:
             config = await preview_curriculum(db)
-        ids = {
-            item["id"]
-            for lab in config["labs"]
-            for item in lab["lessons"]
-            if lab.get("access", "available") == "available"
-            or item.get("progress", {}).get("status") in ("completed", "waived")
-        }
+        ids = set()
+        for lab in config["labs"]:
+            for item in lab["lessons"]:
+                unlocked = (
+                    lab.get("access", "available") == "available"
+                    and item.get("access", "available") == "available"
+                )
+                if unlocked or item.get("progress", {}).get("status") in ("completed", "waived"):
+                    ids.add(item["id"])
+                    for ex in (item.get("content") or {}).get("exercises") or []:
+                        if ex.get("id"):
+                            ids.add(ex["id"])
         allowed = [item for item in catalog()["exercises"] if item["id"] in ids]
         return {**catalog(), "exercises": allowed}
     return catalog()

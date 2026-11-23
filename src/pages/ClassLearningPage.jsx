@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { request, useAuth } from '../contexts/auth-api';
+import { TelemetryContext } from '../contexts/telemetry-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import DocViewer from '../components/common/DocViewer';
@@ -9,6 +10,12 @@ import TelemetryControls from '../components/groundstation/TelemetryControls';
 import { downloadFile } from '../components/editor/project-files';
 import ClassCourseSidebar from '../components/classes/ClassCourseSidebar';
 import LabFigView from '../components/layout/LabFigView';
+import PracticeExerciseTabs from '../components/lessons/PracticeExerciseTabs';
+import {
+  buildGroupedSubmissionCode,
+  getLessonExercises,
+  resolveLessonAndExercise,
+} from '../components/lessons/practice-exercises';
 
 const QuizPanel = lazy(() => import('../components/classes/QuizPanel'));
 const IDEPanel = lazy(() => import('../components/editor/IDEPanel'));
@@ -18,48 +25,55 @@ const ComponentViewer = lazy(() => import('../components/interactive/ComponentVi
 const types = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
 
 // Requirement, evidence, rubric and the sample download: shown in "Mục tiêu bài học" at the top of the page.
-function PracticeBrief({ lesson, classId }) {
+function PracticeBrief({ lesson, classId, exercises = [], activeExercise = null }) {
   const [error, setError] = useState('');
   const content = lesson.content;
+  const downloadId = activeExercise?.id || content.exercise_id || lesson.id;
   async function download() {
     try {
-      const response = await fetchSource(lesson.id, classId);
-      downloadFile(`${lesson.id}.ino`, response, 'text/plain');
+      const response = await fetchSource(downloadId, classId);
+      downloadFile(`${downloadId}.ino`, response, 'text/plain');
     } catch (failure) { setError(failure.message); }
   }
   return <div className="fig-goal-practice">
     <div>
-      {content.instructions ? <DocViewer content={content.instructions} docPath={undefined} /> : <p>Giảng viên chưa bổ sung hướng dẫn chi tiết cho bài này.</p>}
+      {activeExercise && exercises.length > 1 && (
+        <p className="practice-brief-active"><strong>Bài con đang chọn:</strong> <code>{activeExercise.id}</code> — {activeExercise.description}</p>
+      )}
+      {content.instructions ? <DocViewer content={content.instructions} docPath={undefined} /> : <p>{activeExercise?.description || 'Giảng viên chưa bổ sung hướng dẫn chi tiết cho bài này.'}</p>}
       {content.evidence && <p><strong>Minh chứng:</strong> {content.evidence}</p>}
       {content.rubric && <details className="fig-goal-rubric"><summary>Tiêu chí chấm</summary><DocViewer content={content.rubric} docPath={undefined} /></details>}
     </div>
-    {content.mode === 'hardware' && content.exercise_id && <div className="lesson-example-links">
+    {content.mode === 'hardware' && downloadId && <div className="lesson-example-links">
       <button type="button" className="btn btn-sm btn-outline" onClick={download}>Tải mã mẫu ESP32 (.ino)</button><Notice error={error} />
     </div>}
   </div>;
 }
 
 // Device bar + two-column workspace (code and actions | live visualization), as on the lab pages.
-function Practice({ lesson, labId, classId, preview, staffView, onRefresh }) {
+function Practice({ lesson, labId, classId, preview, staffView, onRefresh, exercises = [], activeExercise = null, onSelectExercise }) {
   const { user } = useAuth();
   const [code, setCode] = useState('');
   const content = lesson.content;
   const variant = labId === 8 ? 'dashboard' : 'rich';
+  const exerciseId = activeExercise?.id || lesson.id;
+  const storageScope = `user:${user?.id || 'staff'}:class:${classId}`;
   if (content.mode === 'exploration') return <Suspense fallback={<p>Đang tải mô hình…</p>}><ComponentViewer /></Suspense>;
   if (content.mode === 'assembly') return <p>Bài lắp ráp cơ khí không cần viết mã: làm theo video hướng dẫn và nộp ảnh sản phẩm hoàn thiện cho giảng viên theo hướng dẫn của lớp.</p>;
   if (preview && !staffView) return <p>Chế độ xem thử chỉ hiển thị yêu cầu và tiêu chí; không biên dịch hoặc ghi tiến độ.</p>;
   return <Suspense fallback={<p>Đang tải không gian thực hành…</p>}>
+    <PracticeExerciseTabs exercises={exercises} activeExercise={activeExercise} onSelect={onSelectExercise} />
     <TelemetryControls />
-    <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${variant}`} aria-label={`Không gian thực hành ${lesson.id}`}>
+    <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${variant}`} aria-label={`Không gian thực hành ${exerciseId}`}>
       <div className={`lab-practice-panels lab-practice-panels--${variant}`}>
         <div className="lab-practice-editor">
           <div className="lab-practice-editor-frame">
-            <IDEPanel labId={labId} exerciseId={lesson.id} storageScope={`user:${user?.id || 'staff'}:class:${classId}`} setCode={setCode} variant="workspace" showToolbar={false} />
+            <IDEPanel labId={labId} exerciseId={exerciseId} storageScope={storageScope} setCode={setCode} variant="workspace" showToolbar={false} />
           </div>
-          <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành">
+          <div key={exerciseId} className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành">
             <LabPracticeActions code={code} labId={labId} classId={Number(classId)} lessonId={lesson.id} configuredBoard={content.board || ''} />
           </div>
-          {!staffView && <SubmissionPanel classId={classId} lessonId={lesson.id} code={code} rubric={content.rubric} onRefresh={onRefresh} />}
+          {!staffView && <SubmissionPanel classId={classId} lessonId={lesson.id} labId={labId} storageScope={storageScope} exercises={exercises} activeExerciseId={exerciseId} code={code} rubric={content.rubric} onRefresh={onRefresh} />}
         </div>
         <div className="lab-practice-visualization"><PracticeVisualization /></div>
       </div>
@@ -67,29 +81,40 @@ function Practice({ lesson, labId, classId, preview, staffView, onRefresh }) {
   </Suspense>;
 }
 
-function SubmissionPanel({ classId, lessonId, code, rubric, onRefresh }) {
+function SubmissionPanel({ classId, lessonId, labId, storageScope, exercises = [], activeExerciseId = '', code, rubric, onRefresh }) {
   const url = `/api/classes/${classId}/lessons/${encodeURIComponent(lessonId)}/submissions`;
   const { data, error, reload } = useLmsResource(url);
   const [notice, setNotice] = useState({});
   const [busy, setBusy] = useState(false);
   const pending = useRef(null);
+  const submissionCode = buildGroupedSubmissionCode({
+    exercises,
+    labId,
+    storageScope,
+    activeExerciseId,
+    activeCode: code,
+  });
   async function submit() {
     setBusy(true); setNotice({});
-    if (!pending.current || pending.current.code !== code) pending.current = { code, idempotency_key: crypto.randomUUID() };
+    if (!pending.current || pending.current.code !== submissionCode) pending.current = { code: submissionCode, idempotency_key: crypto.randomUUID() };
     try {
       await request(url, { method: 'POST', body: JSON.stringify(pending.current) });
       pending.current = null; reload(); onRefresh(); setNotice({ message: 'Đã nộp phiên bản mã nguồn. Bài đang chờ giảng viên duyệt.' });
     } catch (failure) { setNotice({ error: failure.message }); }
     finally { setBusy(false); }
   }
-  return <section className="submission-panel"><h3>Bài nộp của tôi</h3><p>Biên dịch thành công chưa hoàn thành bài. Giảng viên sẽ duyệt theo tiêu chí đã giao.</p>
-    <button disabled={busy || !code.trim() || !rubric} onClick={submit}>{busy ? 'Đang nộp…' : 'Nộp phiên bản mã nguồn'}</button>
+  return <section className="submission-panel"><h3>Bài nộp của tôi</h3>
+    <p>{exercises.length > 1
+      ? `Biên dịch thành công chưa hoàn thành bài. Nút nộp bên dưới sẽ gộp mã nguồn từ tất cả ${exercises.length} bài con (${exercises.map(ex => ex.id).join(', ')}) đã lưu trên trình duyệt để giảng viên duyệt một lần.`
+      : 'Biên dịch thành công chưa hoàn thành bài. Giảng viên sẽ duyệt theo tiêu chí đã giao.'}</p>
+    <button disabled={busy || !submissionCode.trim() || !rubric} onClick={submit}>{busy ? 'Đang nộp…' : 'Nộp phiên bản mã nguồn'}</button>
     {!rubric && <p>Giảng viên cần bổ sung tiêu chí chấm trước khi bạn nộp bài.</p>}<Notice {...notice} /><Notice error={error} />
     {data?.map(item => <details key={item.id}><summary>Phiên bản {item.revision} · {{ pending_review: 'Chờ chấm', approved: 'Đã duyệt', changes_requested: 'Cần sửa' }[item.status]}</summary><p>{item.feedback || 'Chưa có nhận xét.'}</p><pre>{item.code}</pre></details>)}
   </section>;
 }
 
-function LessonContent({ lesson, labId, classId, preview, staffView = false, onRefresh, fig }) {
+function LessonContent({ lesson, labId, classId, preview, staffView = false, onRefresh, fig, exercises = [], activeExercise = null, onSelectExercise }) {
+  const telemetry = useContext(TelemetryContext);
   const [notice, setNotice] = useState({});
   const isSummaryLesson = String(lesson.id || '').startsWith('summary-') || /^Tổng hợp\b/i.test(lesson.title || '');
   const [startedAt, setStartedAt] = useState(lesson.progress?.started_at || null);
@@ -97,6 +122,11 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
   const openedKey = useRef(crypto.randomUUID());
   const queue = useRef(Promise.resolve());
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const nextId = lesson.type === 'practice' && activeExercise?.id ? activeExercise.id : '';
+    telemetry?.setActiveExerciseId(nextId);
+    return () => telemetry?.setActiveExerciseId('');
+  }, [telemetry, lesson.type, activeExercise?.id]);
   const event = useCallback(async (kind, values = {}, key = crypto.randomUUID()) => {
     const body = JSON.stringify({ idempotency_key: key, kind, ...values });
     // Retrying the exact key is safe if a response is lost after the server commits.
@@ -145,7 +175,7 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
       ? `Đã học ${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')} · còn ${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, '0')}`
       : 'Hoàn thành bài học';
   const unmeasuredVideo = lesson.type === 'video' && !preview && !lesson.content.confirmation_allowed && !/\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(lesson.content.url);
-  const bodyNode = lesson.type === 'practice' ? <Practice lesson={lesson} labId={labId} classId={classId} preview={preview} staffView={staffView} onRefresh={onRefresh} />
+  const bodyNode = lesson.type === 'practice' ? <Practice lesson={lesson} labId={labId} classId={classId} preview={preview} staffView={staffView} onRefresh={onRefresh} exercises={exercises} activeExercise={activeExercise} onSelectExercise={onSelectExercise} />
     : lesson.type === 'quiz' ? (preview || !lesson.content.bank_ready
       ? <p className="lesson-achieved" role="status">{preview ? 'Chế độ xem toàn bộ không tạo lượt làm bài.' : 'Câu hỏi kiểm tra của mục này chưa sẵn sàng.'} {staffView && <Link to={`/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/questions`}>Soạn câu hỏi</Link>}</p>
       : <Suspense fallback={<p>Đang tải câu hỏi…</p>}><QuizPanel classId={classId} labId={labId} lessonId={lesson.id} title={lesson.title} policySummary={lesson.content} onRefresh={onRefresh} /></Suspense>)
@@ -157,7 +187,7 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
       {unmeasuredVideo && <p className="lesson-achieved" role="status">Nguồn video này chưa hỗ trợ đo đoạn xem. Giảng viên cần bật chế độ xác nhận hoặc cung cấp video đo được.</p>}</>}
     videoNode={lesson.type === 'video' ? <VideoPlayer url={lesson.content.url} initialPosition={lesson.progress?.last_position || 0} onSegment={preview ? undefined : segment} trackingMode={lesson.content.tracking_mode || 'native'} /> : null}
     docNode={lesson.type === 'document' ? <DocViewer content={lesson.content.markdown || '# Tài liệu đang được cập nhật'} docPath={undefined} /> : null}
-    bodyNode={bodyNode} goalNode={lesson.type === 'practice' ? <PracticeBrief lesson={lesson} classId={classId} /> : null}
+    bodyNode={bodyNode} goalNode={lesson.type === 'practice' ? <PracticeBrief lesson={lesson} classId={classId} exercises={exercises} activeExercise={activeExercise} /> : null}
     showComplete={!preview && !staffView && lesson.type !== 'quiz'}
     canComplete={!completionLocked} completed={completed} completeLesson={() => confirm('complete')}
     completeLabel={completed ? '' : completionLabel} completeError="" remainingSeconds={remainingSeconds}
@@ -181,7 +211,18 @@ export default function ClassLearningPage({ experience = false }) {
   const { data, loading, error, reload } = useLmsResource(path, true);
   const isPrivileged = user?.role === 'teacher' || user?.role === 'admin' || Boolean(data && !data.learning_path && !experience);
   const allLessons = data?.labs.flatMap(lab => lab.lessons.map(lesson => ({ lab, lesson }))) || [];
-  const requestedItem = allLessons.find(item => item.lesson.id === search.get('lesson'));
+  const requestedLessonParam = search.get('lesson') || '';
+  const requestedExerciseParam = search.get('exercise') || '';
+  const { lesson: matchedLesson, activeExercise: resolvedExerciseFromParam } = resolveLessonAndExercise(
+    allLessons.map(item => item.lesson),
+    requestedLessonParam,
+    requestedExerciseParam,
+  );
+  const requestedItem = requestedLessonParam
+    ? allLessons.find(item => item.lesson.id === matchedLesson?.id && (
+      item.lesson.id === requestedLessonParam || getLessonExercises(item.lesson).some(ex => ex.id === requestedLessonParam)
+    ))
+    : null;
   const requestedLocked = Boolean(requestedItem && !isPrivileged && (requestedItem.lesson.access === 'locked' || !requestedItem.lesson.content));
   const continueItem = allLessons.find(item => item.lesson.id === data?.learning_path?.continue_lesson_id && (isPrivileged || (item.lesson.access !== 'locked' && item.lesson.content)));
   const firstAvailableItem = allLessons.find(item => isPrivileged || (item.lesson.access !== 'locked' && item.lesson.content));
@@ -191,6 +232,7 @@ export default function ClassLearningPage({ experience = false }) {
       setNavigationNotice('Bạn cần hoàn thành bài học trước để mở khóa bài này.');
       const next = new URLSearchParams(search);
       next.set('lesson', selected.lesson.id);
+      next.delete('exercise');
       setSearch(next, { replace: true });
     }
   }, [requestedLocked, selected, search, setSearch]);
@@ -198,8 +240,10 @@ export default function ClassLearningPage({ experience = false }) {
   if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
   const activeLessons = selected?.lab?.lessons || [];
   const lessonIndex = selected ? activeLessons.findIndex(lesson => lesson.id === selected.lesson.id) : -1;
+  const selectedExercises = selected ? getLessonExercises(selected.lesson) : [];
+  const selectedActiveExercise = (selected && matchedLesson?.id === selected.lesson.id && resolvedExerciseFromParam) || selectedExercises[0] || null;
   const selectLesson = lessonId => {
-    const targetItem = data?.labs.flatMap(lab => lab.lessons.map(lesson => ({ lab, lesson }))).find(item => item.lesson.id === lessonId);
+    const targetItem = allLessons.find(item => item.lesson.id === lessonId || getLessonExercises(item.lesson).some(ex => ex.id === lessonId));
     const target = targetItem?.lesson;
     if (!target || (!isPrivileged && (target.access === 'locked' || !target.content))) return;
     const targetCompleted = ['completed', 'waived'].includes(target.progress?.status);
@@ -211,7 +255,15 @@ export default function ClassLearningPage({ experience = false }) {
     }
     setNavigationNotice('');
     const next = new URLSearchParams(search);
-    next.set('lesson', lessonId);
+    next.set('lesson', target.id);
+    if (lessonId !== target.id) next.set('exercise', lessonId);
+    else next.delete('exercise');
+    setSearch(next);
+  };
+  const selectExercise = exId => {
+    const next = new URLSearchParams(search);
+    if (selected?.lesson) next.set('lesson', selected.lesson.id);
+    next.set('exercise', exId);
     setSearch(next);
   };
   return <div className="player-layout class-player-layout">
@@ -239,7 +291,7 @@ export default function ClassLearningPage({ experience = false }) {
           {!selected.lesson.content
             ? <LabFigView key={lessonKey} {...fig} lesson={selected.lesson} showComplete={false}
               lockedNode={<div className="fig-body-text"><p>Bạn cần hoàn thành bài học trước để mở khóa bài này.</p>{(selected.lesson.reason || selected.lab.reason) && <small>{selected.lesson.reason || selected.lab.reason}</small>}</div>} />
-            : <LessonContent key={lessonKey} fig={fig} lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || isPrivileged} staffView={isPrivileged} onRefresh={reload} />}
+            : <LessonContent key={lessonKey} fig={fig} lesson={selected.lesson} labId={selected.lab.id} classId={classId} preview={preview || isPrivileged} staffView={isPrivileged} onRefresh={reload} exercises={selectedExercises} activeExercise={selectedActiveExercise} onSelectExercise={selectExercise} />}
           {!experience && <Link className="class-learning-path-link" to={`/classes/${classId}/path`}>Lộ trình và tiến độ học tập</Link>}
         </>;
       })()}

@@ -83,6 +83,22 @@ async def publish(
     return await service.publish(db, access, request.expected_version, dry_run)
 
 
+@router.post("/api/classes/{class_id}/upgrade-course-version")
+async def upgrade_course_version(
+    access: ClassAccess = Depends(write_class),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await service.upgrade_class_to_course_version(
+        db,
+        classroom_id=access.classroom.id,
+        actor_id=access.user.id,
+        enable_all_lessons=False,
+        commit=True,
+    )
+    config = await service.configuration(db, access, draft=True)
+    return {**config, "upgrade": info}
+
+
 @public_router.get("/api/curriculum/preview")
 async def preview(db: AsyncSession = Depends(get_db)):
     curriculum = await service.preview_curriculum(db)

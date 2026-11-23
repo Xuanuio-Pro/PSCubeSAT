@@ -15,36 +15,40 @@ from app.services.course_configuration import configuration, preview_curriculum
 from app.services.permissions import ClassAccess, legacy_restricted, require_class_member
 
 
+def _lesson_matches(item: dict, requested_id: str) -> bool:
+    if item["id"] == requested_id:
+        return True
+    exercises = (item.get("content") or {}).get("exercises") or []
+    return any(ex.get("id") == requested_id for ex in exercises)
+
+
+def _resolve_lesson(config: dict, requested_id: str):
+    for lab in config.get("labs", []):
+        for item in lab.get("lessons", []):
+            if _lesson_matches(item, requested_id):
+                return lab, item
+    return None, None
+
+
 async def class_lesson(db, user, class_id, lesson_id):
     access = await require_class_member()(class_id=class_id, user=user, db=db)
     config = await configuration(db, access, student_view=True, apply_access=False)
-    from app.services.learning_progress import ensure_available
-
-    await ensure_available(db, access, config, lesson_id)
-    lesson = next(
-        (item for lab in config["labs"] for item in lab["lessons"] if item["id"] == lesson_id), None
-    )
-    if lesson is None:
+    lab, resolved = _resolve_lesson(config, lesson_id)
+    if resolved is None:
         raise LMSError(
             403, "LESSON_DISABLED", "Bài học không được bật trong chương trình hiện tại của lớp."
         )
-    return {
-        **lesson,
-        "lab_id": next(
-            lab["id"]
-            for lab in config["labs"]
-            if any(item["id"] == lesson_id for item in lab["lessons"])
-        ),
-    }
+    from app.services.learning_progress import ensure_available
+
+    await ensure_available(db, access, config, resolved["id"])
+    return {**resolved, "lab_id": lab["id"]}
 
 
 async def source_access(db, user, class_id, lesson_id):
     if class_id is not None:
         return await class_lesson(db, user, class_id, lesson_id)
     config = await preview_curriculum(db)
-    lesson = next(
-        (item for lab in config["labs"] for item in lab["lessons"] if item["id"] == lesson_id), None
-    )
+    _, lesson = _resolve_lesson(config, lesson_id)
     if lesson is None:
         raise LMSError(
             403, "MEMBERSHIP_REQUIRED", "Bài này yêu cầu tham gia lớp có quyền truy cập."
@@ -81,7 +85,9 @@ async def lab_entry(db, user, lab_id, lesson_id=None):
         lab = next((x for x in config["labs"] if x["id"] == lab_id and x["enabled"]), None)
         if lab is None:
             continue
-        if lesson_id and not any(x["id"] == lesson_id and x["enabled"] for x in lab["lessons"]):
+        if lesson_id and not any(
+            _lesson_matches(x, lesson_id) and x["enabled"] for x in lab["lessons"]
+        ):
             continue
         valid.append({"id": classroom.id, "code": classroom.code, "name": classroom.name})
     if len(valid) == 1:

@@ -97,6 +97,14 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
         <label>Thứ tự<input type="number" min={0} max={1000} value={lesson.order_no} onChange={event => onChange({ ...lesson, order_no: Number(event.target.value) })} /></label>
       </div>
       {todos.length > 0 && <div className="curriculum-todo">{todos.map(todo => <p key={todo}>{todo}</p>)}</div>}
+      {lesson.content?.description && <p className="lms-secondary">{lesson.content.description}</p>}
+      {(lesson.content?.exercises?.length || 0) > 1 && (
+        <ul className="curriculum-subexercises" aria-label="Các bài thực hành con">
+          {lesson.content.exercises.map(ex => (
+            <li key={ex.id}><code>{ex.id}</code><span> — {ex.description || ex.title}</span></li>
+          ))}
+        </ul>
+      )}
       {(lesson.type === 'labtest' || lesson.type === 'quiz') && (
         lesson.content.bank_ready ? (
           <p className="lesson-achieved">✓ Ngân hàng câu hỏi đã được duyệt và xuất bản.</p>
@@ -221,6 +229,7 @@ function Editor({ initial, classId, onReload }) {
   const [errors, setErrors] = useState([]);
   const [impact, setImpact] = useState(null);
   const [bankRefreshKey, setBankRefreshKey] = useState(0);
+  const { ask: askConfirm, dialog: confirmDialog } = useConfirm();
   const handleBankChange = useCallback((targetLessonId, bank) => {
     if (!bank || !targetLessonId) return;
     const approvedCount = typeof bank.approved_count === 'number'
@@ -320,10 +329,45 @@ function Editor({ initial, classId, onReload }) {
     } catch (failure) { setNotice({ error: failure.message }); setErrors(failure.details?.errors || []); setImpact(null); }
     finally { setBusy(false); }
   }
+  async function upgradeCourseVersion() {
+    const agreed = await askConfirm({
+      title: 'Cập nhật lên giáo trình mới nhất?',
+      message: 'Hệ thống sẽ tạo phiên bản mới cho lớp trên giáo trình mới nhất. Toàn bộ ngân hàng câu hỏi và tiến độ học của sinh viên được giữ nguyên.',
+      confirmLabel: 'Cập nhật ngay',
+      tone: 'info',
+    });
+    if (!agreed) return;
+    setBusy(true); setNotice({}); setErrors([]); setImpact(null);
+    try {
+      const next = await request(`/api/classes/${classId}/upgrade-course-version`, { method: 'POST' });
+      setConfig(next);
+      setDirty(false);
+      setBankRefreshKey(value => value + 1);
+      setNotice({
+        message: next.upgrade?.upgraded
+          ? 'Đã cập nhật lớp lên phiên bản giáo trình mới nhất.'
+          : 'Lớp đã dùng phiên bản giáo trình mới nhất.',
+      });
+    } catch (failure) {
+      setNotice({ error: failure.message });
+      setErrors(failure.details?.errors || []);
+    } finally {
+      setBusy(false);
+    }
+  }
   return <>
+    {confirmDialog}
     <header className="lms-heading"><div><h1>Cấu hình chương trình</h1><p>Bản {config.version || 'mới'} · {config.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}{dirty ? ' · Có thay đổi chưa lưu' : ''}</p></div>
       {dirty ? <span>Lưu nháp trước khi xem thử.</span> : <Link to={`/classes/${classId}/learn?preview=true`}>Xem như sinh viên</Link>}</header>
     <p>Bật hoặc tắt bài, chọn yêu cầu hoàn thành và bổ sung học liệu cho lớp. Bài bị tắt không nằm trong chương trình của sinh viên.</p>
+    {config.course_upgrade_available && (
+      <div className="lms-notice" role="status" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <span>Lớp đang dùng phiên bản giáo trình cũ ({config.course_version_id}) nên có thể thiếu bài mới so với các lớp khác.</span>
+        <button type="button" className="lms-primary" disabled={busy} onClick={upgradeCourseVersion}>
+          Cập nhật lên giáo trình mới nhất
+        </button>
+      </div>
+    )}
     <Notice {...notice} />
     <div className="lms-actions"><span>Mẫu lộ trình:</span><button disabled={busy} onClick={() => applyPath('branching')}>Phân nhánh CubeSAT</button><button disabled={busy} onClick={() => applyPath('sequential')}>Tuần tự Lab 0–8</button></div>
     {errors.length > 0 && <section className="lms-notice lms-error" role="alert"><h2>Các mục cần sửa</h2><ul>{errors.map((error, i) => <li key={i}>{error.lab_id !== undefined ? `Lab ${error.lab_id}: ` : ''}{error.lesson_id ? `${error.lesson_id}: ` : ''}{error.message}</li>)}</ul><button onClick={onReload}>Tải lại cấu hình từ server</button></section>}

@@ -10,7 +10,7 @@
     "predev": "npm run dev:db && npm run dev:services && npm run db:migrate && npm run db:seed",
     "predev:be": "npm run dev:db && npm run dev:services && npm run db:migrate && npm run db:seed",
     "db:migrate": "cd fastapi-backend && node ../scripts/python.mjs -m alembic upgrade head",
-    "db:seed": "cd fastapi-backend && node ../scripts/python.mjs -m app.services.curriculum_seed --quiet",
+    "db:seed": "cd fastapi-backend && node ../scripts/python.mjs -m app.services.curriculum_seed --quiet --sync-classes",
     "dev:db": "node scripts/local-db.mjs",
     "dev:db:stop": "node scripts/local-db.mjs -Stop",
     "dev:db:docker": "docker compose -f docker-compose.dev.yml up -d --wait postgres",

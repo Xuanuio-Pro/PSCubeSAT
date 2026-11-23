@@ -161,7 +161,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
                           }}
                         >
                           <span className="sub-lesson-icon">{completed ? <CheckIcon size={14} /> : locked ? <LockIcon size={13} /> : <span>{String(index + 1).padStart(2, '0')}</span>}</span>
-                          <span className="sub-lesson-copy">{!/^\d+$/.test(String(lesson.label)) && <small>{lesson.label}</small>}<span>{lesson.title}</span>{lesson.exerciseCode && <code>{lesson.exerciseCode}</code>}</span>
+                          <span className="sub-lesson-copy">{!/^\d+$/.test(String(lesson.label)) && <small>{lesson.label}{(lesson.exercises?.length || 0) > 1 ? ` · ${lesson.exercises.length} bài con` : ''}</small>}<span>{lesson.title}</span>{lesson.exerciseCode && <code>{lesson.exerciseCode}</code>}</span>
                         </button>
                       );
                     })}
