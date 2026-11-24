@@ -13,6 +13,7 @@ import PracticeVisualization from '../visualization/PracticeVisualization';
 import { useLmsResource } from '../classes/use-lms-resource';
 import { getLabQuestionSet } from '../../data/lab-questions';
 import { CheckpointCard } from '../lessons/LabCheckpoint';
+import LegacyQuizPanel from '../lessons/LegacyQuizPanel';
 import { isSequentialLesson } from '../lessons/lesson-sequence';
 import PracticeExerciseTabs from '../lessons/PracticeExerciseTabs';
 import { getLessonExercises, resolveLessonAndExercise } from '../lessons/practice-exercises';
@@ -163,15 +164,12 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
       </div>
       {practiceVariant === 'split' && <div className="lab-practice-actions" aria-label="Thao tác thực hành" key={activeExerciseId || lesson.id}>{practiceActions}</div>}
     </section>
-  </> : lesson.type === 'quiz' ? (lesson.checkpointId ? <div className="lesson-quiz">
-    {checkpoint ? <CheckpointCard as="div" checkpoint={checkpoint}
-      renderExercise={id => <button type="button" className="lesson-quiz-exercise" onClick={() => selectLesson(id)}><code>{id}</code></button>} />
-      : <p>Chưa có nội dung cho phần câu hỏi này.</p>}
+  </> : lesson.type === 'quiz' ? <div className="lesson-quiz">
+    {checkpoint && <CheckpointCard as="div" checkpoint={checkpoint}
+      renderExercise={id => <button type="button" className="lesson-quiz-exercise" onClick={() => selectLesson(id)}><code>{id}</code></button>} />}
+    <LegacyQuizPanel key={lesson.id} labId={lab.id} lessonId={lesson.id} title={lesson.title} kind="quiz" />
     <p className="lesson-quiz-note">Phần câu hỏi dùng để ôn tập, không tính vào tiến độ và không khóa bài tiếp theo.</p>
-  </div> : <div className="fig-body-text">
-    <h2>{lesson.title}</h2>
-    <p>Câu hỏi kiểm tra của mục này đang được biên soạn. Đáp án chỉ lưu trên máy chủ và sẽ mở khi ngân hàng câu hỏi được duyệt.</p>
-  </div>) : lesson.type === 'summary' ? <div className="fig-body-text">
+  </div> : lesson.type === 'summary' ? <div className="fig-body-text">
     <h2>Kết quả cần đạt</h2><p>{lesson.description}</p>
     <h2>Đối chiếu các bài thực hành</h2><p>Kiểm tra mã biên dịch, lưu lại kết quả quan sát và giải thích cách chương trình đáp ứng yêu cầu của từng bài.</p>
     <ul className="lesson-summary-list">{lessons.filter(item => item.type === 'practice').flatMap(item => {
@@ -189,8 +187,8 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
     </div>
   </div> : lesson.type === 'labtest' ? <div className="fig-body-text lesson-labtest">
     <h2>Lab Test cuối Lab {lab.id}</h2>
-    <p>Mỗi lượt làm bài gồm các câu hỏi do giảng viên soạn và duyệt trong ngân hàng của Lab {lab.id}. Bài làm được chấm ở máy chủ; đáp án không hiển thị trong lúc làm bài.</p>
-    <p className="lab-questions-notice" role="status">Ngân hàng câu hỏi của Lab {lab.id} đang được soạn. Lab Test sẽ mở khi giảng viên xuất bản.</p>
+    <p>Mỗi lượt làm bài rút ngẫu nhiên từ ngân hàng câu hỏi của Lab {lab.id} và chấm trực tiếp ở máy chủ; đáp án và giải thích chỉ hiển thị sau khi nộp bài.</p>
+    <LegacyQuizPanel key={lesson.id} labId={lab.id} lessonId={lesson.id} title={lesson.title} kind="labtest" />
   </div> : lesson.type === 'assembly' ? <div className="fig-body-text">
     <h2>Yêu cầu thực hành</h2>
     <p>{lesson.title}.</p>
@@ -219,7 +217,7 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
         completedCount={completedCount} totalCount={sequentialLessons.length} completionPercent={completionPercent}
         progressNote={lessons.some(item => item.type === 'quiz') ? 'không tính phần câu hỏi' : ''}
         videoNode={<VideoPlayer url={videoUrl} />}
-        docNode={<DocViewer key={lesson.id} docPath={lab.id === 0 && lesson.id === 'document' ? lab.docPath : undefined} content={lesson.reading} />}
+        docNode={<DocViewer key={lesson.id} docPath={lab.id === 0 && lesson.id === 'document' && !lesson.reading ? lab.docPath : undefined} content={lesson.reading} />}
         componentsNode={visualizationPanel}
         bodyNode={lessonBody} goalNode={practiceGoal}
         selectLesson={selectLesson}

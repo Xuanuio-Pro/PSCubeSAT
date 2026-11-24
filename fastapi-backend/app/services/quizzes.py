@@ -487,6 +487,7 @@ async def start(db, access, target, request):
                 {
                     k: lesson["params"][k]
                     for k in (
+                        "num_questions",
                         "time_limit_minutes",
                         "pass_score",
                         "max_attempts",
@@ -533,8 +534,8 @@ async def start(db, access, target, request):
             pool = [q for q in await questions(db, bank.id) if q.status == "approved"]
             if not pool:
                 raise LMSError(409, "BANK_NOT_READY", "Ngân hàng chưa có câu hỏi đã duyệt.")
-            # Every approved question is on the paper: the teacher decides the size by what they add.
-            draw = len(pool)
+            requested = int(snapshot.get("num_questions") or len(pool))
+            draw = min(max(1, requested), len(pool))
             snapshot["num_questions"] = draw
             snapshot["pass_score"] = min(snapshot["pass_score"], draw)
             attempt = QuizAttempt(

@@ -133,7 +133,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionVersion))).scalar_one(),
-                270,  # 60 * 3 rotating quiz samples + 9 * 10 Lab Test samples
+                4013,  # All 60 lesson quiz CSVs + 9 combined Lab Test CSVs across Lab 0-8
             )
         for count in (0,):
             async with self.sessions() as db:
@@ -191,7 +191,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         for _ in range(3):
             attempt = (await self.start()).json()
             await self.correct(attempt)
-            future = now() + timedelta(minutes=16)
+            future = now() + timedelta(minutes=21)
             with patch("app.services.quizzes.now", return_value=future):
                 late = await self.call(
                     4,
@@ -565,6 +565,31 @@ class QuizValidationTests(unittest.TestCase):
         for mutation in ({"correct_choice_id": "missing"}, {"choices": [value["choices"][0]] * 4}):
             with self.assertRaises(ValueError):
                 QuestionInput.model_validate({**value, **mutation})
+        # Math operators (+ vs -, - vs *) stay distinct even if NFKC/whitespace-normalized.
+        formula_q = QuestionInput.model_validate(
+            {
+                **value,
+                "choices": [
+                    {"id": "a", "text": "+50°C"},
+                    {"id": "b", "text": "-50°C"},
+                    {"id": "c", "text": "NDVI = (NIR - Red) / (NIR + Red)"},
+                    {"id": "d", "text": "NDVI = (NIR * Red) / (NIR + Red)"},
+                ],
+            }
+        )
+        self.assertEqual(len(formula_q.choices), 4)
+        with self.assertRaises(ValueError):
+            QuestionInput.model_validate(
+                {
+                    **value,
+                    "choices": [
+                        {"id": "a", "text": " +50 °C "},
+                        {"id": "b", "text": "+50 °C"},
+                        {"id": "c", "text": "-50 °C"},
+                        {"id": "d", "text": "0 °C"},
+                    ],
+                }
+            )
         with self.assertRaises(Exception):
             validate_distinct([value], [{**value, "prompt": value["prompt"] + "!"}])
 

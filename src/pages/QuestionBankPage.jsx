@@ -292,7 +292,7 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
         </button>
       )}
     </div>
-    <p>Mỗi lượt làm bài gồm toàn bộ các câu đã duyệt (xáo trộn thứ tự), giảng viên thêm bao nhiêu câu thì sinh viên làm bấy nhiêu câu; cần ít nhất 1 câu đã duyệt. Hỗ trợ 4 dạng câu hỏi theo đề mẫu (1 đáp án, nhiều đáp án, Đúng/Sai 4 ý a-b-c-d, trả lời ngắn).</p>
+    <p>Mỗi lượt làm bài rút ngẫu nhiên số câu theo cấu hình (mặc định 5 câu cho Quiz, 20 câu cho Lab Test; nếu ngân hàng ít hơn thì lấy hết), cần ít nhất 1 câu đã duyệt. Hỗ trợ 4 dạng câu hỏi theo đề mẫu (1 đáp án, nhiều đáp án, Đúng/Sai 4 ý a-b-c-d, trả lời ngắn).</p>
     {!draft && <form className="lms-panel" onSubmit={async event => { event.preventDefault(); const result = await mutate(url + '/fork', { expected_revision: bank.revision, reason, retire_question_id: retire || null }); if (result) select(null); }}>
       <h2>Tạo phiên bản sửa</h2><p>Lượt đang làm và kết quả cũ giữ nguyên. Thu hồi câu sẽ tạm ngừng cấp đề mới cho đến khi xuất bản bản sửa.</p>
       <div className="lms-form-grid"><label>Câu cần thu hồi (nếu có)<select value={retire} onChange={event => setRetire(event.target.value)}><option value="">Chỉ tạo phiên bản mới</option>{bank.questions.map(q => <option key={q.id} value={q.question_id}>{q.prompt.slice(0, 100)}</option>)}</select></label><label>Lý do<textarea required minLength={5} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} /></label></div><button disabled={busy}>Tạo bản sửa</button>
@@ -456,7 +456,7 @@ function PolicyForm({ initial, busy, onSave }) {
   const isUnlimited = value.max_attempts === null;
   return <details className="lms-panel"><summary><h2>Chính sách bài test</h2></summary><p>Áp dụng cho lượt mới. Tham số riêng trong cấu hình chương trình đã xuất bản được ưu tiên. Các lượt đang thi giữ chính sách ban đầu.</p>
     <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, cooldown_minutes: isUnlimited ? 0 : Number(fields.cooldown_minutes || 0), expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
-      {[['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key]} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
+      {[['num_questions', 'Số câu rút mỗi lượt', 200], ['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key] ?? ''} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
         <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>Số lượt làm mỗi đợt</span>
         <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>

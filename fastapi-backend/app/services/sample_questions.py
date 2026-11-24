@@ -15,7 +15,7 @@ from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 
-from app.schemas.quiz import QuestionInput
+from app.schemas.quiz import QuestionInput, normalized
 from app.services.exam_import import parse_csv_questions
 
 CURRICULUM_DIR = Path(__file__).resolve().parents[1] / "firmware" / "curriculum"
@@ -23,30 +23,51 @@ DEFAULT_BANK_FILENAME = "default-question-bank.csv"
 
 DEFAULT_POLICIES = {
     "quiz": {
-        "num_questions": 3,
-        "pass_score": 2,
+        "num_questions": 5,
+        "pass_score": 4,
         "time_limit_minutes": 10,
         "max_attempts": None,
         "cooldown_minutes": 0,
     },
     "labtest": {
-        "num_questions": 10,
-        "pass_score": 8,
-        "time_limit_minutes": 15,
+        "num_questions": 20,
+        "pass_score": 16,
+        "time_limit_minutes": 20,
         "max_attempts": 5,
         "cooldown_minutes": 30,
     },
 }
 
 
+LEGACY_GENERIC_PROMPT_TEXTS = (
+    "CPU là viết tắt của cụm từ nào?",
+    "Thiết bị nào sau đây là thiết bị đầu vào (input)?",
+    "1 byte bằng bao nhiêu bit?",
+    "Số nhị phân 1010 có giá trị bằng bao nhiêu trong hệ thập phân?",
+    "Phần mềm nào sau đây là hệ điều hành?",
+    "Giao thức nào thường dùng để truyền tải trang web an toàn (có mã hóa)?",
+    "Trong Excel, hàm nào dùng để tính tổng các giá trị trong một vùng ô?",
+    "Địa chỉ IP nào sau đây là địa chỉ IPv4 hợp lệ?",
+    "Cấu trúc dữ liệu nào hoạt động theo nguyên tắc vào trước ra trước (FIFO)?",
+    "Độ phức tạp thời gian của thuật toán tìm kiếm nhị phân trên mảng đã sắp xếp gồm n phần tử là gì?",
+)
+
+
+def is_legacy_generic_prompt(prompt: str | None) -> bool:
+    """Return True if a prompt belongs to the retired generic CPU/RAM/IPv4 fallback bank."""
+    if not prompt:
+        return False
+    return normalized(prompt) in {normalized(item) for item in LEGACY_GENERIC_PROMPT_TEXTS}
+
+
 def default_policy(kind: str, sample_count: int | None = None) -> dict[str, int | None]:
     """Return default QuizPolicy values for a lesson quiz or Lab Test."""
     base = dict(DEFAULT_POLICIES["labtest" if kind == "labtest" else "quiz"])
     if sample_count is not None and sample_count > 0:
-        bounded = min(sample_count, 200)
-        base["num_questions"] = bounded
-        if bounded < base["pass_score"]:
-            base["pass_score"] = max(1, bounded)
+        draw = min(int(base["num_questions"]), sample_count)
+        base["num_questions"] = draw
+        if draw < int(base["pass_score"]):
+            base["pass_score"] = max(1, draw)
     return base
 
 

@@ -33,6 +33,7 @@ ALLOWED_PARAMS = {
     "document": {"markdown", "estimated_minutes"},
     "practice": {"instructions", "rubric", "board", "evidence", "estimated_minutes"},
     "labtest": {
+        "num_questions",
         "time_limit_minutes",
         "max_attempts",
         "cooldown_minutes",
@@ -40,6 +41,7 @@ ALLOWED_PARAMS = {
         "estimated_minutes",
     },
     "quiz": {
+        "num_questions",
         "time_limit_minutes",
         "max_attempts",
         "cooldown_minutes",
@@ -342,8 +344,9 @@ def validate_params(lesson, params):
             valid = value is None or (type(value) is int and 0 < value <= 100)
         elif key == "cooldown_minutes":
             valid = type(value) is int and 0 <= value <= 1440
-        elif key in {"estimated_minutes", "time_limit_minutes", "pass_score"}:
+        elif key in {"estimated_minutes", "num_questions", "time_limit_minutes", "pass_score"}:
             valid = type(value) is int and 0 < value <= {
+                "num_questions": 200,
                 "pass_score": 200,
                 "time_limit_minutes": 180,
             }.get(key, 10000)
@@ -1010,6 +1013,7 @@ async def upgrade_class_to_course_version(
     actor_id: int,
     target_course_version_id: str | None = None,
     enable_all_lessons: bool = False,
+    reset_doc_overrides: bool = False,
     commit: bool = True,
 ):
     """Upgrade a class onto `target_course_version_id` without mutating historical snapshots."""
@@ -1052,12 +1056,20 @@ async def upgrade_class_to_course_version(
     }
     needs_cv_upgrade = latest_row.course_version_id != target_cv.id
     target_lesson_ids = {item.id for item in lessons}
+    doc_ids = {
+        item.id
+        for item in lessons
+        if item.type == "document" and not item.id.startswith("summary-")
+    }
+    needs_doc_reset = reset_doc_overrides and any(
+        s.lesson_id in doc_ids and "markdown" in (s.params or {}) for s in old_settings.values()
+    )
     needs_enable_sync = enable_all_lessons and (
         any(not bool(item.get("enabled", True)) for item in (latest_row.lab_settings or []))
         or any(not s.enabled for s in old_settings.values())
         or set(old_settings) != target_lesson_ids
     )
-    if not needs_cv_upgrade and not needs_enable_sync:
+    if not needs_cv_upgrade and not needs_enable_sync and not needs_doc_reset:
         return {
             "upgraded": False,
             "class_id": classroom_id,
@@ -1138,6 +1150,8 @@ async def upgrade_class_to_course_version(
                 for k, v in (old_s.params or {}).items()
                 if k in ALLOWED_PARAMS[lesson.type]
             }
+            if reset_doc_overrides and lesson.id in doc_ids:
+                clean_params.pop("markdown", None)
             enabled = True if enable_all_lessons else bool(old_s.enabled)
             required = _keep_required_on_upgrade(lesson, clean_params, old_s, enable_all_lessons)
             order_no = lesson.order_no if needs_cv_upgrade else old_s.order_no
@@ -1241,24 +1255,33 @@ async def upgrade_class_to_course_version(
     return report
 
 
-async def sync_classes_to_latest_course(db, *, enable_all_lessons: bool = True):
+async def sync_classes_to_latest_course(
+    db, *, enable_all_lessons: bool = True, reset_doc_overrides: bool = False
+):
     """Upgrade all existing classes to the latest published course version cleanly."""
+    from app.services.question_banks import refresh_default_banks_for_class
+
     target_cv = await latest_published_course_version(db)
     if target_cv is None:
         return []
     class_rows = list((await db.execute(select(Classroom).order_by(Classroom.id))).scalars())
     reports = []
     for classroom in class_rows:
-        reports.append(
-            await upgrade_class_to_course_version(
-                db,
-                classroom_id=classroom.id,
-                actor_id=classroom.created_by,
-                target_course_version_id=target_cv.id,
-                enable_all_lessons=enable_all_lessons,
-                commit=True,
-            )
+        item = await upgrade_class_to_course_version(
+            db,
+            classroom_id=classroom.id,
+            actor_id=classroom.created_by,
+            target_course_version_id=target_cv.id,
+            enable_all_lessons=enable_all_lessons,
+            reset_doc_overrides=reset_doc_overrides,
+            commit=True,
         )
+        refresh = await refresh_default_banks_for_class(
+            db, classroom.id, actor_id=classroom.created_by, commit=True
+        )
+        item["refreshed_banks"] = refresh["refreshed_banks"]
+        item["updated_policies"] = refresh["updated_policies"]
+        reports.append(item)
     return reports
 
 

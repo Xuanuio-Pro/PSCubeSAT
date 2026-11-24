@@ -83,7 +83,7 @@ function groupFor(lab, item, index, count) {
   return groups[Math.max(0, group)] || `Phần ${index + 1}/${count}`;
 }
 const legacy = LABS.map(lab => ({ ...lab, lessons: getLessonsForLab(lab.id).map(item => ({ ...item,
-  reading: item.type === 'document' ? lessonReadingContent(lab, item) : '',
+  reading: item.type === 'document' ? ((hasLabFile(lab.id, item.id) && labText(lab.id, item.id)) || lessonReadingContent(lab, item)) : '',
 })) }));
 // The legacy Lab Test page stays in the legacy view; the course model appends its own server-graded labtest below.
 // All `quiz` lessons across Lab 0-8 are server-graded and exported to `/classes` while keeping `checkpointId` for legacy views.

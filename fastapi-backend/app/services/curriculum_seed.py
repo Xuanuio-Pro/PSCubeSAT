@@ -94,6 +94,11 @@ async def main():
         action="store_true",
         help="When syncing classes, also enable any disabled labs/lessons.",
     )
+    parser.add_argument(
+        "--reset-doc-overrides",
+        action="store_true",
+        help="When syncing classes, clear saved per-class markdown overrides on document lessons so defaults from seed apply.",
+    )
     args = parser.parse_args()
     async with get_session_maker()() as db:
         report = await seed_curriculum(db)
@@ -102,7 +107,9 @@ async def main():
             from app.services.course_configuration import sync_classes_to_latest_course
 
             report["synced_classes"] = await sync_classes_to_latest_course(
-                db, enable_all_lessons=args.enable_all_lessons
+                db,
+                enable_all_lessons=args.enable_all_lessons,
+                reset_doc_overrides=args.reset_doc_overrides,
             )
     output = json.dumps(report, ensure_ascii=False, indent=2)
     if args.report:

@@ -538,14 +538,14 @@ class Lab1SyllabusAndSyncTests(unittest.IsolatedAsyncioTestCase):
             await self.call(2, "GET", f"/api/classes/{self.class_a}/lessons/quiz-1-1/question-bank")
         ).json()
         self.assertEqual(q11_bank["status"], "published")
-        self.assertEqual(q11_bank["approved_count"], 3)
+        self.assertEqual(q11_bank["approved_count"], 90)
         q21_bank = (
             await self.call(
                 2, "GET", f"/api/classes/{self.class_a}/lessons/quiz-doc-2-1/question-bank"
             )
         ).json()
         self.assertEqual(q21_bank["status"], "published")
-        self.assertEqual(q21_bank["approved_count"], 3)
+        self.assertEqual(q21_bank["approved_count"], 141)
 
         # Student progress & submission & unlock preserved on new CourseVersion:
         # partial child completion -> grouped practice stays in_progress; full child completion -> completed!
@@ -825,6 +825,71 @@ class Lab1SyllabusAndSyncTests(unittest.IsolatedAsyncioTestCase):
             [len(lab["lessons"]) for lab in curr_new["labs"]],
             [10, 31, 12, 23, 35, 15, 12, 14, 12],
         )
+
+    async def test_reset_doc_overrides_clears_markdown_and_is_idempotent(self):
+        draft = (
+            await self.call(2, "GET", f"/api/classes/{self.class_a}/curriculum?draft=true")
+        ).json()
+        body = {
+            "expected_version": draft["version"],
+            "labs": [
+                {
+                    "lab_id": lab["id"],
+                    "enabled": True,
+                    "prerequisites": lab.get("prerequisites", []),
+                }
+                for lab in draft["labs"]
+            ],
+            "lessons": [
+                {
+                    "lesson_id": item["id"],
+                    "enabled": item["id"] != "video-1-1",
+                    "required": item["required"],
+                    "order_no": item["order_no"],
+                    "params": (
+                        {"markdown": "Nội dung cũ cần thay"}
+                        if item["id"] == "document-2-1"
+                        else {"markdown": "Tổng kết riêng của lớp"}
+                        if item["id"] == "summary-0"
+                        else item.get("params", {})
+                    ),
+                }
+                for lab in draft["labs"]
+                for item in lab["lessons"]
+            ],
+        }
+        saved = await self.call(2, "PUT", f"/api/classes/{self.class_a}/curriculum", body)
+        self.assertEqual(saved.status_code, 200, saved.text)
+        pub = await self.call(
+            2,
+            "POST",
+            f"/api/classes/{self.class_a}/curriculum/publish",
+            {"expected_version": saved.json()["version"]},
+        )
+        self.assertEqual(pub.status_code, 200, pub.text)
+
+        async with self.sessions() as db:
+            first = await sync_classes_to_latest_course(
+                db, enable_all_lessons=False, reset_doc_overrides=True
+            )
+            self.assertTrue(first[0]["upgraded"])
+            second = await sync_classes_to_latest_course(
+                db, enable_all_lessons=False, reset_doc_overrides=True
+            )
+            self.assertFalse(second[0]["upgraded"])
+
+        refreshed = (
+            await self.call(2, "GET", f"/api/classes/{self.class_a}/curriculum?draft=true")
+        ).json()
+        self.assertEqual(refreshed["status"], "published")
+        self.assertFalse(
+            next(x for x in refreshed["labs"][1]["lessons"] if x["id"] == "video-1-1")["enabled"]
+        )
+        doc21 = next(x for x in refreshed["labs"][2]["lessons"] if x["id"] == "document-2-1")
+        self.assertNotIn("markdown", doc21["params"])
+        self.assertTrue(doc21["content"]["markdown"].startswith("# Doc 2.1:"))
+        sum0 = next(x for x in refreshed["labs"][0]["lessons"] if x["id"] == "summary-0")
+        self.assertEqual(sum0["content"]["markdown"], "Tổng kết riêng của lớp")
 
 
 @unittest.skipUnless(

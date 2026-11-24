@@ -119,8 +119,13 @@ class QuestionInput(InputModel):
 
         if len(self.choices) != 4:
             raise ValueError("Cần đủ bốn lựa chọn cho câu hỏi trắc nghiệm.")
+        import unicodedata as _unicodedata
+
         ids = [choice.id for choice in self.choices]
-        values = [normalized(choice.text) for choice in self.choices]
+        values = [
+            " ".join(_unicodedata.normalize("NFKC", choice.text).split()).casefold()
+            for choice in self.choices
+        ]
         if len(set(ids)) != 4 or len(set(values)) != 4 or not all(values):
             raise ValueError("Cần bốn lựa chọn khác nhau và ID không trùng.")
         if any(choice_id not in ids for choice_id in self.choice_explanations):

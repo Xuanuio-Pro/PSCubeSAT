@@ -12,12 +12,14 @@ const fields = {
   document: [['markdown', 'Nội dung tài liệu (Markdown)', 'textarea']],
   practice: [['instructions', 'Hướng dẫn thực hành', 'textarea'], ['rubric', 'Tiêu chí chấm', 'textarea'], ['evidence', 'Minh chứng đầu ra', 'textarea'], ['board', 'Bo mạch', 'board']],
   quiz: [
+    ['num_questions', 'Số câu rút mỗi lượt', 'number'],
     ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
     ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
     ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
     ['pass_score', 'Số câu đúng để đạt', 'number'],
   ],
   labtest: [
+    ['num_questions', 'Số câu rút mỗi lượt', 'number'],
     ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
     ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
     ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
@@ -191,7 +193,7 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
         }
         const numberBounds = key === 'watch_ratio'
           ? { min: 0, max: 1, step: '0.05' }
-          : key === 'pass_score'
+          : key === 'pass_score' || key === 'num_questions'
           ? { min: 1, max: 200, step: '1' }
           : key === 'time_limit_minutes'
           ? { min: 1, max: 180, step: '1' }

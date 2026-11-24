@@ -1,5 +1,31 @@
 # Nhật ký quyết định
 
+## 24/11/2026 — Phân phối toàn bộ 35 tài liệu Doc từ `docs.zip` & nâng cấp hiển thị KaTeX / Mermaid
+
+- **Hoàn thiện 35 tệp tài liệu phía server (`fastapi-backend/app/firmware/curriculum/lab{0..8}/doc-*.md`):**
+  - Tách 9 tệp `lab{0..8}-*.md` trong `docs.zip` thành 35 tệp Markdown riêng cho từng bài `document`, loại bỏ toàn bộ khối `### ❓ Câu Hỏi Củng Cố Kiến Thức` (vì ngay sau mỗi Doc đã có bài `quiz` chấm trên server) và phần `## 💻 Hướng Dẫn Thực Hành` ở cuối tệp.
+  - Ánh xạ **theo chủ đề bài học** ở 2 điểm lệch so với file gốc:
+    - **Lab 1** (zip có 6 mục Doc, giáo trình có 8 bài Doc): ánh xạ `1.1` → `doc-1-1.md`, `1.2` → `doc-1-2.md`, `1.3` (74HC595) → `doc-1-5.md`, `1.4` (UART) → `doc-1-6.md`, `1.5` (Wi-Fi/HTTP) → `doc-1-7.md`, `1.6` (`millis()`) → `doc-1-8.md`; biên tập `doc-1-3.md` (GPIO & LEDC PWM) và `doc-1-4.md` (Nút nhấn, Pull-up & Debounce) từ hướng dẫn Breakout PCB và Bài 1.1/1.3/1.4 trong `lab1-obc.md` cùng lý thuyết chuẩn.
+    - **Lab 4 (`doc-4-7.md`):** mục `Doc 4.7` trong zip không có thân bài nên kết hợp tiêu đề Doc 4.7 với kiến trúc thu thập đa cảm biến khép kín & sơ đồ ghép kênh 74HC4066.
+    - **Lab 5:** tách `Doc 5.3` phần LoRa CSS / E32 / RF Configurator vào `doc-5-2.md` (`document-5-lora`), và ghép `Doc 5.2` (Đóng gói, CRC-16, CCSDS) với phần Kiến trúc Trạm Mặt Đất vào `doc-5-3.md` (`document-5-2`).
+  - Xuất lại `seed.json` và đồng bộ nhánh `legacy` trong `scripts/export-curriculum.mjs` + `LabLayout.jsx` để đường `/lab` (kể cả Lab 0 `document`) và `/classes` dùng chung bộ 35 tài liệu chuẩn.
+- **Nâng cấp `DocViewer.jsx`:** bổ sung `remark-math` + `rehype-katex` hiển thị công thức toán, lazy-load `mermaid` vẽ sơ đồ luồng/kiến trúc (`securityLevel: 'strict'`, fallback code block nếu lỗi) và render các khối cảnh báo `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
+- **Ghi đè đồng bộ cho các lớp hiện có (`--reset-doc-overrides`):** bổ sung cờ tùy chọn `--reset-doc-overrides` trong `curriculum_seed.py --sync-classes` (`reset_doc_overrides` ở `upgrade_class_to_course_version`), tạo `ClassCourseVersion` `version + 1` sạch sẽ theo immutability triggers và xóa khóa `params["markdown"]` cũ trên các bài `document` (trừ `summary-*`) để toàn bộ lớp hiện có dùng tài liệu mới ngay lập tức mà vẫn giữ nguyên `enabled`, `required`, tiến độ, bài nộp và ngân hàng câu hỏi.
+
+## 24/11/2026 — Nạp bộ câu hỏi mặc định CubeSAT (60 Quiz + 9 Lab Test) & rút đề ngẫu nhiên 5 / 20 câu
+
+- **Kho ngân hàng câu hỏi CubeSAT chỉ nằm ở phía server (`fastapi-backend/app/firmware/curriculum/lab{0..8}/`):**
+  - Nhập toàn bộ 43 tệp câu hỏi CSV từ bộ `quizzes.zip` (Lab 0–8 Doc & Practice) thành **60 tệp CSV theo từng bài `quiz`** (tối thiểu 5 câu/bài; các bài thực hành tách theo `source_reference` / từ khóa chuyên đề của từng Lab, và `quiz-doc-4-6` sử dụng nhóm câu hỏi I2C/Multiplexer trong Lab 4 do chưa có file `Doc4.6` riêng) và **9 tệp `labtest-{0..8}.csv`** tổng hợp loại trùng toàn bộ câu hỏi của từng Lab (`200–223` câu/Lab Test), tổng cộng **4.013 câu hỏi** chuẩn CubeSAT. Thay thế `default-question-bank.csv` (10 câu mẫu tin học cũ) bằng 10 câu fallback từ Lab 0 Doc 0.1. Đáp án và giải thích hoàn toàn không nằm trong `seed.json` hay bundle frontend (`AGENTS.md` quy tắc 5).
+- **Rút đề ngẫu nhiên theo cấu hình (`num_questions`):**
+  - Đổi mặc định chính sách ở `sample_questions.py` và `quizzes.py`: bài `quiz` mặc định rút ngẫu nhiên **5 câu** (`pass_score = 4`, `10 phút`, không giới hạn lượt), bài `labtest` mặc định rút ngẫu nhiên **20 câu** (`pass_score = 16`, `20 phút`, `5 lượt/đợt`, chờ `30 phút`); nếu ngân hàng có ít câu đã duyệt hơn `num_questions`, server rút hết số câu hiện có và hạ `pass_score = min(pass_score, draw)`. Giảng viên có thể tùy chỉnh `num_questions` trên cả `PolicyForm` và cấu hình chương trình lớp (`ALLOWED_PARAMS["quiz" | "labtest"]`). Nâng trần bản nháp mỗi phiên bản ngân hàng từ `200` lên `500` để nạp trọn bộ ngân hàng Lab Test (`~223` câu).
+- **Chuẩn hóa kiểm tra đáp án công thức & trùng câu hỏi:**
+  - `QuestionInput.valid_choices` đổi sang so sánh bằng NFKC + gộp khoảng trắng + `casefold()` thay vì `normalized()` (vốn xóa dấu `+`, `-`, `*`, `/`), tránh báo lỗi giả cho các lựa chọn công thức toán học như `+50°C` vs `-50°C` hoặc `(NIR - Red)` vs `(NIR * Red)`.
+  - `validate_distinct` dùng tập khóa `normalized(prompt)` (O(N)) thay cho ngưỡng `SequenceMatcher >= 0.9` nhằm tránh chặn các cặp câu hỏi kỹ thuật hợp lệ khác tham số (`CPOL = 0` vs `CPHA = 0`, `OBC` vs `C&DH`, `cao nhất` vs `thấp nhất`) và tăng tốc seed/publish ngân hàng Lab Test >200 câu.
+- **Làm mới an toàn cho tất cả các lớp hiện có (`refresh_default_banks_for_class`):**
+  - Tích hợp vào `sync_classes_to_latest_course` (`--sync-classes`): với mỗi lớp đang có, giữ nguyên toàn bộ câu hỏi do giảng viên tự soạn; chỉ thay các câu từ ngân hàng tin học cũ (`is_legacy_generic_prompt`) hoặc ngân hàng trống bằng bộ câu CubeSAT mới bằng cách tạo phiên bản ngân hàng `version + 1` (không sửa đè bản `published` để tôn trọng PostgreSQL immutability triggers và giữ nguyên lịch sử `QuizAttempt`), tự xuất bản lại nếu trước đó đang `published`, và cập nhật các `QuizPolicy` còn giữ nguyên mặc định cũ `(3, 2, 10)` / `(10, 8, 15)` / `(5, 4, 10)` sang `(5, 4, 10)` / `(20, 16, 20)`. Chạy lặp lại `--sync-classes` là idempotent.
+- **Ôn tập chấm ở máy chủ cho đường `/lab` và `/labN/questions`:**
+  - Bổ sung `GET /api/curriculum/legacy/labs/{lab_id}/questions`, `GET .../quiz/{lesson_id}` (rút ngẫu nhiên 5/20 câu đã xóa sạch `correct_choice_id` và giải thích), và `POST .../quiz/{lesson_id}/grade` (chấm cả 4 dạng câu hỏi ở server rồi mới trả giải thích), toàn bộ đều chặn bằng `legacy_restricted` (`403 MEMBERSHIP_REQUIRED` cho sinh viên lớp pilot). Frontend dùng `LegacyQuizPanel.jsx` trên `LabLayout` và `LabQuestionsPage`.
+
 ## 23/11/2026 — Gộp 11 nhóm thực hành nhiều bài con (179 → 164 bài học)
 
 - **Gộp đúng theo mục cấp 1 của README (26 bài con → 11 bài thực hành cha):**

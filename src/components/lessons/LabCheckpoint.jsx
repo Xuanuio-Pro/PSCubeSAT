@@ -40,8 +40,10 @@ export function CheckpointCard({ checkpoint, index, renderExercise, as = 'li' })
       <span>Bài thực hành liên quan:</span>
       <ul>{checkpoint.exercises.map(id => <li key={id}>{renderExercise(id)}</li>)}</ul>
     </div>}
-    <section aria-labelledby={headingId} className="lab-questions-body">
-      <QuestionList questions={checkpoint.questions} />
-    </section>
+    {checkpoint.questions.length > 0 && (
+      <section aria-labelledby={headingId} className="lab-questions-body">
+        <QuestionList questions={checkpoint.questions} />
+      </section>
+    )}
   </Tag>;
 }

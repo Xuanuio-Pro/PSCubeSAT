@@ -29,23 +29,48 @@ from app.tests.test_quizzes import question
 
 class SampleQuestionLoaderTests(unittest.TestCase):
     def test_global_fallback_returns_10_for_labtest_and_rotating_3_for_quizzes(self):
+        # Live CURRICULUM_DIR serves all 69 exported CubeSAT CSV pools (>= 5 per quiz, >= 200 per labtest).
         labtest_items = sample_questions_for(0, "labtest-0")
-        self.assertEqual(len(labtest_items), 10)
+        self.assertEqual(len(labtest_items), 200)
+        self.assertGreaterEqual(len(sample_questions_for(0, "quiz-0-1", quiz_index=0)), 5)
+        self.assertGreaterEqual(len(sample_questions_for(0, "quiz-0-2", quiz_index=1)), 5)
+        self.assertGreaterEqual(len(sample_questions_for(0, "quiz-0-3", quiz_index=2)), 5)
 
-        first_three = [q["prompt"] for q in sample_questions_for(0, "quiz-0-1", quiz_index=0)]
-        second_three = [q["prompt"] for q in sample_questions_for(0, "quiz-0-2", quiz_index=1)]
-        third_three = [q["prompt"] for q in sample_questions_for(0, "quiz-0-3", quiz_index=2)]
-        fourth_three = [q["prompt"] for q in sample_questions_for(1, "quiz-1-4", quiz_index=3)]
+        # Global 10-question CSV fallback (when per-lesson/per-lab files are absent) still rotates cleanly.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            default_csv = (
+                Path(__file__).resolve().parents[1]
+                / "firmware/curriculum/default-question-bank.csv"
+            ).read_text(encoding="utf-8")
+            (root / "default-question-bank.csv").write_text(default_csv, encoding="utf-8")
 
-        self.assertEqual(len(first_three), 3)
-        self.assertEqual(len(second_three), 3)
-        self.assertEqual(len(third_three), 3)
-        self.assertEqual(len(fourth_three), 3)
-        # First 3 quizzes in a lab cover 9 distinct items from the 10-item CSV pool.
-        self.assertEqual(len(set(first_three + second_three + third_three)), 9)
-        # Index 3 wraps smoothly: item 9 + items 0, 1.
-        self.assertEqual(fourth_three[0], labtest_items[9]["prompt"])
-        self.assertEqual(fourth_three[1:], first_three[:2])
+            fallback_lt = sample_questions_for(0, "labtest-0", curriculum_dir=root)
+            self.assertEqual(len(fallback_lt), 10)
+            first_three = [
+                q["prompt"]
+                for q in sample_questions_for(0, "quiz-0-1", quiz_index=0, curriculum_dir=root)
+            ]
+            second_three = [
+                q["prompt"]
+                for q in sample_questions_for(0, "quiz-0-2", quiz_index=1, curriculum_dir=root)
+            ]
+            third_three = [
+                q["prompt"]
+                for q in sample_questions_for(0, "quiz-0-3", quiz_index=2, curriculum_dir=root)
+            ]
+            fourth_three = [
+                q["prompt"]
+                for q in sample_questions_for(1, "quiz-1-4", quiz_index=3, curriculum_dir=root)
+            ]
+
+            self.assertEqual(len(first_three), 3)
+            self.assertEqual(len(second_three), 3)
+            self.assertEqual(len(third_three), 3)
+            self.assertEqual(len(fourth_three), 3)
+            self.assertEqual(len(set(first_three + second_three + third_three)), 9)
+            self.assertEqual(fourth_three[0], fallback_lt[9]["prompt"])
+            self.assertEqual(fourth_three[1:], first_three[:2])
 
     def test_per_lesson_and_per_lab_overrides_and_empty_fallthrough(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -120,8 +145,8 @@ class SampleQuestionLoaderTests(unittest.TestCase):
         self.assertEqual(
             default_policy("quiz"),
             {
-                "num_questions": 3,
-                "pass_score": 2,
+                "num_questions": 5,
+                "pass_score": 4,
                 "time_limit_minutes": 10,
                 "max_attempts": None,
                 "cooldown_minutes": 0,
@@ -130,13 +155,14 @@ class SampleQuestionLoaderTests(unittest.TestCase):
         self.assertEqual(
             default_policy("labtest"),
             {
-                "num_questions": 10,
-                "pass_score": 8,
-                "time_limit_minutes": 15,
+                "num_questions": 20,
+                "pass_score": 16,
+                "time_limit_minutes": 20,
                 "max_attempts": 5,
                 "cooldown_minutes": 30,
             },
         )
+        self.assertEqual(default_policy("labtest", sample_count=4)["num_questions"], 4)
         self.assertEqual(default_policy("labtest", sample_count=4)["pass_score"], 4)
 
 
@@ -180,8 +206,9 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
                 q01["content"]["pass_score"],
                 q01["content"]["max_attempts"],
                 q01["content"]["cooldown_minutes"],
+                q01["content"]["num_questions"],
             ),
-            (10, 2, None, 0),
+            (10, 4, None, 0, 5),
         )
         self.assertTrue(lt0["enabled"])
         self.assertTrue(lt0["required"])
@@ -191,8 +218,9 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
                 lt0["content"]["pass_score"],
                 lt0["content"]["max_attempts"],
                 lt0["content"]["cooldown_minutes"],
+                lt0["content"]["num_questions"],
             ),
-            (15, 8, 5, 30),
+            (20, 16, 5, 30, 20),
         )
 
         # Concurrent bank GETs (like opening ClassCurriculumPage) seed safely with no duplicates.
@@ -208,14 +236,17 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         for res in responses:
             self.assertEqual(res.status_code, 200, res.text)
         b1, b2, b3, lt_bank, _, q21_bank, q4mux_bank = [res.json() for res in responses]
-        for bank in (b1, b2, b3, q21_bank, q4mux_bank):
+        expected_counts = [110, 73, 17, 141, 5]
+        for bank, expected_count in zip((b1, b2, b3, q21_bank, q4mux_bank), expected_counts):
             self.assertEqual(bank["status"], "draft")
-            self.assertEqual(bank["approved_count"], 3)
+            self.assertEqual(bank["approved_count"], expected_count)
             self.assertTrue(all(q["status"] == "approved" for q in bank["questions"]))
             self.assertIsNone(bank["policy"]["max_attempts"])
             self.assertEqual(bank["policy"]["cooldown_minutes"], 0)
+            self.assertEqual(bank["policy"]["num_questions"], 5)
         self.assertEqual(lt_bank["status"], "draft")
-        self.assertEqual(lt_bank["approved_count"], 10)
+        self.assertEqual(lt_bank["approved_count"], 200)
+        self.assertEqual(lt_bank["policy"]["num_questions"], 20)
         self.assertEqual(lt_bank["policy"]["max_attempts"], 5)
         self.assertEqual(lt_bank["policy"]["cooldown_minutes"], 30)
 
@@ -224,7 +255,7 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
             | {q["prompt"] for q in b2["questions"]}
             | {q["prompt"] for q in b3["questions"]}
         )
-        self.assertEqual(len(prompts), 9)
+        self.assertEqual(len(prompts), 200)
 
     async def test_brand_new_class_auto_publishes_and_student_takes_sample_quiz_and_labtest(self):
         draft = (await self.call(2, "GET", f"{self.base}/curriculum?draft=true")).json()
@@ -252,7 +283,7 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         q01 = next(x for x in saved_json["labs"][0]["lessons"] if x["id"] == "quiz-0-1")
         self.assertFalse(q01["content"]["bank_ready"])
         self.assertTrue(q01["content"]["bank_auto_publishable"])
-        self.assertEqual(q01["content"]["bank_approved_count"], 3)
+        self.assertEqual(q01["content"]["bank_approved_count"], 110)
         self.assertEqual(q01["content"]["bank_draft_count"], 0)
 
         # Dry run lists banks that will be auto-published without mutating them yet.
@@ -333,14 +364,14 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         ):
             self.assertNotIn(private_key, student_q01["content"])
 
-        # Student starts quiz-0-1 (3 questions), answers without leaking solutions, and passes 2/3.
+        # Student starts quiz-0-1 (5 random questions from 110), answers without leaking solutions, and passes 4/5+.
         started = await self.call(
             4, "POST", f"{self.base}/lessons/quiz-0-1/attempts", {"idempotency_key": str(uuid4())}
         )
         self.assertEqual(started.status_code, 200, started.text)
         attempt = started.json()
-        self.assertEqual(len(attempt["items"]), 3)
-        self.assertEqual(attempt["policy"]["pass_score"], 2)
+        self.assertEqual(len(attempt["items"]), 5)
+        self.assertEqual(attempt["policy"]["pass_score"], 4)
         self.assertNotIn("correct_choice_id", started.text)
         self.assertNotIn("explanation", started.text)
 
@@ -366,18 +397,18 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ans_res.status_code, 200, ans_res.text)
         sub_res = await self.call(4, "POST", f"/api/attempts/{attempt['id']}/submit")
         self.assertEqual(sub_res.status_code, 200, sub_res.text)
-        self.assertEqual(sub_res.json()["score"], 3)
+        self.assertEqual(sub_res.json()["score"], 5)
         self.assertTrue(sub_res.json()["passed"])
 
-        # Now Lab Test 0 unlocks (10 questions, pass 8/10).
+        # Now Lab Test 0 unlocks (20 random questions from 200, pass 16/20, 20 min).
         lt_start = await self.call(
             4, "POST", f"{self.base}/labs/0/attempts", {"idempotency_key": str(uuid4())}
         )
         self.assertEqual(lt_start.status_code, 200, lt_start.text)
         lt_attempt = lt_start.json()
-        self.assertEqual(len(lt_attempt["items"]), 10)
-        self.assertEqual(lt_attempt["policy"]["pass_score"], 8)
-        self.assertEqual(lt_attempt["policy"]["time_limit_minutes"], 15)
+        self.assertEqual(len(lt_attempt["items"]), 20)
+        self.assertEqual(lt_attempt["policy"]["pass_score"], 16)
+        self.assertEqual(lt_attempt["policy"]["time_limit_minutes"], 20)
         self.assertNotIn("correct_choice_id", lt_start.text)
 
     async def test_unapproved_draft_blocks_publish_and_load_samples_restores_without_duplicates(
@@ -404,17 +435,23 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(added.status_code, 200, added.text)
         q_bank = added.json()
 
-        # Teacher deletes all 10 sample questions directly on draft labtest-0 (no fork needed).
+        # Clear 199 sample questions in DB and delete the last one via HTTP on draft labtest-0 (no fork needed).
+        from sqlalchemy import delete
+
         lt_bank = (await self.call(2, "GET", f"{self.base}/labs/0/question-bank")).json()
-        for q in lt_bank["questions"]:
-            deleted = await self.call(
-                2,
-                "DELETE",
-                f"{self.base}/labs/0/question-bank/questions/{q['id']}",
-                {"expected_revision": lt_bank["revision"]},
-            )
-            self.assertEqual(deleted.status_code, 200, deleted.text)
-            lt_bank = deleted.json()
+        remaining = lt_bank["questions"][0]
+        drop_ids = [q["id"] for q in lt_bank["questions"][1:]]
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.id.in_(drop_ids)))
+            await db.commit()
+        deleted = await self.call(
+            2,
+            "DELETE",
+            f"{self.base}/labs/0/question-bank/questions/{remaining['id']}",
+            {"expected_revision": lt_bank["revision"]},
+        )
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+        lt_bank = deleted.json()
         self.assertEqual(len(lt_bank["questions"]), 0)
 
         # Publishing class must fail cleanly with QUIZ_DRAFT_UNAPPROVED (quiz-0-1) and CONTENT_MISSING (labtest-0).
@@ -460,8 +497,8 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
             {"expected_revision": lt_bank["revision"]},
         )
         self.assertEqual(restored.status_code, 200, restored.text)
-        self.assertEqual(restored.json()["added_count"], 10)
-        self.assertEqual(restored.json()["approved_count"], 10)
+        self.assertEqual(restored.json()["added_count"], 200)
+        self.assertEqual(restored.json()["approved_count"], 200)
 
         # Repeating load-samples does not create duplicates.
         repeat = await self.call(
@@ -472,16 +509,16 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(repeat.status_code, 200, repeat.text)
         self.assertEqual(repeat.json()["added_count"], 0)
-        self.assertEqual(repeat.json()["approved_count"], 10)
+        self.assertEqual(repeat.json()["approved_count"], 200)
 
-        # Now class publishes cleanly, including the 4 approved questions on quiz-0-1.
+        # Now class publishes cleanly, including the 111 approved questions on quiz-0-1.
         pub = await self.fixture.publish(version, dry_run=False)
         self.assertEqual(pub.status_code, 200, pub.text)
         pub_q_bank = (
             await self.call(2, "GET", f"{self.base}/lessons/quiz-0-1/question-bank")
         ).json()
         self.assertEqual(pub_q_bank["status"], "published")
-        self.assertEqual(pub_q_bank["approved_count"], 4)
+        self.assertEqual(pub_q_bank["approved_count"], 111)
 
         # Calling load-samples on a published bank is rejected cleanly (422).
         after_pub = await self.call(
@@ -491,6 +528,181 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
             {"expected_revision": pub_q_bank["revision"]},
         )
         self.assertEqual(after_pub.status_code, 422)
+
+    async def test_refresh_default_banks_preserves_custom_questions_and_is_idempotent(self):
+        from sqlalchemy import delete
+
+        from app.services.question_banks import refresh_default_banks_for_class
+        from app.services.sample_questions import LEGACY_GENERIC_PROMPT_TEXTS
+
+        draft = (await self.call(2, "GET", f"{self.base}/curriculum?draft=true")).json()
+        body = course.settings_payload(draft)
+        for item in body["lessons"]:
+            if item["lesson_id"] == "document":
+                item["params"] = {"markdown": "Nội dung Lab 0."}
+        saved = await self.fixture.save(body)
+        self.assertEqual(saved.status_code, 200, saved.text)
+        pub = await self.fixture.publish(saved.json()["version"], dry_run=False)
+        self.assertEqual(pub.status_code, 200, pub.text)
+
+        # Simulate a legacy DB state: replace quiz-0-1 (published) with old CPU/RAM/IPv4 prompt + 1 custom question,
+        # set quiz-0-1 & labtest-0 policies to old defaults, and set quiz-0-2 policy to a custom teacher setting.
+        async with self.sessions() as db:
+            q01_bank = (
+                await db.execute(
+                    select(QuestionBank).where(
+                        QuestionBank.class_id == self.fixture.class_a,
+                        QuestionBank.lesson_id == "quiz-0-1",
+                        QuestionBank.status == "published",
+                    )
+                )
+            ).scalar_one()
+            old_q01_id = q01_bank.id
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == old_q01_id))
+            custom_q = {
+                **question(500),
+                "prompt": "Câu hỏi riêng do giảng viên soạn trước đợt cập nhật?",
+            }
+            legacy_q = {
+                **question(501),
+                "prompt": LEGACY_GENERIC_PROMPT_TEXTS[0],
+            }
+            for content in (custom_q, legacy_q):
+                db.add(
+                    QuestionVersion(
+                        id=str(uuid4()),
+                        bank_id=old_q01_id,
+                        question_id=str(uuid4()),
+                        content=content,
+                        status="approved",
+                        reviewer=2,
+                    )
+                )
+            p_q01 = await db.get(QuizPolicy, (self.fixture.class_a, "quiz-0-1"))
+            p_q01.num_questions, p_q01.pass_score, p_q01.time_limit_minutes = 3, 2, 10
+            p_q02 = await db.get(QuizPolicy, (self.fixture.class_a, "quiz-0-2"))
+            p_q02.num_questions, p_q02.pass_score, p_q02.time_limit_minutes = 4, 3, 12
+            p_lt0 = await db.get(QuizPolicy, (self.fixture.class_a, "labtest-0"))
+            p_lt0.num_questions, p_lt0.pass_score, p_lt0.time_limit_minutes = 10, 8, 15
+            await db.commit()
+
+            report = await refresh_default_banks_for_class(
+                db, self.fixture.class_a, actor_id=2, commit=True
+            )
+            self.assertEqual(report["refreshed_banks"], 1)
+            self.assertEqual(report["updated_policies"], 2)
+
+            # Old published bank version stayed intact; a new published version+1 replaced legacy prompt cleanly.
+            q01_versions = list(
+                (
+                    await db.execute(
+                        select(QuestionBank)
+                        .where(
+                            QuestionBank.class_id == self.fixture.class_a,
+                            QuestionBank.lesson_id == "quiz-0-1",
+                        )
+                        .order_by(QuestionBank.version)
+                    )
+                ).scalars()
+            )
+            self.assertEqual(len(q01_versions), 2)
+            self.assertEqual(q01_versions[0].id, old_q01_id)
+            self.assertEqual(q01_versions[1].status, "published")
+            new_prompts = [
+                row.content["prompt"]
+                for row in (
+                    await db.execute(
+                        select(QuestionVersion).where(QuestionVersion.bank_id == q01_versions[1].id)
+                    )
+                ).scalars()
+            ]
+            self.assertEqual(len(new_prompts), 111)
+            self.assertIn("Câu hỏi riêng do giảng viên soạn trước đợt cập nhật?", new_prompts)
+            self.assertNotIn(LEGACY_GENERIC_PROMPT_TEXTS[0], new_prompts)
+
+            # Uncustomized policies migrated to 5/4/10 and 20/16/20; customized policy (4/3/12) untouched.
+            refreshed_q01 = await db.get(QuizPolicy, (self.fixture.class_a, "quiz-0-1"))
+            refreshed_q02 = await db.get(QuizPolicy, (self.fixture.class_a, "quiz-0-2"))
+            refreshed_lt0 = await db.get(QuizPolicy, (self.fixture.class_a, "labtest-0"))
+            self.assertEqual(
+                (
+                    refreshed_q01.num_questions,
+                    refreshed_q01.pass_score,
+                    refreshed_q01.time_limit_minutes,
+                ),
+                (5, 4, 10),
+            )
+            self.assertEqual(refreshed_q01.bank_id, q01_versions[1].id)
+            self.assertEqual(
+                (
+                    refreshed_q02.num_questions,
+                    refreshed_q02.pass_score,
+                    refreshed_q02.time_limit_minutes,
+                ),
+                (4, 3, 12),
+            )
+            self.assertEqual(
+                (
+                    refreshed_lt0.num_questions,
+                    refreshed_lt0.pass_score,
+                    refreshed_lt0.time_limit_minutes,
+                ),
+                (20, 16, 20),
+            )
+
+            # Re-running refresh is idempotent.
+            second = await refresh_default_banks_for_class(
+                db, self.fixture.class_a, actor_id=2, commit=True
+            )
+            self.assertEqual(second["refreshed_banks"], 0)
+            self.assertEqual(second["updated_policies"], 0)
+
+    async def test_randomized_draw_honors_policy_and_lesson_param_num_questions(self):
+        draft = (await self.call(2, "GET", f"{self.base}/curriculum?draft=true")).json()
+        body = course.settings_payload(draft)
+        for item in body["lessons"]:
+            if item["lesson_id"] == "document":
+                item.update(enabled=True, required=True, params={"markdown": "Nội dung Lab 0."})
+            elif item["lesson_id"] == "quiz-0-1":
+                item.update(
+                    enabled=True, required=True, params={"num_questions": 7, "pass_score": 5}
+                )
+        saved = await self.fixture.save(body)
+        self.assertEqual(saved.status_code, 200, saved.text)
+        pub = await self.fixture.publish(saved.json()["version"], dry_run=False)
+        self.assertEqual(pub.status_code, 200, pub.text)
+
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import update
+
+        from app.models.learning import LessonProgress
+
+        await self.call(
+            4,
+            "POST",
+            f"{self.base}/lessons/document/events",
+            {"idempotency_key": str(uuid4()), "kind": "opened"},
+        )
+        async with self.sessions() as db:
+            await db.execute(
+                update(LessonProgress)
+                .where(LessonProgress.lesson_id == "document")
+                .values(started_at=datetime.now(timezone.utc) - timedelta(seconds=65))
+            )
+            await db.commit()
+        await self.call(
+            4,
+            "POST",
+            f"{self.base}/lessons/document/events",
+            {"idempotency_key": str(uuid4()), "kind": "complete"},
+        )
+        started = await self.call(
+            4, "POST", f"{self.base}/lessons/quiz-0-1/attempts", {"idempotency_key": str(uuid4())}
+        )
+        self.assertEqual(started.status_code, 200, started.text)
+        self.assertEqual(len(started.json()["items"]), 7)
+        self.assertEqual(started.json()["policy"]["pass_score"], 5)
 
 
 class Migration0021UnitTests(unittest.TestCase):
@@ -675,9 +887,9 @@ class Migration0021UnitTests(unittest.TestCase):
                         )
                     ).one()
 
-                self.assertEqual(c1_q1, [("approved", 1)] * 3)
-                self.assertEqual(c1_q2, [("approved",)] * 3)
-                self.assertEqual(c1_lt0, [("approved",)] * 10)
+                self.assertEqual(c1_q1, [("approved", 1)] * 110)
+                self.assertEqual(c1_q2, [("approved",)] * 73)
+                self.assertEqual(c1_lt0, [("approved",)] * 200)
                 self.assertEqual(c2_lt0, [("existing-q",)])
                 self.assertEqual(c2_lt1, [])
                 self.assertEqual(tuple(p1), (10, 8, 15))
@@ -692,7 +904,7 @@ class Migration0021UnitTests(unittest.TestCase):
                         conn.execute(
                             text("SELECT count(*) FROM question_versions WHERE bank_id='c1-lt0'")
                         ).scalar_one(),
-                        10,
+                        200,
                     )
                     self.assertEqual(
                         tuple(
@@ -724,7 +936,7 @@ class Migration0021UnitTests(unittest.TestCase):
                         conn.execute(
                             text("SELECT count(*) FROM question_versions WHERE bank_id='c1-lt0'")
                         ).scalar_one(),
-                        10,
+                        200,
                     )
                     self.assertEqual(
                         tuple(
