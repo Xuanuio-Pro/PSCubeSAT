@@ -69,12 +69,27 @@ export default function GoogleSignIn({ signup = false, remember = true }) {
         width: Math.min(container.current.clientWidth || 320, 400),
       });
       setStatus('');
-      // Google gives no callback when it refuses the page origin: the button iframe just stays empty.
-      blockedCheck = setTimeout(() => {
-        if (active && !container.current?.querySelector('iframe')?.offsetHeight) {
-          setError(`Google chưa cho phép đăng nhập từ ${window.location.origin}. Quản trị viên cần thêm địa chỉ này vào “Authorized JavaScript origins” của Google Client ID, hoặc bạn dùng email và mật khẩu.`);
+      // Google gives no callback when it refuses the page origin, so only an empty button area counts
+      // as blocked. GSI now draws the standard button as plain HTML (role="button") and keeps its
+      // iframe at height 0 unless the button is personalised, so the iframe alone is not a signal.
+      const buttonVisible = () => {
+        const root = container.current;
+        if (!root) return false;
+        return [...root.querySelectorAll('[role="button"], iframe')].some(el => el instanceof HTMLElement && el.offsetHeight > 0);
+      };
+      const blockedMessage = `Google chưa cho phép đăng nhập từ ${window.location.origin}. Quản trị viên cần thêm địa chỉ này vào “Authorized JavaScript origins” của Google Client ID, hoặc bạn dùng email và mật khẩu.`;
+      /** @param {number} attempt */
+      const checkButton = (attempt) => {
+        if (!active) return;
+        if (buttonVisible()) {
+          setError(current => (current === blockedMessage ? '' : current));
+          return;
         }
-      }, 4000);
+        if (attempt === 2) setError(blockedMessage);
+        // Keep watching for a slow network: the warning clears itself once the button appears.
+        if (attempt < 10) blockedCheck = setTimeout(() => checkButton(attempt + 1), 2000);
+      };
+      blockedCheck = setTimeout(() => checkButton(1), 2000);
     }).catch((err) => {
       if (active) {
         setError(err.message);
