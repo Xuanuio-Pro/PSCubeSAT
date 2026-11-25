@@ -1218,3 +1218,81 @@
     min-width: 0;
   }
 }
+
+/* ===== Lab (Figma) theme for admin / class management =====
+   Same language as .lab-fig in index.css: navy #094174, translucent blue-grey cards, large radii,
+   soft shadows, gradient pill tabs, Plus Jakarta Sans. Scoped to non-player pages only. */
+.lms-shell:not(.is-learning-shell) {
+  --fig-navy: #094174;
+  --fig-card: rgba(221, 232, 243, 0.6);
+  --fig-card-strong: rgba(221, 232, 243, 0.78);
+  --fig-surface: rgba(243, 243, 250, 0.92);
+  --fig-shadow: 0 16px 32px -4px rgba(12, 12, 13, 0.1), 0 4px 4px -4px rgba(12, 12, 13, 0.05);
+  --fig-gradient: linear-gradient(180deg, #3e54a0, #1c7caf);
+  font-family: 'Plus Jakarta Sans', var(--font-sans);
+  color: var(--fig-navy);
+}
+.lms-shell:not(.is-learning-shell) button,
+.lms-shell:not(.is-learning-shell) input,
+.lms-shell:not(.is-learning-shell) select,
+.lms-shell:not(.is-learning-shell) textarea { font-family: inherit; }
+.lms-shell:not(.is-learning-shell) h1,
+.lms-shell:not(.is-learning-shell) h2,
+.lms-shell:not(.is-learning-shell) h3 { color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) p { color: var(--fig-navy); }
+
+/* Tab pills like .fig-tab */
+.lms-shell:not(.is-learning-shell) .lms-nav {
+  background: var(--fig-card); border: 0.3px solid var(--fig-navy); border-radius: 999px;
+  box-shadow: var(--fig-shadow); backdrop-filter: blur(8px);
+}
+.lms-shell:not(.is-learning-shell) .lms-nav a { border-radius: 999px; color: var(--fig-navy); font-weight: 700; }
+.lms-shell:not(.is-learning-shell) .lms-nav a:hover { background: rgba(9, 65, 116, 0.08); color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) .lms-nav a.active { background: var(--fig-gradient); color: #fff; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25); }
+
+/* Cards: heading, panels, class rows, curriculum blocks, report summary */
+.lms-shell:not(.is-learning-shell) .lms-heading,
+.lms-shell:not(.is-learning-shell) .lms-panel,
+.lms-shell:not(.is-learning-shell) .lms-class-row,
+.lms-shell:not(.is-learning-shell) .lms-empty,
+.lms-shell:not(.is-learning-shell) .lms-import-box,
+.lms-shell:not(.is-learning-shell) .curriculum-lab,
+.lms-shell:not(.is-learning-shell) .report-summary div,
+.lms-shell:not(.is-learning-shell) .path-overview {
+  background: var(--fig-card); border: 0; border-radius: 28px; box-shadow: var(--fig-shadow);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.lms-shell:not(.is-learning-shell) .lms-heading { border-radius: 32px; }
+.lms-shell:not(.is-learning-shell) .lms-class-row:hover { background: var(--fig-card-strong); }
+.lms-shell:not(.is-learning-shell) .curriculum-lesson { background: var(--fig-surface); border: 0; border-radius: 20px; }
+
+/* Tables sit on a light surface inside the card */
+.lms-shell:not(.is-learning-shell) .lms-table-wrap { background: var(--fig-surface); border: 0; border-radius: 24px; box-shadow: var(--fig-shadow); overflow: hidden; }
+.lms-shell:not(.is-learning-shell) th { background: rgba(9, 65, 116, 0.08); color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) td { color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) tbody tr:hover { background: rgba(9, 65, 116, 0.05); }
+
+/* Controls */
+.lms-shell:not(.is-learning-shell) input,
+.lms-shell:not(.is-learning-shell) select,
+.lms-shell:not(.is-learning-shell) textarea { background: #f3f3fa; border: 0; border-radius: 18px; color: var(--fig-navy); box-shadow: 0 1px 4px rgba(12, 12, 13, 0.05); }
+.lms-shell:not(.is-learning-shell) input:focus,
+.lms-shell:not(.is-learning-shell) select:focus,
+.lms-shell:not(.is-learning-shell) textarea:focus { background: #fff; box-shadow: 0 0 0 3px rgba(9, 65, 116, 0.18); }
+.lms-shell:not(.is-learning-shell) button { border: 0.3px solid var(--fig-navy); border-radius: 999px; background: rgba(255, 255, 255, 0.85); color: var(--fig-navy); font-weight: 700; }
+.lms-shell:not(.is-learning-shell) button:hover:not(:disabled) { background: #fff; border-color: var(--fig-navy); color: var(--fig-navy); box-shadow: 0 6px 14px rgba(9, 65, 116, 0.15); }
+.lms-shell:not(.is-learning-shell) button.lms-primary { background: var(--fig-gradient); border-color: transparent; color: #fff; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25); }
+.lms-shell:not(.is-learning-shell) button.lms-primary:hover:not(:disabled) { background: linear-gradient(180deg, #34478c, #17688f); color: #fff; }
+.lms-shell:not(.is-learning-shell) > a,
+.lms-shell:not(.is-learning-shell) .lms-heading .lms-actions a,
+.lms-shell:not(.is-learning-shell) .lms-class-meta a,
+.lms-shell:not(.is-learning-shell) .curriculum-links a { border-radius: 999px; border: 0.3px solid var(--fig-navy); color: var(--fig-navy); background: rgba(255, 255, 255, 0.85); font-weight: 700; }
+.lms-shell:not(.is-learning-shell) progress { accent-color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) .lms-status { border-radius: 999px; font-weight: 700; }
+
+/* Admin dashboard / users reuse the same shell; keep the page transparent so the app background shows through */
+@media (max-width: 720px) {
+  .lms-shell:not(.is-learning-shell) .lms-heading,
+  .lms-shell:not(.is-learning-shell) .lms-panel,
+  .lms-shell:not(.is-learning-shell) .lms-class-row { border-radius: 22px; }
+}
