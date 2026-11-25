@@ -109,6 +109,9 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name: fullName || undefined }),
     });
+    if (data.verification_required) {
+      return { verificationRequired: true, emailSent: data.email_sent !== false, message: data.message };
+    }
     saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;

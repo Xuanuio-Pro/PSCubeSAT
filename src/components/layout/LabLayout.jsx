@@ -1,10 +1,11 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, isValidElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CourseSidebar from './CourseSidebar';
 import LabFigView from './LabFigView';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
 import { authorizedFetch, useAuth } from '../../contexts/auth-api';
+import { TelemetryContext } from '../../contexts/telemetry-api';
 import { getAuthToken } from '../../contexts/auth-storage';
 import { downloadFile } from '../editor/project-files';
 import TelemetryControls from '../groundstation/TelemetryControls';
@@ -12,7 +13,10 @@ import PracticeVisualization from '../visualization/PracticeVisualization';
 import { useLmsResource } from '../classes/use-lms-resource';
 import { getLabQuestionSet } from '../../data/lab-questions';
 import { CheckpointCard } from '../lessons/LabCheckpoint';
+import LegacyQuizPanel from '../lessons/LegacyQuizPanel';
 import { isSequentialLesson } from '../lessons/lesson-sequence';
+import PracticeExerciseTabs from '../lessons/PracticeExerciseTabs';
+import { getLessonExercises, resolveLessonAndExercise } from '../lessons/practice-exercises';
 
 // Replace (or add) one lab's entry in the /api/progress list with the server's response.
 const withLabProgress = (list, body) => (list.some(item => item.lab_id === body.lab_id)
@@ -36,12 +40,36 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
   const [progress, setProgress] = useState([]);
   const [completeError, setCompleteError] = useState('');
   const [clock, setClock] = useState(Date.now());
+  const telemetry = useContext(TelemetryContext);
   const lessons = lab.lessons;
-  const lesson = lessons.find(item => item.id === searchParams.get('lesson')) || lessons[0];
+  const { lesson, exercises, activeExercise } = resolveLessonAndExercise(
+    lessons,
+    searchParams.get('lesson') || '',
+    searchParams.get('exercise') || '',
+  );
+  const activeExerciseId = activeExercise?.id || '';
+  const activeExerciseIndex = activeExercise ? Math.max(0, exercises.findIndex(item => item.id === activeExercise.id)) : 0;
   const lessonIndex = lessons.indexOf(lesson);
   const firstPractice = lessons.find(item => item.type === 'practice');
   const videoUrl = lab?.id === 0 && lesson.id === 'overview' ? lab.videoUrl : lesson.videoUrl;
-  const selectLesson = useCallback(id => setSearchParams(current => { const next = new URLSearchParams(current); next.set('lesson', id); return next; }), [setSearchParams]);
+  const selectLesson = useCallback(id => setSearchParams(current => {
+    const next = new URLSearchParams(current);
+    const { lesson: targetLesson } = resolveLessonAndExercise(lessons, id);
+    if (targetLesson && targetLesson.id !== id) {
+      next.set('lesson', targetLesson.id);
+      next.set('exercise', id);
+    } else {
+      next.set('lesson', id);
+      next.delete('exercise');
+    }
+    return next;
+  }), [lessons, setSearchParams]);
+  const selectExercise = useCallback(exId => setSearchParams(current => {
+    const next = new URLSearchParams(current);
+    next.set('lesson', lesson.id);
+    next.set('exercise', exId);
+    return next;
+  }), [lesson.id, setSearchParams]);
   const labProgress = progress.find(item => item.lab_id === lab.id);
   const lessonStates = useMemo(() => labProgress?.lessons || {}, [labProgress]);
   const sequentialLessons = lessons.filter(isSequentialLesson);
@@ -70,16 +98,22 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
   const resetLesson = () => sendLessonAction('reset', 'Không đặt lại được trạng thái bài học.');
   const downloadExample = async () => {
     const token = getAuthToken();
+    const targetId = activeExerciseId || lesson.id;
     setDownloading(true); setDownloadError('');
     try {
-      const response = await authorizedFetch(`/api/curriculum/exercises/${encodeURIComponent(lesson.id)}/source`);
+      const response = await authorizedFetch(`/api/curriculum/exercises/${encodeURIComponent(targetId)}/source`);
       if (!response.ok) throw new Error(response.status === 401 ? 'Vui lòng đăng nhập lại.' : 'Không tải được mã mẫu. Vui lòng thử lại.');
       const code = await response.text();
-      if (token && token === getAuthToken()) downloadFile(`${lesson.id}.ino`, code, 'text/plain');
+      if (token && token === getAuthToken()) downloadFile(`${targetId}.ino`, code, 'text/plain');
     } catch (error) { setDownloadError(error.message); }
     finally { setDownloading(false); }
   };
 
+  useEffect(() => {
+    const nextId = lesson.type === 'practice' && activeExerciseId ? activeExerciseId : '';
+    telemetry?.setActiveExerciseId(nextId);
+    return () => telemetry?.setActiveExerciseId('');
+  }, [telemetry, lesson.type, activeExerciseId]);
   useEffect(() => { if (mainRef.current) mainRef.current.scrollTop = 0; }, [lab?.id, lesson.id]);
   useEffect(() => {
     if (!isAuthenticated || !lab) return;
@@ -105,38 +139,45 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
 
   if (!lab) return <div>Lab không tồn tại</div>;
   const scopedEditor = isValidElement(editorPanel) ? cloneElement(editorPanel, {
-    key: lesson.id, exerciseId: lesson.type === 'practice' ? lesson.id : '', legacyFallback: lesson.id === firstPractice?.id,
+    key: activeExerciseId || lesson.id,
+    exerciseId: lesson.type === 'practice' ? (activeExerciseId || lesson.id) : '',
+    legacyFallback: lesson.id === firstPractice?.id && activeExerciseIndex === 0,
   }) : editorPanel;
 
   // Practice: the requirement and its links sit in "Mục tiêu bài học" at the top; the device bar only appears here.
+  const practiceRepoUrl = activeExercise?.repositoryUrl || lesson.repositoryUrl;
+  const practiceTitleText = activeExercise?.title || lesson.title;
   const practiceGoal = lesson.type === 'practice' ? <div className="fig-goal-practice">
-    <div><h2>Yêu cầu thực hành</h2><p>{lesson.title}.</p><p className="fig-goal-lab">{lab.description}</p></div>
-    <div className="lesson-example-links"><a href={lesson.repositoryUrl} target="_blank" rel="noreferrer">Hướng dẫn trên PTITCube ↗</a><button type="button" className="btn btn-sm btn-outline" disabled={downloading} onClick={downloadExample}>{downloading ? 'Đang tải mã mẫu…' : 'Tải mã mẫu ESP32 (.ino)'}</button>{downloadError && <small role="alert">{downloadError}</small>}</div>
+    <div><h2>Yêu cầu thực hành</h2><p>{practiceTitleText}.</p><p className="fig-goal-lab">{lab.description}</p></div>
+    <div className="lesson-example-links">{practiceRepoUrl && <a href={practiceRepoUrl} target="_blank" rel="noreferrer">Hướng dẫn trên PTITCube ↗</a>}<button type="button" className="btn btn-sm btn-outline" disabled={downloading} onClick={downloadExample}>{downloading ? 'Đang tải mã mẫu…' : 'Tải mã mẫu ESP32 (.ino)'}</button>{downloadError && <small role="alert">{downloadError}</small>}</div>
   </div> : null;
   const lessonBody = lesson.type === 'practice' ? <>
+    <PracticeExerciseTabs exercises={exercises} activeExercise={activeExercise} onSelect={selectExercise} />
     <TelemetryControls />
-    <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${practiceVariant}`} aria-label={`Không gian thực hành ${lesson.exerciseCode}`}>
+    <section className={`lab-workspace lab-practice-workspace lab-practice-workspace--${practiceVariant}`} aria-label={`Không gian thực hành ${activeExerciseId || lesson.id}`}>
       <div className={`lab-practice-panels lab-practice-panels--${practiceVariant}`}>
         <div className="lab-practice-editor">
           <div className="lab-practice-editor-frame">{scopedEditor}</div>
-          {practiceVariant !== 'split' && <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
+          {practiceVariant !== 'split' && <div className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành" key={activeExerciseId || lesson.id}>{practiceActions}</div>}
         </div>
         <div className="lab-practice-visualization"><PracticeVisualization /></div>
       </div>
-      {practiceVariant === 'split' && <div className="lab-practice-actions" aria-label="Thao tác thực hành" key={lesson.id}>{practiceActions}</div>}
+      {practiceVariant === 'split' && <div className="lab-practice-actions" aria-label="Thao tác thực hành" key={activeExerciseId || lesson.id}>{practiceActions}</div>}
     </section>
-  </> : lesson.type === 'quiz' ? (lesson.checkpointId ? <div className="lesson-quiz">
-    {checkpoint ? <CheckpointCard as="div" checkpoint={checkpoint}
-      renderExercise={id => <button type="button" className="lesson-quiz-exercise" onClick={() => selectLesson(id)}><code>{id}</code></button>} />
-      : <p>Chưa có nội dung cho phần câu hỏi này.</p>}
+  </> : lesson.type === 'quiz' ? <div className="lesson-quiz">
+    {checkpoint && <CheckpointCard as="div" checkpoint={checkpoint}
+      renderExercise={id => <button type="button" className="lesson-quiz-exercise" onClick={() => selectLesson(id)}><code>{id}</code></button>} />}
+    <LegacyQuizPanel key={lesson.id} labId={lab.id} lessonId={lesson.id} title={lesson.title} kind="quiz" />
     <p className="lesson-quiz-note">Phần câu hỏi dùng để ôn tập, không tính vào tiến độ và không khóa bài tiếp theo.</p>
-  </div> : <div className="fig-body-text">
-    <h2>{lesson.title}</h2>
-    <p>Câu hỏi kiểm tra của mục này đang được biên soạn. Đáp án chỉ lưu trên máy chủ và sẽ mở khi ngân hàng câu hỏi được duyệt.</p>
-  </div>) : lesson.type === 'summary' ? <div className="fig-body-text">
+  </div> : lesson.type === 'summary' ? <div className="fig-body-text">
     <h2>Kết quả cần đạt</h2><p>{lesson.description}</p>
     <h2>Đối chiếu các bài thực hành</h2><p>Kiểm tra mã biên dịch, lưu lại kết quả quan sát và giải thích cách chương trình đáp ứng yêu cầu của từng bài.</p>
-    <ul className="lesson-summary-list">{lessons.filter(item => item.type === 'practice').map(item => <li key={item.id}><button type="button" onClick={() => selectLesson(item.id)}><code>{item.exerciseCode}</code><span>{item.title}</span></button></li>)}</ul>
+    <ul className="lesson-summary-list">{lessons.filter(item => item.type === 'practice').flatMap(item => {
+      const subList = getLessonExercises(item);
+      return subList.length
+        ? subList.map(ex => <li key={ex.id}><button type="button" onClick={() => selectLesson(ex.id)}><code>{ex.id}</code><span>{ex.description || ex.title}</span></button></li>)
+        : [<li key={item.id}><button type="button" onClick={() => selectLesson(item.id)}><code>{item.id}</code><span>{item.title}</span></button></li>];
+    })}</ul>
     <p>Lưu mã .ino, file Blockly và kết quả kiểm thử để đưa vào báo cáo Lab {lab.id}.</p>
     <h2>Câu hỏi kiểm tra</h2>
     <p>Ôn lại kiến thức sau mỗi phần Doc và mỗi nhóm bài thực hành của Lab {lab.id}, sau đó làm Lab Test cuối Lab.</p>
@@ -146,8 +187,8 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
     </div>
   </div> : lesson.type === 'labtest' ? <div className="fig-body-text lesson-labtest">
     <h2>Lab Test cuối Lab {lab.id}</h2>
-    <p>Mỗi lượt làm bài gồm các câu hỏi do giảng viên soạn và duyệt trong ngân hàng của Lab {lab.id}. Bài làm được chấm ở máy chủ; đáp án không hiển thị trong lúc làm bài.</p>
-    <p className="lab-questions-notice" role="status">Ngân hàng câu hỏi của Lab {lab.id} đang được soạn. Lab Test sẽ mở khi giảng viên xuất bản.</p>
+    <p>Mỗi lượt làm bài rút ngẫu nhiên từ ngân hàng câu hỏi của Lab {lab.id} và chấm trực tiếp ở máy chủ; đáp án và giải thích chỉ hiển thị sau khi nộp bài.</p>
+    <LegacyQuizPanel key={lesson.id} labId={lab.id} lessonId={lesson.id} title={lesson.title} kind="labtest" />
   </div> : lesson.type === 'assembly' ? <div className="fig-body-text">
     <h2>Yêu cầu thực hành</h2>
     <p>{lesson.title}.</p>
@@ -176,7 +217,7 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
         completedCount={completedCount} totalCount={sequentialLessons.length} completionPercent={completionPercent}
         progressNote={lessons.some(item => item.type === 'quiz') ? 'không tính phần câu hỏi' : ''}
         videoNode={<VideoPlayer url={videoUrl} />}
-        docNode={<DocViewer key={lesson.id} docPath={lab.id === 0 && lesson.id === 'document' ? lab.docPath : undefined} content={lesson.reading} />}
+        docNode={<DocViewer key={lesson.id} docPath={lab.id === 0 && lesson.id === 'document' && !lesson.reading ? lab.docPath : undefined} content={lesson.reading} />}
         componentsNode={visualizationPanel}
         bodyNode={lessonBody} goalNode={practiceGoal}
         selectLesson={selectLesson}

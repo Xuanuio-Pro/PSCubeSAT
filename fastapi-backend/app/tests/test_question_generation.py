@@ -32,7 +32,15 @@ class FakeGenerator:
 
 
 class GenerationTests(unittest.IsolatedAsyncioTestCase):
-    asyncSetUp = fixtures.QuizAPITests.asyncSetUp
+    async def asyncSetUp(self):
+        from sqlalchemy import delete
+
+        await fixtures.QuizAPITests.asyncSetUp(self)
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion))
+            await db.commit()
+
+    asyncSetUp_unused = None
     asyncTearDown = fixtures.QuizAPITests.asyncTearDown
     call = fixtures.QuizAPITests.call
     bank = fixtures.QuizAPITests.bank

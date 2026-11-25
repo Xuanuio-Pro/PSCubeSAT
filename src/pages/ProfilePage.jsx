@@ -4,6 +4,8 @@ import { useAuth, request } from '../contexts/auth-api';
 import { LABS } from '../data/lab-metadata';
 import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
 import PasswordInput from '../components/common/PasswordInput';
+import PasswordRequirements from '../components/common/PasswordRequirements';
+import { validatePassword } from '../utils/passwordPolicy';
 
 import DeviceManager from '../components/profile/DeviceManager';
 
@@ -59,8 +61,8 @@ function ChangePasswordForm() {
     e.preventDefault();
     setError('');
     setSuccess(false);
-    if (newPassword.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự');
-    if (new TextEncoder().encode(newPassword).length > 72) return setError('Mật khẩu không được vượt quá 72 byte UTF-8');
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) return setError(passwordError);
     if (newPassword !== confirmPassword) return setError('Mật khẩu xác nhận không khớp');
 
     setSubmitting(true);
@@ -88,11 +90,12 @@ function ChangePasswordForm() {
           </div>
           <div>
             <label htmlFor="profile-new-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
-            <PasswordInput id="profile-new-password" autoComplete="new-password" minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
+            <PasswordInput id="profile-new-password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-requirements profile-password-error' : 'profile-password-requirements'} />
+            <PasswordRequirements id="profile-password-requirements" value={newPassword} />
           </div>
           <div>
             <label htmlFor="profile-confirm-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
-            <PasswordInput id="profile-confirm-password" autoComplete="new-password" minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
+            <PasswordInput id="profile-confirm-password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           {error && <div id="profile-password-error" className="auth-error-text" role="alert">⚠ {error}</div>}
           {success && <div role="status" style={{ color: '#15803d', fontSize: '0.85rem', fontWeight: 600 }}>✓ Đã đổi mật khẩu thành công</div>}

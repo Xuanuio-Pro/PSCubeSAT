@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fixtures from './fixtures/practice-serial.json' with { type: 'json' };
-import { CURRICULUM } from '../src/data/curriculum.js';
+import { CURRICULUM, getExercisesForLab } from '../src/data/curriculum.js';
 import { createPracticeDecoder, emptyActivity, reduceActivity, practiceProfile } from '../src/telemetry/practice.js';
 import { createTelemetryStore, currentReadings, telemetryStatus } from '../src/telemetry/store.js';
 import { adaptSerialLine } from '../src/telemetry/adapters.js';
@@ -11,7 +11,7 @@ import { describeShellResult } from '../src/telemetry/shell-results.js';
 const entry = (text, at = 10000) => ({ text, receivedAt: at, type: 'rx', origin: 'serial' });
 
 test('every curriculum practice has a concrete output fixture and matching visualization profile', () => {
-  const ids = Object.values(CURRICULUM).flatMap(lab => lab.lessons.filter(lesson => lesson.type === 'practice').map(lesson => lesson.id));
+  const ids = Object.keys(CURRICULUM).flatMap(labId => getExercisesForLab(Number(labId)).map(ex => ex.id));
   assert.deepEqual(fixtures.map(fixture => fixture.id).sort(), ids.sort());
 });
 
@@ -210,8 +210,8 @@ test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter an
 });
 test('each exercise shows only the panels its reference sketch has data for', () => {
   const expected = {
-    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [],
-    'Lab1-08': ['lab1Connection'], 'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'],
+    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [], 'Lab1-08': [],
+    'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'], 'Lab1-11': ['lab1Connection'],
     'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
     'Lab3-01a': [], 'Lab3-01b': [], 'Lab3-02': ['shell', 'commands'],
     'Lab3-03': [], 'Lab3-04': ['commands'], 'Lab3-05': ['commands'],
@@ -219,7 +219,7 @@ test('each exercise shows only the panels its reference sketch has data for', ()
     'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
     'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'], 'Lab4-03c': ['gps'],
     'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
-    'Lab4-05': ['environment', 'attitude', 'gps'], 'Lab4-06': ['gps', 'camera'],
+    'Lab4-05': ['gps', 'camera'], 'Lab4-06': ['environment', 'attitude', 'gps'],
     'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
     'Lab5-02a': ['radio', 'groundStation'], 'Lab5-02b': ['radio', 'groundStation'], 'Lab5-03': ['radio', 'groundStation'],
     'Lab7-01': ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system'],
@@ -250,7 +250,7 @@ test('LoRa logs from the raw UART and the COM library become TX/RX/error radio e
 });
 
 test('Lab1 AP preserves its IP through bounded logs and errors clear old connection details', () => {
-  const decode = createPracticeDecoder('Lab1-09_WiFi_AP_Mode');
+  const decode = createPracticeDecoder('Lab1-10_WiFi_AP_Mode');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('Configuring access point...AP IP address:'); feed('192.168.4.1');
@@ -266,7 +266,7 @@ test('Lab1 AP preserves its IP through bounded logs and errors clear old connect
 });
 
 test('Lab1 web status requires valid device IP and explicit server startup; reconnect cannot reuse old IP', () => {
-  const decode = createPracticeDecoder('Lab1-10_Web_Server_LED');
+  const decode = createPracticeDecoder('Lab1-11_Web_Server_LED');
   let activity = emptyActivity();
   const feed = line => { for (const event of decode(entry(line)).events) activity = reduceActivity(activity, event); };
   feed('IP address:'); feed('999.168.1.2'); feed('0.0.0.0');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { Notice } from '../components/classes/LmsCommon';
@@ -11,8 +11,20 @@ const fields = {
   video: [['url', 'URL video (HTTPS)', 'url'], ['watch_ratio', 'Tỷ lệ xem cần đạt (0–1)', 'number'], ['duration_seconds', 'Thời lượng video (giây)', 'number'], ['tracking_mode', 'Cách ghi nhận video', 'tracking'], ['confirmation_allowed', 'Cho phép SV xác nhận đã xem', 'boolean']],
   document: [['markdown', 'Nội dung tài liệu (Markdown)', 'textarea']],
   practice: [['instructions', 'Hướng dẫn thực hành', 'textarea'], ['rubric', 'Tiêu chí chấm', 'textarea'], ['evidence', 'Minh chứng đầu ra', 'textarea'], ['board', 'Bo mạch', 'board']],
-  quiz: [['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'], ['max_attempts', 'Số lượt làm tối đa', 'number'], ['pass_score', 'Số câu đúng để đạt', 'number']],
-  labtest: [['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'], ['max_attempts', 'Số lượt làm tối đa', 'number'], ['pass_score', 'Số câu đúng tối thiểu để đạt', 'number']],
+  quiz: [
+    ['num_questions', 'Số câu rút mỗi lượt', 'number'],
+    ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
+    ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
+    ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
+    ['pass_score', 'Số câu đúng để đạt', 'number'],
+  ],
+  labtest: [
+    ['num_questions', 'Số câu rút mỗi lượt', 'number'],
+    ['time_limit_minutes', 'Thời gian làm bài (phút)', 'number'],
+    ['max_attempts', 'Số lượt làm mỗi đợt', 'attempts'],
+    ['cooldown_minutes', 'Thời gian chờ khi hết lượt (phút)', 'cooldown'],
+    ['pass_score', 'Số câu đúng tối thiểu để đạt', 'number'],
+  ],
 };
 
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
@@ -26,7 +38,7 @@ function fileToBase64(file) {
   });
 }
 
-function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }) {
+function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChange, refreshKey, disabled }) {
   const [importing, setImporting] = useState(false);
   const [importNotice, setImportNotice] = useState({});
   const { ask: askConfirm, dialog: confirmDialog } = useConfirm();
@@ -69,8 +81,13 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
     if (value === '') delete params[key]; else params[key] = value;
     onChange({ ...lesson, params });
   }
+  const bankReadyOrAuto = Boolean(lesson.content.bank_ready || lesson.content.bank_auto_publishable);
   const todos = (lesson.content.todos || []).filter(
-    todo => !(lesson.type === 'labtest' && lesson.content.bank_ready && todo.includes('ngân hàng'))
+    todo => !(
+      (lesson.type === 'labtest' || lesson.type === 'quiz')
+      && bankReadyOrAuto
+      && (todo.includes('ngân hàng') || todo.includes('câu hỏi kiểm tra'))
+    )
   );
   return <details className="curriculum-lesson" open={lesson.type === 'labtest'}>
     <summary><span><small>{labels[lesson.type]}</small><strong>{lesson.title}</strong><code>{lesson.id}</code></span><span>{lesson.enabled ? lesson.required ? 'Bắt buộc' : 'Tùy chọn' : 'Đã tắt'}</span></summary>
@@ -82,11 +99,35 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
         <label>Thứ tự<input type="number" min={0} max={1000} value={lesson.order_no} onChange={event => onChange({ ...lesson, order_no: Number(event.target.value) })} /></label>
       </div>
       {todos.length > 0 && <div className="curriculum-todo">{todos.map(todo => <p key={todo}>{todo}</p>)}</div>}
-      {lesson.type === 'labtest' && lesson.content.bank_ready && (
-        <p className="lesson-achieved">✓ Ngân hàng câu hỏi của Lab {labId} đã được duyệt và xuất bản.</p>
+      {lesson.content?.description && <p className="lms-secondary">{lesson.content.description}</p>}
+      {(lesson.content?.exercises?.length || 0) > 1 && (
+        <ul className="curriculum-subexercises" aria-label="Các bài thực hành con">
+          {lesson.content.exercises.map(ex => (
+            <li key={ex.id}><code>{ex.id}</code><span> — {ex.description || ex.title}</span></li>
+          ))}
+        </ul>
+      )}
+      {(lesson.type === 'labtest' || lesson.type === 'quiz') && (
+        lesson.content.bank_ready ? (
+          <p className="lesson-achieved">✓ Ngân hàng câu hỏi đã được duyệt và xuất bản.</p>
+        ) : lesson.content.bank_auto_publishable ? (
+          <p className="lesson-achieved">
+            ✓ Đã có {lesson.content.bank_approved_count} câu hỏi sẵn sàng (sẽ tự động xuất bản khi xuất bản cấu hình lớp).
+          </p>
+        ) : (lesson.content.bank_draft_count || 0) > 0 ? (
+          <p className="lms-notice lms-error" role="status">
+            Đang có {lesson.content.bank_draft_count} câu hỏi nháp chưa duyệt. Hãy duyệt hoặc xóa câu nháp trước khi xuất bản lớp.
+          </p>
+        ) : null
       )}
       {lesson.type === 'video' && <p className="lms-secondary">Video YouTube/Vimeo không đo được đoạn xem: chọn cách ghi nhận "SV xác nhận" và bật cho phép xác nhận. Video .mp4/.webm dùng "Đo đoạn xem" và cần nhập thời lượng.</p>}
-      {lesson.type === 'quiz' && <p className="lms-secondary">Soạn và xuất bản câu hỏi ở khung bên dưới trước, sau đó mới bật bài này. Sinh viên chỉ hoàn thành bài khi đạt điểm.</p>}
+      {lesson.type === 'quiz' && (
+        <p className="lms-secondary">
+          {bankReadyOrAuto
+            ? 'Lớp mới đã nạp sẵn 3 câu hỏi mẫu đã duyệt; giảng viên có thể dùng luôn hoặc thêm/bớt câu hỏi ở khung bên dưới. Sinh viên chỉ hoàn thành bài khi đạt điểm.'
+            : 'Soạn hoặc nạp câu hỏi mẫu ở khung bên dưới trước khi bật bài này. Sinh viên chỉ hoàn thành bài khi đạt điểm.'}
+        </p>
+      )}
       {lesson.type === 'document' && <div className="lms-import-box">
         <label>Nhập từ tệp Word (.docx) hoặc PDF
           <input type="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={importing} onChange={importDocument} />
@@ -95,15 +136,67 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
         <Notice {...importNotice} />
       </div>}
       <div className="lms-form-grid">{[...fields[lesson.type], ['estimated_minutes', 'Thời lượng dự kiến (phút)', 'number']].map(([key, label, kind]) => {
-        const value = lesson.params[key] ?? lesson.content[key] ?? '';
+        const hasParam = Object.prototype.hasOwnProperty.call(lesson.params, key);
+        const value = hasParam ? lesson.params[key] : (lesson.content[key] ?? '');
+        if (kind === 'attempts') {
+          const isUnlimited = value === null;
+          const fallbackAttempts = lesson.type === 'labtest' ? 5 : 3;
+          return <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>{label}</span>
+            <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                checked={isUnlimited}
+                onChange={event => {
+                  const nextParams = { ...lesson.params };
+                  if (event.target.checked) {
+                    nextParams.max_attempts = null;
+                    nextParams.cooldown_minutes = 0;
+                  } else {
+                    nextParams.max_attempts = fallbackAttempts;
+                  }
+                  onChange({ ...lesson, params: nextParams });
+                }}
+              />
+              <span>Không giới hạn lượt</span>
+            </label>
+            {!isUnlimited && (
+              <input
+                type="number"
+                aria-label={label}
+                min={1}
+                max={100}
+                step="1"
+                value={value === '' ? '' : value}
+                onChange={event => param(key, event.target.value === '' ? '' : Number(event.target.value))}
+              />
+            )}
+          </div>;
+        }
+        if (kind === 'cooldown') {
+          const effectiveAttempts = Object.prototype.hasOwnProperty.call(lesson.params, 'max_attempts')
+            ? lesson.params.max_attempts
+            : lesson.content.max_attempts;
+          const isUnlimited = effectiveAttempts === null;
+          return <label key={key}>{label}
+            <input
+              type="number"
+              min={0}
+              max={1440}
+              step="1"
+              disabled={isUnlimited}
+              value={isUnlimited ? 0 : (value === '' ? '' : value)}
+              onChange={event => param(key, event.target.value === '' ? '' : Number(event.target.value))}
+            />
+            <small className="lms-secondary">0 = khóa hẳn khi hết lượt; mặc định Lab Test là 30 phút.</small>
+          </label>;
+        }
         const numberBounds = key === 'watch_ratio'
           ? { min: 0, max: 1, step: '0.05' }
-          : key === 'pass_score'
+          : key === 'pass_score' || key === 'num_questions'
           ? { min: 1, max: 200, step: '1' }
           : key === 'time_limit_minutes'
           ? { min: 1, max: 180, step: '1' }
-          : key === 'max_attempts'
-          ? { min: 1, max: 100, step: '1' }
           : { min: 0, max: 7200, step: '1' };
         return <label key={key} className={kind === 'textarea' ? 'lms-wide' : ''}>{label}
           {kind === 'boolean' ? <input type="checkbox" checked={!!value} onChange={event => param(key, event.target.checked)} />
@@ -116,7 +209,14 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, disabled }
     </fieldset>
     {(lesson.type === 'labtest' || lesson.type === 'quiz') && (
       <div className="lms-import-box" style={{ marginTop: '16px' }}>
-        <InlineQuestionBank classId={classId} labId={labId} lessonId={lesson.type === 'quiz' ? lesson.id : null} onPublished={onReload} />
+        <InlineQuestionBank
+          classId={classId}
+          labId={labId}
+          lessonId={lesson.type === 'quiz' ? lesson.id : null}
+          onPublished={onReload}
+          onBankChange={onBankChange}
+          refreshKey={refreshKey}
+        />
       </div>
     )}
     {confirmDialog}
@@ -130,6 +230,49 @@ function Editor({ initial, classId, onReload }) {
   const [notice, setNotice] = useState({});
   const [errors, setErrors] = useState([]);
   const [impact, setImpact] = useState(null);
+  const [bankRefreshKey, setBankRefreshKey] = useState(0);
+  const { ask: askConfirm, dialog: confirmDialog } = useConfirm();
+  const handleBankChange = useCallback((targetLessonId, bank) => {
+    if (!bank || !targetLessonId) return;
+    const approvedCount = typeof bank.approved_count === 'number'
+      ? bank.approved_count
+      : (bank.questions || []).filter(q => q.status === 'approved').length;
+    const draftCount = (bank.questions || []).filter(q => q.status === 'draft').length;
+    const ready = bank.status === 'published';
+    const autoPublishable = bank.status === 'draft' && approvedCount >= 1 && draftCount === 0;
+    setConfig(current => {
+      let changed = false;
+      const labs = current.labs.map(lab => ({
+        ...lab,
+        lessons: lab.lessons.map(item => {
+          if (item.id !== targetLessonId) return item;
+          const c = item.content;
+          if (
+            c.bank_ready === ready
+            && c.bank_status === bank.status
+            && c.bank_approved_count === approvedCount
+            && c.bank_draft_count === draftCount
+            && c.bank_auto_publishable === autoPublishable
+          ) {
+            return item;
+          }
+          changed = true;
+          return {
+            ...item,
+            content: {
+              ...c,
+              bank_ready: ready,
+              bank_status: bank.status,
+              bank_approved_count: approvedCount,
+              bank_draft_count: draftCount,
+              bank_auto_publishable: autoPublishable,
+            },
+          };
+        }),
+      }));
+      return changed ? { ...current, labs } : current;
+    });
+  }, []);
   function updateLab(id, callback) {
     setConfig(current => ({ ...current, labs: current.labs.map(lab => lab.id === id ? callback(lab) : lab) }));
     setDirty(true); setImpact(null); setErrors([]); setNotice({});
@@ -155,19 +298,83 @@ function Editor({ initial, classId, onReload }) {
     try {
       const result = await request(`/api/classes/${classId}/publish?dry_run=${dryRun}`, { method: 'POST', body: JSON.stringify({ expected_version: config.version }) });
       if (dryRun) setImpact(result);
-      else { setImpact(null); setNotice({ message: `Đã xuất bản cấu hình cho ${result.affected_students} sinh viên.` }); setConfig(current => ({ ...current, status: 'published' })); }
+      else {
+        const autoSet = new Set(result.auto_publish_banks || []);
+        setImpact(null);
+        setNotice({
+          message: autoSet.size > 0
+            ? `Đã xuất bản cấu hình cho ${result.affected_students} sinh viên (kèm ${autoSet.size} ngân hàng câu hỏi).`
+            : `Đã xuất bản cấu hình cho ${result.affected_students} sinh viên.`,
+        });
+        setConfig(current => ({
+          ...current,
+          status: 'published',
+          labs: current.labs.map(lab => ({
+            ...lab,
+            lessons: lab.lessons.map(item => (
+              autoSet.has(item.id)
+                ? {
+                    ...item,
+                    content: {
+                      ...item.content,
+                      bank_ready: true,
+                      bank_status: 'published',
+                      bank_auto_publishable: false,
+                    },
+                  }
+                : item
+            )),
+          })),
+        }));
+        if (autoSet.size > 0) setBankRefreshKey(value => value + 1);
+      }
     } catch (failure) { setNotice({ error: failure.message }); setErrors(failure.details?.errors || []); setImpact(null); }
     finally { setBusy(false); }
   }
+  async function upgradeCourseVersion() {
+    const agreed = await askConfirm({
+      title: 'Cập nhật lên giáo trình mới nhất?',
+      message: 'Hệ thống sẽ tạo phiên bản mới cho lớp trên giáo trình mới nhất. Toàn bộ ngân hàng câu hỏi và tiến độ học của sinh viên được giữ nguyên.',
+      confirmLabel: 'Cập nhật ngay',
+      tone: 'info',
+    });
+    if (!agreed) return;
+    setBusy(true); setNotice({}); setErrors([]); setImpact(null);
+    try {
+      const next = await request(`/api/classes/${classId}/upgrade-course-version`, { method: 'POST' });
+      setConfig(next);
+      setDirty(false);
+      setBankRefreshKey(value => value + 1);
+      setNotice({
+        message: next.upgrade?.upgraded
+          ? 'Đã cập nhật lớp lên phiên bản giáo trình mới nhất.'
+          : 'Lớp đã dùng phiên bản giáo trình mới nhất.',
+      });
+    } catch (failure) {
+      setNotice({ error: failure.message });
+      setErrors(failure.details?.errors || []);
+    } finally {
+      setBusy(false);
+    }
+  }
   return <>
+    {confirmDialog}
     <header className="lms-heading"><div><h1>Cấu hình chương trình</h1><p>Bản {config.version || 'mới'} · {config.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}{dirty ? ' · Có thay đổi chưa lưu' : ''}</p></div>
       {dirty ? <span>Lưu nháp trước khi xem thử.</span> : <Link to={`/classes/${classId}/learn?preview=true`}>Xem như sinh viên</Link>}</header>
     <p>Bật hoặc tắt bài, chọn yêu cầu hoàn thành và bổ sung học liệu cho lớp. Bài bị tắt không nằm trong chương trình của sinh viên.</p>
+    {config.course_upgrade_available && (
+      <div className="lms-notice" role="status" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <span>Lớp đang dùng phiên bản giáo trình cũ ({config.course_version_id}) nên có thể thiếu bài mới so với các lớp khác.</span>
+        <button type="button" className="lms-primary" disabled={busy} onClick={upgradeCourseVersion}>
+          Cập nhật lên giáo trình mới nhất
+        </button>
+      </div>
+    )}
     <Notice {...notice} />
     <div className="lms-actions"><span>Mẫu lộ trình:</span><button disabled={busy} onClick={() => applyPath('branching')}>Phân nhánh CubeSAT</button><button disabled={busy} onClick={() => applyPath('sequential')}>Tuần tự Lab 0–8</button></div>
     {errors.length > 0 && <section className="lms-notice lms-error" role="alert"><h2>Các mục cần sửa</h2><ul>{errors.map((error, i) => <li key={i}>{error.lab_id !== undefined ? `Lab ${error.lab_id}: ` : ''}{error.lesson_id ? `${error.lesson_id}: ` : ''}{error.message}</li>)}</ul><button onClick={onReload}>Tải lại cấu hình từ server</button></section>}
     <div className="curriculum-toolbar"><button disabled={busy || !dirty && config.version > 0} onClick={save} className="lms-primary">{busy ? 'Đang xử lý…' : 'Lưu nháp'}</button><button disabled={busy || dirty || config.status !== 'draft' || !config.version} onClick={() => publish(true)}>Kiểm tra trước xuất bản</button></div>
-    {impact && <section className="lms-confirm"><p>Cấu hình hợp lệ. <strong>{impact.affected_students} sinh viên</strong> sẽ nhận bản {impact.version}. Bản đã xuất bản được giữ trong lịch sử.</p><div className="lms-actions"><button disabled={busy} onClick={() => publish(false)}>Xác nhận xuất bản</button><button disabled={busy} onClick={() => setImpact(null)}>Hủy</button></div></section>}
+    {impact && <section className="lms-confirm"><p>Cấu hình hợp lệ. <strong>{impact.affected_students} sinh viên</strong> sẽ nhận bản {impact.version}. Bản đã xuất bản được giữ trong lịch sử.{impact.auto_publish_banks?.length > 0 && ` Đồng thời tự động xuất bản ${impact.auto_publish_banks.length} ngân hàng câu hỏi đang ở bản nháp.`}</p><div className="lms-actions"><button disabled={busy} onClick={() => publish(false)}>Xác nhận xuất bản</button><button disabled={busy} onClick={() => setImpact(null)}>Hủy</button></div></section>}
     {config.labs.map(lab => <details key={lab.id} className="lms-panel curriculum-lab" open={lab.id === 2}>
       <summary><h2>Lab {lab.id}: {lab.title}</h2><span>{!lab.enabled && 'Lab đã tắt · '}{lab.lessons.filter(item => item.enabled).length}/{lab.lessons.length} bài đang bật</span></summary>
       <p><Link to={`/classes/${classId}/labs/${lab.id}/questions`}>Soạn ngân hàng và quản lý Lab Test</Link></p><p>{lab.objectives}</p><p><strong>Nhóm nội dung:</strong> {lab.groups.join(' → ') || 'Tổng quan'}</p><p><strong>Minh chứng đầu ra:</strong> {lab.evidence}</p>
@@ -200,7 +407,7 @@ function Editor({ initial, classId, onReload }) {
           </div>
         </div>
       </fieldset>
-      {lab.lessons.map(lesson => <LessonSettings key={lesson.id} lesson={lesson} labId={lab.id} classId={classId} onReload={onReload} disabled={busy} onChange={next => updateLab(lab.id, value => ({ ...value, lessons: value.lessons.map(item => item.id === next.id ? next : item) }))} />)}
+      {lab.lessons.map(lesson => <LessonSettings key={lesson.id} lesson={lesson} labId={lab.id} classId={classId} onReload={onReload} onBankChange={handleBankChange} refreshKey={bankRefreshKey} disabled={busy} onChange={next => updateLab(lab.id, value => ({ ...value, lessons: value.lessons.map(item => item.id === next.id ? next : item) }))} />)}
     </details>)}
   </>;
 }

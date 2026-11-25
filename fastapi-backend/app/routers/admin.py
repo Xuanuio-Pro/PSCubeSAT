@@ -20,6 +20,7 @@ from app.schemas.classes import (
 )
 from app.services.auth import AuthService
 from app.services.classes import (
+    delete_user,
     paginate,
     reset_user_password,
     search_filter,
@@ -118,6 +119,16 @@ async def patch_user_by_id(
     db: AsyncSession = Depends(get_db),
 ):
     return await update_user(db, actor, user_id, request.model_dump(exclude_unset=True))
+
+
+@router.delete("/users/{user_id}", status_code=200)
+async def remove_user(
+    user_id: int,
+    actor: User = Depends(admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Xóa mềm tài khoản: giữ dữ liệu học tập, chặn đăng nhập và gỡ khỏi mọi lớp."""
+    return await delete_user(db, actor, user_id)
 
 
 @router.post("/users/{user_id}/reset-password", response_model=PasswordResetResponse)

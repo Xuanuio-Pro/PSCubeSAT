@@ -18,5 +18,7 @@ rồi `npm run curriculum:seed` (hoặc khởi động lại backend để seed 
 
 - File `quiz-*.json` và `labtest-0.json` **chỉ nằm ở server**. Exporter không đọc chúng, nên đáp án
   không bao giờ vào `seed.json`, bundle frontend hay response khi đang làm bài (AGENTS.md, quy tắc 5).
-- Bộ nạp câu hỏi từ các file này vào cơ sở dữ liệu chưa được viết; hiện chúng chỉ là chỗ dự trữ.
-- Lab Test cần đúng 20 câu đã duyệt mới xuất bản được (mỗi lượt rút 5 câu).
+- Khi khởi tạo ngân hàng cho lớp mới (hoặc bấm "Nạp câu hỏi mẫu"), backend tìm câu mẫu theo thứ tự:
+  `lab{N}/{lesson_id}.csv|json` → `lab{N}/quiz.csv|json` / `labtest.csv|json` → `default-question-bank.csv`
+  (3 câu xoay vòng cho mỗi quiz, 10 câu cho Lab Test). File JSON rỗng sẽ tự rơi xuống file mặc định.
+- Ngưỡng mặc định: quiz 3 câu (đạt 2/3, 10 phút), Lab Test 10 câu (đạt 8/10, 15 phút); có thể chỉnh trên giao diện lớp.

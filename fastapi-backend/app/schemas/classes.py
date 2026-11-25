@@ -11,7 +11,7 @@ class InputModel(BaseModel):
 
 
 class AdminUserPatch(InputModel):
-    role: Literal["admin", "teacher", "user"] | None = None
+    role: Literal["teacher", "user"] | None = None  # admins are never granted through the API
     status: AccountStatus | None = None
 
     @model_validator(mode="after")

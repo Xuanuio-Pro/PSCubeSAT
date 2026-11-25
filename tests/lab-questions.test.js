@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LAB_QUESTION_SETS, getLabQuestionSet, labQuestionsUrl } from '../src/data/lab-questions.js';
-import { CURRICULUM } from '../src/data/curriculum.js';
+import { CURRICULUM, getExercisesForLab } from '../src/data/curriculum.js';
 
-const practiceIds = labId => (CURRICULUM[labId]?.lessons || []).filter(item => item.type === 'practice').map(item => item.id);
+const practiceIds = labId => getExercisesForLab(labId).map(item => item.id);
 
 test('every lab 0-8 has an end-of-lab question outline with doc and practice checkpoints', () => {
   for (let labId = 0; labId <= 8; labId++) {

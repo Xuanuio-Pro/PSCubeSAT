@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { Notice } from '../components/classes/LmsCommon';
@@ -228,6 +228,17 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
     }
   }
 
+  async function loadSamples() {
+    const result = await mutate(url + '/load-samples', { expected_revision: bank.revision });
+    if (result) {
+      setNotice({
+        message: result.added_count > 0
+          ? `Đã nạp ${result.added_count} câu hỏi mẫu đã duyệt vào ngân hàng.`
+          : 'Các câu hỏi mẫu đã có sẵn trong ngân hàng.',
+      });
+    }
+  }
+
   async function importFile(event) {
     event.preventDefault();
     if (!questionFile || questionFile.size > 1000000) {
@@ -265,6 +276,11 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
     <Notice {...notice} />
     <div className="lms-actions">
       <button type="button" disabled={busy} onClick={reload}>Tải lại ngân hàng</button>
+      {draft && (
+        <button type="button" disabled={busy} onClick={loadSamples}>
+          Nạp câu hỏi mẫu
+        </button>
+      )}
       {draft && bank.questions.some(q => q.status === 'draft') && (
         <button type="button" disabled={busy} onClick={approveAllDrafts}>
           Duyệt tất cả câu nháp ({bank.questions.filter(q => q.status === 'draft').length})
@@ -276,7 +292,7 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
         </button>
       )}
     </div>
-    <p>Mỗi lượt làm bài gồm toàn bộ các câu đã duyệt (xáo trộn thứ tự), giảng viên thêm bao nhiêu câu thì sinh viên làm bấy nhiêu câu; cần ít nhất 1 câu đã duyệt. Hỗ trợ 4 dạng câu hỏi theo đề mẫu (1 đáp án, nhiều đáp án, Đúng/Sai 4 ý a-b-c-d, trả lời ngắn).</p>
+    <p>Mỗi lượt làm bài rút ngẫu nhiên số câu theo cấu hình (mặc định 5 câu cho Quiz, 20 câu cho Lab Test; nếu ngân hàng ít hơn thì lấy hết), cần ít nhất 1 câu đã duyệt. Hỗ trợ 4 dạng câu hỏi theo đề mẫu (1 đáp án, nhiều đáp án, Đúng/Sai 4 ý a-b-c-d, trả lời ngắn).</p>
     {!draft && <form className="lms-panel" onSubmit={async event => { event.preventDefault(); const result = await mutate(url + '/fork', { expected_revision: bank.revision, reason, retire_question_id: retire || null }); if (result) select(null); }}>
       <h2>Tạo phiên bản sửa</h2><p>Lượt đang làm và kết quả cũ giữ nguyên. Thu hồi câu sẽ tạm ngừng cấp đề mới cho đến khi xuất bản bản sửa.</p>
       <div className="lms-form-grid"><label>Câu cần thu hồi (nếu có)<select value={retire} onChange={event => setRetire(event.target.value)}><option value="">Chỉ tạo phiên bản mới</option>{bank.questions.map(q => <option key={q.id} value={q.question_id}>{q.prompt.slice(0, 100)}</option>)}</select></label><label>Lý do<textarea required minLength={5} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} /></label></div><button disabled={busy}>Tạo bản sửa</button>
@@ -435,12 +451,52 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
 }
 
 function PolicyForm({ initial, busy, onSave }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState({ cooldown_minutes: 0, ...initial });
   const [close, setClose] = useState(initial.closes_at ? new Date(Date.parse(initial.closes_at) - new Date(initial.closes_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
+  const isUnlimited = value.max_attempts === null;
   return <details className="lms-panel"><summary><h2>Chính sách bài test</h2></summary><p>Áp dụng cho lượt mới. Tham số riêng trong cấu hình chương trình đã xuất bản được ưu tiên. Các lượt đang thi giữ chính sách ban đầu.</p>
-    <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
-      {[['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200], ['max_attempts', 'Số lượt tối đa', 100]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key]} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
-      <label>Công bố đáp án<select value={value.reveal_policy} onChange={event => setValue(current => ({ ...current, reveal_policy: event.target.value }))}><option value="after_pass">Khi đạt điểm tối thiểu (hoặc hết lượt)</option><option value="after_attempts">Sau khi hết lượt</option><option value="after_close">Sau khi đóng bài test</option><option value="immediate">Ngay sau nộp (không thi lại sau khi xem)</option><option value="never">Không công bố</option></select></label>
+    <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, cooldown_minutes: isUnlimited ? 0 : Number(fields.cooldown_minutes || 0), expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
+      {[['num_questions', 'Số câu rút mỗi lượt', 200], ['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key] ?? ''} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>Số lượt làm mỗi đợt</span>
+        <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+          <input
+            type="checkbox"
+            checked={isUnlimited}
+            onChange={event => setValue(current => ({
+              ...current,
+              max_attempts: event.target.checked ? null : 5,
+              cooldown_minutes: event.target.checked ? 0 : (current.cooldown_minutes ?? 30),
+            }))}
+          />
+          <span>Không giới hạn lượt</span>
+        </label>
+        {!isUnlimited && (
+          <input
+            type="number"
+            aria-label="Số lượt làm mỗi đợt"
+            min={1}
+            max={100}
+            required
+            value={value.max_attempts ?? 5}
+            onChange={event => setValue(current => ({ ...current, max_attempts: Number(event.target.value) }))}
+          />
+        )}
+      </div>
+      <label>
+        Thời gian chờ khi hết lượt (phút)
+        <input
+          type="number"
+          min={0}
+          max={1440}
+          required
+          disabled={isUnlimited}
+          value={isUnlimited ? 0 : (value.cooldown_minutes ?? 0)}
+          onChange={event => setValue(current => ({ ...current, cooldown_minutes: Number(event.target.value) }))}
+        />
+        <small className="lms-secondary">0 = khóa hẳn khi hết lượt; &gt; 0 = mở đợt mới sau thời gian chờ.</small>
+      </label>
+      <label>Công bố đáp án<select value={value.reveal_policy} onChange={event => setValue(current => ({ ...current, reveal_policy: event.target.value }))}><option value="after_pass">Khi đạt điểm tối thiểu (hoặc khóa hẳn khi hết lượt)</option><option value="after_attempts">Sau khi hết lượt (nếu không có thời gian chờ)</option><option value="after_close">Sau khi đóng bài test</option><option value="immediate">Ngay sau nộp (không thi lại sau khi xem)</option><option value="never">Không công bố</option></select></label>
       <label>Đóng bài test (giờ địa phương)<input type="datetime-local" value={close} required={value.reveal_policy === 'after_close'} onChange={event => setClose(event.target.value)} /></label>
     </div><button disabled={busy}>Lưu chính sách</button></form></details>;
 }
@@ -481,18 +537,62 @@ function TeacherResults({ base }) {
     <section className="lms-panel"><h2>Tỷ lệ đúng theo phiên bản câu</h2><button onClick={stats.reload}>Cập nhật thống kê</button><Notice error={stats.error} />{!stats.data?.length ? <p>Chưa có lượt đã chấm.</p> : <div className="lms-table-wrap"><table><caption className="sr-only">Tỷ lệ trả lời đúng theo từng phiên bản câu hỏi</caption><thead><tr><th>Câu hỏi</th><th>Lượt đúng / Tổng</th><th>Tỷ lệ đúng</th></tr></thead><tbody>{stats.data.map(row => <tr key={row.question_version_id}><td>{row.prompt}<small> {row.question_version_id.slice(0, 8)}</small></td><td>{row.correct}/{row.total}</td><td>{Math.round(row.correct_ratio * 100)}%</td></tr>)}</tbody></table></div>}</section></>;
 }
 
-export function InlineQuestionBank({ classId, labId, lessonId = null, onPublished = null }) {
+export function InlineQuestionBank({
+  classId,
+  labId,
+  lessonId = null,
+  onPublished = null,
+  onBankChange = null,
+  refreshKey = 0,
+}) {
   const url = bankBase(classId, labId, lessonId) + '/question-bank';
   const { data: bank, loading, error, reload } = useLmsResource(url);
   const [questionFile, setQuestionFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState({});
+  const onBankChangeRef = useRef(onBankChange);
+  onBankChangeRef.current = onBankChange;
+  const prevRefreshKey = useRef(refreshKey);
+
+  useEffect(() => {
+    if (bank && onBankChangeRef.current) {
+      onBankChangeRef.current(lessonId || `labtest-${labId}`, bank);
+    }
+  }, [bank, labId, lessonId]);
+
+  useEffect(() => {
+    if (refreshKey !== prevRefreshKey.current) {
+      prevRefreshKey.current = refreshKey;
+      reload();
+    }
+  }, [refreshKey, reload]);
 
   if (loading) return <p role="status">Đang tải ngân hàng câu hỏi {lessonId ? lessonId : `Lab ${labId}`}…</p>;
   if (error) return <><Notice error={error} /><button type="button" onClick={reload}>Thử lại</button></>;
 
   const draft = bank.status === 'draft';
   const draftCount = bank.questions.filter(q => q.status === 'draft').length;
+
+  async function loadSamples() {
+    setBusy(true);
+    setNotice({});
+    try {
+      const result = await request(url + '/load-samples', {
+        method: 'POST',
+        body: JSON.stringify({ expected_revision: bank.revision }),
+      });
+      setNotice({
+        message: result.added_count > 0
+          ? `Đã nạp ${result.added_count} câu hỏi mẫu đã duyệt vào ngân hàng.`
+          : 'Các câu hỏi mẫu đã có sẵn trong ngân hàng.',
+      });
+      reload();
+    } catch (err) {
+      setNotice({ error: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleImport(event) {
     event.preventDefault();
@@ -568,6 +668,7 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
           <strong>Thêm file câu hỏi & đáp án ({lessonId ? lessonId : `Lab Test ${labId}`})</strong>
           <span className="lms-secondary">
             Phiên bản {bank.version} · {labels[bank.status]} · Đã duyệt <strong>{bank.approved_count}</strong> câu (tổng {bank.questions.length} câu)
+            {draft && bank.approved_count > 0 && draftCount === 0 && ' · Sẵn sàng tự xuất bản cùng cấu hình lớp'}
           </span>
           <span className="lms-secondary">
             <strong>Mẫu file (đã gồm đáp án đúng và giải thích từng đáp án):</strong>{' '}
@@ -592,13 +693,16 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
             </label>
             <button className="lms-primary" disabled={busy || !questionFile}>Thêm file câu hỏi</button>
           </form>
-          {(draftCount > 0 || bankReady(bank)) && (
-            <div className="lms-actions" style={{ marginTop: '10px' }}>
-              {draftCount > 0 && (
-                <button type="button" disabled={busy} onClick={approveAll}>
-                  Duyệt tất cả câu nháp ({draftCount})
-                </button>
-              )}
+          <div className="lms-actions" style={{ marginTop: '10px' }}>
+            <button type="button" disabled={busy} onClick={loadSamples}>
+              Nạp câu hỏi mẫu
+            </button>
+            {draftCount > 0 && (
+              <button type="button" disabled={busy} onClick={approveAll}>
+                Duyệt tất cả câu nháp ({draftCount})
+              </button>
+            )}
+            {(draftCount > 0 || bankReady(bank)) && (
               <button
                 type="button"
                 className="lms-primary"
@@ -607,8 +711,8 @@ export function InlineQuestionBank({ classId, labId, lessonId = null, onPublishe
               >
                 Xuất bản {bank.approved_count} câu đã duyệt
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </>
       ) : (
         <p className="lms-secondary" style={{ marginTop: '8px' }}>

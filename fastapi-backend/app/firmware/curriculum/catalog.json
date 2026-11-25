@@ -54,8 +54,8 @@
       }
     },
     {
-      "id": "Lab1-03_Button",
-      "file": "Lab1-03_Button.cpp",
+      "id": "Lab1-04_Button",
+      "file": "Lab1-04_Button.cpp",
       "upstream_commit": "068216b917ca67b8de8e75a1f2e0b14e58098006",
       "upstream_url": "https://github.com/PTITCube/Lab1-03_Button/blob/068216b917ca67b8de8e75a1f2e0b14e58098006/src/main.cpp",
       "board": "esp32",
@@ -71,8 +71,8 @@
       }
     },
     {
-      "id": "Lab1-04_LED_Button",
-      "file": "Lab1-04_LED_Button.cpp",
+      "id": "Lab1-05_LED_Button",
+      "file": "Lab1-05_LED_Button.cpp",
       "upstream_commit": "9e468ea820a1ecb705c5eea451fe26fe368aab5c",
       "upstream_url": "https://github.com/PTITCube/Lab1-04_LED_Button/blob/9e468ea820a1ecb705c5eea451fe26fe368aab5c/src/main.cpp",
       "board": "esp32",
@@ -88,8 +88,8 @@
       }
     },
     {
-      "id": "Lab1-05_7_Segment_LED",
-      "file": "Lab1-05_7_Segment_LED.cpp",
+      "id": "Lab1-06_7_Segment_LED",
+      "file": "Lab1-06_7_Segment_LED.cpp",
       "upstream_commit": "d641e8393152dc4ebc6f56d20d7a2ff4e9602e24",
       "upstream_url": "https://github.com/PTITCube/Lab1-05_7_Segment_LED/blob/d641e8393152dc4ebc6f56d20d7a2ff4e9602e24/src/main.cpp",
       "board": "esp32",
@@ -105,8 +105,8 @@
       }
     },
     {
-      "id": "Lab1-06_Serial_Communication",
-      "file": "Lab1-06_Serial_Communication.cpp",
+      "id": "Lab1-07_Serial_Communication",
+      "file": "Lab1-07_Serial_Communication.cpp",
       "upstream_commit": "8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b",
       "upstream_url": "https://github.com/PTITCube/Lab1-06_Serial_Communication/blob/8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b/src/main.cpp",
       "board": "esp32",
@@ -122,8 +122,8 @@
       }
     },
     {
-      "id": "Lab1-07_Serial_Control_LED",
-      "file": "Lab1-07_Serial_Control_LED.cpp",
+      "id": "Lab1-08_Serial_Control_LED",
+      "file": "Lab1-08_Serial_Control_LED.cpp",
       "upstream_commit": "05c3d08b35cbeec36817613b87976c3931d343b5",
       "upstream_url": "https://github.com/PTITCube/Lab1-07_Serial_Control_LED/blob/05c3d08b35cbeec36817613b87976c3931d343b5/src/main.cpp",
       "board": "esp32",
@@ -139,8 +139,8 @@
       }
     },
     {
-      "id": "Lab1-08_WiFi_Connection",
-      "file": "Lab1-08_WiFi_Connection.cpp",
+      "id": "Lab1-09_WiFi_Connection",
+      "file": "Lab1-09_WiFi_Connection.cpp",
       "upstream_commit": "02729eeed59d75f95d77fcb51f87656311f5c40a",
       "upstream_url": "https://github.com/PTITCube/Lab1-08_WiFi_Connection/blob/02729eeed59d75f95d77fcb51f87656311f5c40a/src/main.cpp",
       "board": "esp32",
@@ -156,8 +156,8 @@
       }
     },
     {
-      "id": "Lab1-09_WiFi_AP_Mode",
-      "file": "Lab1-09_WiFi_AP_Mode.cpp",
+      "id": "Lab1-10_WiFi_AP_Mode",
+      "file": "Lab1-10_WiFi_AP_Mode.cpp",
       "upstream_commit": "7622a1c4a05969988884ab19845c8536a3d8f7ed",
       "upstream_url": "https://github.com/PTITCube/Lab1-09_WiFi_AP_Mode/blob/7622a1c4a05969988884ab19845c8536a3d8f7ed/src/main.cpp",
       "board": "esp32",
@@ -173,8 +173,8 @@
       }
     },
     {
-      "id": "Lab1-10_Web_Server_LED",
-      "file": "Lab1-10_Web_Server_LED.cpp",
+      "id": "Lab1-11_Web_Server_LED",
+      "file": "Lab1-11_Web_Server_LED.cpp",
       "upstream_commit": "6788696718d8e3281e9cf917e503a34bed3a9e70",
       "upstream_url": "https://github.com/PTITCube/Lab1-10_Web_Server_LED/blob/6788696718d8e3281e9cf917e503a34bed3a9e70/src/main.cpp",
       "board": "esp32",
@@ -344,8 +344,8 @@
       }
     },
     {
-      "id": "Lab3-04_Watchdog_And_Event",
-      "file": "Lab3-04_Watchdog_And_Event.cpp",
+      "id": "Lab3-04_Watchdog_Timer",
+      "file": "Lab3-04_Watchdog_Timer.cpp",
       "upstream_commit": "932741750f6b079521ba0dbefff0b530a3e628ec",
       "upstream_url": "https://github.com/PTITCube/Lab3-04_Watchdog_And_Event/blob/932741750f6b079521ba0dbefff0b530a3e628ec/src/main.cpp",
       "board": "esp32",
@@ -599,25 +599,8 @@
       }
     },
     {
-      "id": "Lab4-05_Read_All_Sensors",
-      "file": "Lab4-05_Read_All_Sensors.cpp",
-      "upstream_commit": "4a18b32a35ab56da6042ed86ddda7435beb69f8a",
-      "upstream_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors/blob/4a18b32a35ab56da6042ed86ddda7435beb69f8a/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Upstream 2026-11 adds GPS; coordinates are printed only with a fresh fix (hasFix), never 0,0."
-      ],
-      "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-06_Camera_Multiplexer",
-      "file": "Lab4-06_Camera_Multiplexer.cpp",
+      "id": "Lab4-05_Camera_Multiplexer",
+      "file": "Lab4-05_Camera_Multiplexer.cpp",
       "upstream_commit": "e62e4bf749f17df0ef79947e0755bd8d1c603c06",
       "upstream_url": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer/blob/e62e4bf749f17df0ef79947e0755bd8d1c603c06/src/main.cpp",
       "board": "esp32",
@@ -630,6 +613,23 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "f66301d19937dce43d208d45f93c75fd19b39f6a9e3651e9dcc66ac1447adb06",
+        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "result": "passed"
+      }
+    },
+    {
+      "id": "Lab4-06_Read_All_Sensors",
+      "file": "Lab4-06_Read_All_Sensors.cpp",
+      "upstream_commit": "4a18b32a35ab56da6042ed86ddda7435beb69f8a",
+      "upstream_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors/blob/4a18b32a35ab56da6042ed86ddda7435beb69f8a/src/main.cpp",
+      "board": "esp32",
+      "notes": [
+        "Upstream 2026-11 adds GPS; coordinates are printed only with a fresh fix (hasFix), never 0,0."
+      ],
+      "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
+      "verified_build": {
+        "board": "esp32",
+        "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
         "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
         "result": "passed"
       }
@@ -737,8 +737,8 @@
       }
     },
     {
-      "id": "Lab5-03_Satellite_Comm_System",
-      "file": "Lab5-03_Satellite_Comm_System.cpp",
+      "id": "Lab5-03_Ground_Station_Demo",
+      "file": "Lab5-03_Ground_Station_Demo.cpp",
       "upstream_commit": "a156004a4ce2a541fc5f31e1fd2413bb7b6b047a",
       "upstream_url": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/a156004a4ce2a541fc5f31e1fd2413bb7b6b047a/src/main.cpp",
       "board": "esp32",

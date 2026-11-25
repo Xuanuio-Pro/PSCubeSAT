@@ -40,14 +40,14 @@ class CurriculumPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(first, await seed_curriculum(db))
             await db.commit()
             self.assertEqual(
-                (await db.execute(select(func.count()).select_from(Lesson))).scalar_one(), 135
+                (await db.execute(select(func.count()).select_from(Lesson))).scalar_one(), 164
             )
         # 0015/0016 refuse to drop quiz lessons or per-lesson banks, so a rollback past them is rejected
         # as a whole and the database stays at head with its data unchanged.
         await self.cli_refused("downgrade", "0009_quizzes")
         async with self.engine.connect() as db:
             self.assertEqual(
-                (await db.execute(text("SELECT count(*) FROM lessons"))).scalar_one(), 135
+                (await db.execute(text("SELECT count(*) FROM lessons"))).scalar_one(), 164
             )
         await self.assert_schema_matches()
         async with sessions() as db:

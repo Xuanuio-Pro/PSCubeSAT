@@ -8,22 +8,25 @@ const ICONS = {
 };
 
 /** In-app replacement for window.confirm; mount it only while a question is pending. */
-export default function ConfirmDialog({ title, message, confirmLabel = 'Xác nhận', cancelLabel = 'Hủy', tone = 'danger', onConfirm, onCancel }) {
+export default function ConfirmDialog({ title, message, children = null, wide = false, locked = false, showClose = false, confirmLabel = 'Xác nhận', cancelLabel = 'Hủy', tone = 'danger', onConfirm, onCancel }) {
   const titleId = useId();
   const messageId = useId();
   const dialog = useRef(null);
   const cancelButton = useRef(null);
   const cancel = useRef(onCancel);
   cancel.current = onCancel;
+  // `locked` keeps one-time content (a temporary password) from vanishing on Esc or a stray click.
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
 
   useEffect(() => {
     const previous = /** @type {HTMLElement | null} */ (document.activeElement);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     // The safe choice has the focus first, so Enter never deletes by accident.
-    cancelButton.current?.focus();
+    (cancelButton.current || dialog.current?.querySelector('button'))?.focus();
     const onKey = event => {
-      if (event.key === 'Escape') { event.preventDefault(); cancel.current(); return; }
+      if (event.key === 'Escape') { event.preventDefault(); if (!lockedRef.current) cancel.current(); return; }
       if (event.key !== 'Tab') return;
       const buttons = dialog.current?.querySelectorAll('button:not([disabled])');
       if (!buttons?.length) return;
@@ -41,15 +44,17 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Xác nh�
   }, []);
 
   return createPortal(
-    <div className="confirm-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onCancel(); }}>
-      <div ref={dialog} className={`confirm-dialog confirm-${tone}`} role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
+    <div className="confirm-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !locked) onCancel(); }}>
+      <div ref={dialog} className={`confirm-dialog confirm-${tone}${wide ? ' confirm-wide' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
+        {showClose && <button type="button" className="confirm-close" aria-label="Đóng" title="Đóng" onClick={onCancel}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>}
         <span className="confirm-icon">{ICONS[tone] || ICONS.info}</span>
         <div className="confirm-body">
           <h2 id={titleId}>{title}</h2>
           <p id={messageId}>{message}</p>
+          {children}
         </div>
         <div className="confirm-actions">
-          <button type="button" ref={cancelButton} className="confirm-cancel" onClick={onCancel}>{cancelLabel}</button>
+          {cancelLabel !== null && <button type="button" ref={cancelButton} className="confirm-cancel" onClick={onCancel}>{cancelLabel}</button>}
           <button type="button" className="confirm-ok" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>

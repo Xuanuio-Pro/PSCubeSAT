@@ -14,7 +14,7 @@ export const SYSTEM_ROWS = {
 
 export function visualizationPlan(profile) {
   const panels = [...profile.panels];
-  // Lab1-07 LED commands are typed in the Serial Monitor; the lab shows no extra panels.
+  // Lab1-08 LED commands are typed in the Serial Monitor; the lab shows no extra panels.
   if (profile.commands.length && profile.lab !== 1 && !panels.includes('commands')) panels.push('commands');
   return { panels, systemRows: SYSTEM_ROWS[profile.id.slice(0, 7)] ?? [] };
 }

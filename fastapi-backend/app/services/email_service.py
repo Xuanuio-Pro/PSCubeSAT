@@ -68,3 +68,27 @@ async def send_password_reset_email(to_email: str, reset_url: str, ttl_minutes: 
         "</div>"
     )
     await run_in_threadpool(_send_smtp_sync, to_email, subject, text_body, html_body)
+
+
+async def send_verification_email(to_email: str, verify_url: str, ttl_hours: int) -> None:
+    subject = "[PTIT CubeSAT] Xác minh email đăng ký"
+    safe_url = html.escape(verify_url, quote=True)
+    text_body = (
+        "Cảm ơn bạn đã đăng ký tài khoản trên nền tảng học tập PTIT CubeSAT.\n\n"
+        f"Mở liên kết sau để xác minh email (hiệu lực {ttl_hours} giờ, chỉ dùng 1 lần):\n"
+        f"{verify_url}\n\n"
+        "Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này."
+    )
+    html_body = (
+        '<div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">'
+        '<h2 style="color:#0a4174">Xác minh email PTIT CubeSAT</h2>'
+        "<p>Cảm ơn bạn đã đăng ký. Hãy xác minh email để bắt đầu học.</p>"
+        f'<p><a href="{safe_url}" style="display:inline-block;padding:10px 18px;'
+        'background:#0a4174;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold">'
+        "Xác minh email</a></p>"
+        f"<p>Liên kết có hiệu lực trong <strong>{ttl_hours} giờ</strong> và chỉ sử dụng được một lần.</p>"
+        f'<p style="font-size:12px;color:#475569">Hoặc dán liên kết sau vào trình duyệt: {safe_url}</p>'
+        '<p style="font-size:12px;color:#64748b">Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>'
+        "</div>"
+    )
+    await run_in_threadpool(_send_smtp_sync, to_email, subject, text_body, html_body)
