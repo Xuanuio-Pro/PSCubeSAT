@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { request } from '../contexts/auth-api';
 import { Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
+import ConfirmDialog from '../components/classes/ConfirmDialog';
 
 const roleLabels = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Người dùng' };
+
+function confirmMessage(pending) {
+  if (pending.remove) return 'Tài khoản sẽ đăng xuất ngay, không đăng nhập lại được và bị gỡ khỏi mọi lớp. Dữ liệu học tập vẫn được giữ lại và email này không thể đăng ký mới. Không thể hoàn tác trên giao diện.';
+  if (pending.resetLink) return 'Liên kết đặt lại chỉ dùng một lần và tự hết hạn sau ít phút. Yêu cầu chờ hiện tại sẽ được xử lý.';
+  if (pending.reset) return 'Mật khẩu hiện tại sẽ ngừng hoạt động ngay. Mật khẩu tạm chỉ hiển thị một lần.';
+  return 'Quyền truy cập sẽ được cập nhật ngay với các phiên đang đăng nhập.';
+}
 
 export default function AdminUsersPage() {
   const [filters, setFilters] = useState({ search: '', role: '', status: '', pending_reset: '' });
@@ -13,22 +21,35 @@ export default function AdminUsersPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState({});
   const [issued, setIssued] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const query = new URLSearchParams({ page: String(page), ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) });
   const { data, loading, error, reload } = useLmsResource(`/api/admin/users?${query}`);
   const filter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1); setPending(null); };
+  function copyIssued() {
+    const text = issued.kind === 'link' ? issued.reset_url : issued.temporary_password;
+    navigator.clipboard?.writeText(text).then(() => { setCopied(true); setCopyError(false); }, () => setCopyError(true));
+  }
   async function save() {
     setBusy(true); setNotice({}); setIssued(null);
     try {
       if (pending.resetLink) {
         const res = await request(`/api/admin/users/${pending.user.id}/reset-link`, { method: 'POST' });
-        setIssued({ kind: 'link', ...res });
+        setIssued({ kind: 'link', ...res }); setCopied(false); setCopyError(false);
+        setPending(null);
+        reload();
+        return;
+      }
+      if (pending.remove) {
+        await request(`/api/admin/users/${pending.user.id}`, { method: 'DELETE' });
+        setNotice({ message: `Đã xóa tài khoản ${pending.user.email}.` });
         setPending(null);
         reload();
         return;
       }
       if (pending.reset) {
         const res = await request(`/api/admin/users/${pending.user.id}/reset-password`, { method: 'POST' });
-        setIssued({ kind: 'password', ...res });
+        setIssued({ kind: 'password', ...res }); setCopied(false); setCopyError(false);
         setPending(null);
         reload();
         return;
@@ -57,28 +78,32 @@ export default function AdminUsersPage() {
     </section>
 
     <Notice {...notice} />
-    {pending && <section className="lms-confirm admin-confirm" aria-label="Xác nhận thay đổi tài khoản">
-      <p><strong>{pending.label}</strong> tài khoản {pending.user.email}?</p>
-      <p>{pending.resetLink ? 'Liên kết đặt lại chỉ dùng một lần và tự hết hạn sau ít phút. Yêu cầu chờ hiện tại sẽ được xử lý.' : pending.reset ? 'Mật khẩu hiện tại sẽ ngừng hoạt động ngay. Mật khẩu tạm chỉ hiển thị một lần.' : 'Quyền truy cập sẽ được cập nhật ngay với các phiên đang đăng nhập.'}</p>
-      <div className="lms-actions"><button disabled={busy} onClick={save}>{busy ? 'Đang lưu…' : 'Xác nhận'}</button><button disabled={busy} onClick={() => setPending(null)}>Hủy</button></div>
-    </section>}
-    {issued && <section className="lms-confirm admin-confirm" role="status" aria-label={issued.kind === 'link' ? 'Liên kết đặt lại mật khẩu' : 'Mật khẩu tạm'}>
-      {issued.kind === 'link' ? <>
-        <p>Liên kết đặt lại mật khẩu dùng một lần cho <strong>{issued.email}</strong>:<code className="admin-temp-password admin-temp-password--link">{issued.reset_url}</code></p>
-        <p>Gửi riêng liên kết này cho người dùng để tự đặt mật khẩu mới (hết hạn lúc {new Date(issued.expires_at).toLocaleString('vi-VN')}). Liên kết chỉ dùng được 1 lần và không hiển thị lại.</p>
-        <div className="lms-actions">
-          <button onClick={() => navigator.clipboard?.writeText(issued.reset_url).then(() => setNotice({ message: 'Đã sao chép liên kết đặt lại mật khẩu.' }), () => setNotice({ error: 'Không sao chép được. Hãy chọn và sao chép thủ công.' }))}>Sao chép liên kết</button>
-          <button onClick={() => setIssued(null)}>Đã gửi, ẩn đi</button>
-        </div>
-      </> : <>
-        <p>Mật khẩu tạm của <strong>{issued.email}</strong>:<code className="admin-temp-password">{issued.temporary_password}</code></p>
-        <p>Gửi riêng cho người dùng và nhắc họ đổi mật khẩu trong trang Hồ sơ sau khi đăng nhập. Mật khẩu này sẽ không hiển thị lại.</p>
-        <div className="lms-actions">
-          <button onClick={() => navigator.clipboard?.writeText(issued.temporary_password).then(() => setNotice({ message: 'Đã sao chép mật khẩu tạm.' }), () => setNotice({ error: 'Không sao chép được. Hãy chọn và sao chép thủ công.' }))}>Sao chép</button>
-          <button onClick={() => setIssued(null)}>Đã gửi, ẩn đi</button>
-        </div>
-      </>}
-    </section>}
+    {pending && <ConfirmDialog
+      tone={pending.remove || pending.change?.status === 'locked' ? 'danger' : 'info'}
+      title={`${pending.label} tài khoản ${pending.user.email}?`}
+      message={confirmMessage(pending)}
+      confirmLabel={pending.remove ? 'Xóa tài khoản' : pending.change?.status === 'locked' ? 'Khóa tài khoản' : 'Xác nhận'}
+      onConfirm={() => { if (!busy) save(); }}
+      onCancel={() => { if (!busy) setPending(null); }}
+    />}
+    {issued && <ConfirmDialog
+      wide
+      locked
+      showClose
+      tone="info"
+      title={issued.kind === 'link' ? 'Liên kết đặt lại mật khẩu' : 'Mật khẩu tạm'}
+      message={issued.kind === 'link' ? `Liên kết dùng một lần cho ${issued.email}:` : `Mật khẩu tạm của ${issued.email}:`}
+      confirmLabel={copied ? 'Đã sao chép' : issued.kind === 'link' ? 'Sao chép liên kết' : 'Sao chép'}
+      cancelLabel={null}
+      onConfirm={copyIssued}
+      onCancel={() => setIssued(null)}
+    >
+      <code className="confirm-code">{issued.kind === 'link' ? issued.reset_url : issued.temporary_password}</code>
+      <p className="confirm-note">{issued.kind === 'link'
+        ? `Gửi riêng liên kết này cho người dùng để tự đặt mật khẩu mới (hết hạn lúc ${new Date(issued.expires_at).toLocaleString('vi-VN')}). Liên kết chỉ dùng được 1 lần và không hiển thị lại.`
+        : 'Gửi riêng cho người dùng và nhắc họ đổi mật khẩu trong trang Hồ sơ sau khi đăng nhập. Mật khẩu này sẽ không hiển thị lại.'}</p>
+      {copyError && <p className="confirm-note" role="alert">Không sao chép được. Hãy chọn và sao chép thủ công.</p>}
+    </ConfirmDialog>}
     {loading ? <div className="admin-page-panel"><p role="status">Đang tải tài khoản…</p></div> : error ? <div className="admin-page-panel"><Notice error={error} /><button onClick={reload}>Thử lại</button></div> : <>
       <section className="admin-panel">
         <div className="lms-table-wrap"><table><caption className="sr-only">Danh sách tài khoản</caption><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
@@ -90,13 +115,12 @@ export default function AdminUsersPage() {
             </td>
             <td>{roleLabels[user.role]}</td><td><span className={`lms-status ${user.status}`}>{user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}</span></td>
             <td><div className="lms-actions">
-              {user.role === 'admin'
-                ? <span className="lms-secondary">Tài khoản quản trị</span>
-                : <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: 'admin' }, label: 'Cấp quyền quản trị cho' }); }}>Cấp quyền Admin</button>}
+              {user.role === 'admin' && <span className="lms-secondary">Tài khoản quản trị</span>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: user.role === 'teacher' ? 'user' : 'teacher' }, label: user.role === 'teacher' ? 'Thu hồi quyền giảng viên của' : 'Cấp quyền giảng viên cho' }); }}>{user.role === 'teacher' ? 'Thu hồi quyền GV' : 'Cấp quyền GV'}</button>}
               <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); }}>{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, resetLink: true, label: 'Cấp link đặt lại mật khẩu cho' }); }}>Cấp link đặt lại</button>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, reset: true, label: 'Cấp mật khẩu tạm cho' }); }}>Cấp mật khẩu tạm</button>}
+              {user.role !== 'admin' && <button className="admin-danger-btn" disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, remove: true, label: 'Xóa' }); }}>Xóa</button>}
             </div></td>
           </tr>)}</tbody></table></div>
         {!data.items.length && <p className="admin-empty">Không có tài khoản phù hợp. Hãy thử tên, email hoặc bộ lọc khác.</p>}

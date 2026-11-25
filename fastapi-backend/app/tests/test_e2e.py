@@ -66,13 +66,25 @@ async def cross_role_flow(t, call, sessions, tokens):
             "components",
             "document-0-2",
             "video-0-2",
+            "quiz-0-1",
+            "quiz-0-2",
+            "quiz-0-3",
             "summary-0",
+            "labtest-0",
         ):
             item.update(enabled=False, required=False)
     body = await apply(body)
 
     # Bank: import 20 drafts, approve each, publish exactly 20.
     bank_url = base + "/labs/0/question-bank"
+    bank = await ok(5, "GET", bank_url)
+    async with sessions() as db:
+        from sqlalchemy import delete
+
+        from app.models.quiz import QuestionVersion
+
+        await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+        await db.commit()
     bank = await ok(5, "GET", bank_url)
     payload = json.dumps({"questions": [question(i) for i in range(20)]})
     bank = await ok(

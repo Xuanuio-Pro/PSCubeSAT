@@ -14,8 +14,16 @@ import { startTelemetrySocket, telemetrySocketUrl } from '../telemetry/socket';
 /** @param {{ children: any, groundStation?: boolean }} props `groundStation`: this window's port is the ground station's USB-TTL. */
 export function TelemetryProvider({ children, groundStation = false }) {
   const route = useLocation();
-  const requestedLesson = new URLSearchParams(route.search).get('lesson') || '';
-  const exerciseId = /^Lab[1-8]-/.test(requestedLesson) ? requestedLesson : '';
+  const params = new URLSearchParams(route.search);
+  const queryExercise = params.get('exercise') || '';
+  const requestedLesson = params.get('lesson') || '';
+  const [activeExerciseId, setActiveExerciseId] = useState('');
+  const queryExerciseId = /^Lab[1-8]-/.test(queryExercise)
+    ? queryExercise
+    : /^Lab[1-8]-/.test(requestedLesson)
+      ? requestedLesson
+      : '';
+  const exerciseId = activeExerciseId || queryExerciseId;
   const { user } = useAuth();
   const { subscribe, isConnected, isConnecting, sessionId } = useSerial();
   const serialConnected = useRef(isConnected);
@@ -141,7 +149,7 @@ export function TelemetryProvider({ children, groundStation = false }) {
     return () => { abort.abort(); stop(); };
   }, [state.mode, state.deviceId, state.generation, user, store]);
 
-  return <TelemetryContext.Provider value={{ ...state, latest: currentReadings(state), exerciseId, status: telemetryStatus(state, state.now),
+  return <TelemetryContext.Provider value={{ ...state, latest: currentReadings(state), exerciseId, setActiveExerciseId, status: telemetryStatus(state, state.now),
     isCurrentSelection: generation => store.getSnapshot().generation === generation,
     devices, deviceError, serialBinding, selectSource, selectDevice, refreshDevices: () => setRefresh(value => value + 1),
   }}>{children}</TelemetryContext.Provider>;

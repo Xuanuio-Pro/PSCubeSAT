@@ -3,8 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginDestination } from '../contexts/auth-session';
 import AuthLayout from '../components/common/AuthLayout';
 import PasswordInput from '../components/common/PasswordInput';
+import PasswordRequirements from '../components/common/PasswordRequirements';
+import { validatePassword } from '../utils/passwordPolicy';
 import { useAuth } from '../contexts/auth-api';
 import GoogleSignIn from '../components/common/GoogleSignIn';
+import ResendVerification from '../components/common/ResendVerification';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,14 +21,15 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(null);
 
   function validate() {
     /** @type {Record<string, string>} */
     const next = {};
     if (!fullName.trim()) next.fullName = 'Vui lòng nhập họ và tên';
     if (!EMAIL_PATTERN.test(email.trim())) next.email = 'Email không hợp lệ';
-    if (password.length < 6) next.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    if (new TextEncoder().encode(password).length > 72) next.password = 'Mật khẩu không được vượt quá 72 byte UTF-8';
+    const passwordError = validatePassword(password);
+    if (passwordError) next.password = passwordError;
     if (confirmPassword !== password) next.confirmPassword = 'Mật khẩu không khớp';
     return next;
   }
@@ -38,13 +42,35 @@ export default function SignUpPage() {
 
     setSubmitting(true);
     try {
-      await register(email.trim().toLowerCase(), password, fullName.trim());
+      const result = await register(email.trim().toLowerCase(), password, fullName.trim());
+      if (result?.verificationRequired) {
+        setPendingVerification({ email: email.trim().toLowerCase(), ...result });
+        return;
+      }
       navigate(loginDestination(location.state?.from), { replace: true });
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (pendingVerification) {
+    return (
+      <AuthLayout>
+        <h1 className="auth-title">Kiểm tra email của bạn</h1>
+        <div className="auth-success-notice" role="status">
+          <p>{pendingVerification.message}</p>
+          <p style={{ marginTop: '8px', fontWeight: 400 }}>
+            Thư được gửi tới <strong>{pendingVerification.email}</strong>. Bạn cần xác minh email trước khi đăng nhập.
+          </p>
+        </div>
+        <ResendVerification email={pendingVerification.email} initialCooldown={pendingVerification.emailSent ? 60 : 0} />
+        <p className="auth-footer-text">
+          Đã xác minh xong? <Link to="/login" state={location.state}>Đăng nhập</Link>
+        </p>
+      </AuthLayout>
+    );
   }
 
   return (
@@ -100,15 +126,16 @@ export default function SignUpPage() {
           <PasswordInput
             id="password"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
             placeholder="********"
             hasError={Boolean(errors.password)}
             aria-invalid={Boolean(errors.password)}
-            aria-describedby={errors.password ? 'signup-password-error' : undefined}
+            aria-describedby={errors.password ? 'signup-password-requirements signup-password-error' : 'signup-password-requirements'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <PasswordRequirements id="signup-password-requirements" value={password} />
           {errors.password && <div id="signup-password-error" className="auth-error-text" role="alert">⚠ {errors.password}</div>}
         </div>
 
@@ -117,7 +144,7 @@ export default function SignUpPage() {
           <PasswordInput
             id="confirmPassword"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
             placeholder="********"
             hasError={Boolean(errors.confirmPassword)}

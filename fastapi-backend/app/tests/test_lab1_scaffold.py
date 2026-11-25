@@ -9,14 +9,21 @@ PRACTICE = [
     "Lab1-01_Blink_LED",
     "Lab1-02_Control_Multiple_LEDs",
     "Lab1-03_PWM_LED",
-    "Lab1-03_Button",
-    "Lab1-04_LED_Button",
-    "Lab1-05_7_Segment_LED",
-    "Lab1-06_Serial_Communication",
-    "Lab1-07_Serial_Control_LED",
-    "Lab1-08_WiFi_Connection",
-    "Lab1-09_WiFi_AP_Mode",
-    "Lab1-10_Web_Server_LED",
+    "Lab1-04_Button",
+    "Lab1-05_LED_Button",
+    "Lab1-06_7_Segment_LED",
+    "Lab1-07_Serial_Communication",
+    "Lab1-08_Serial_Control_LED",
+    "Lab1-09_WiFi_Connection",
+    "Lab1-10_WiFi_AP_Mode",
+    "Lab1-11_Web_Server_LED",
+]
+PRACTICE_LESSONS = [
+    "practice-1-led",
+    "practice-1-button",
+    "Lab1-06_7_Segment_LED",
+    "practice-1-uart",
+    "practice-1-wifi",
 ]
 
 
@@ -32,9 +39,17 @@ class Lab1ScaffoldTests(unittest.TestCase):
         self.assertEqual(lessons[-1]["type"], "labtest")
         self.assertEqual(lessons[-2]["id"], "summary-1")
 
-    def test_practice_ids_are_kept_in_order(self):
-        practice = [item["id"] for item in self.lessons() if item["type"] == "practice"]
-        self.assertEqual(practice, PRACTICE)
+    def test_practice_ids_and_grouped_sub_exercises_are_kept_in_order(self):
+        practice = [item for item in self.lessons() if item["type"] == "practice"]
+        self.assertEqual([item["id"] for item in practice], PRACTICE_LESSONS)
+        flattened = []
+        for item in practice:
+            exercises = item["content"].get("exercises")
+            if exercises:
+                flattened.extend(ex["id"] for ex in exercises)
+            else:
+                flattened.append(item["content"]["exercise_id"])
+        self.assertEqual(flattened, PRACTICE)
 
     def test_has_thirteen_quiz_slots_eight_docs_three_videos(self):
         lessons = self.lessons()
@@ -58,9 +73,9 @@ class Lab1ScaffoldTests(unittest.TestCase):
 
     def test_each_practice_follows_its_group_quiz(self):
         ids = [item["id"] for item in self.lessons()]
-        self.assertLess(ids.index("Lab1-02_Control_Multiple_LEDs"), ids.index("quiz-1-4"))
-        self.assertLess(ids.index("Lab1-04_LED_Button"), ids.index("quiz-1-6"))
-        self.assertLess(ids.index("Lab1-10_Web_Server_LED"), ids.index("quiz-1-13"))
+        self.assertLess(ids.index("practice-1-led"), ids.index("quiz-1-4"))
+        self.assertLess(ids.index("practice-1-button"), ids.index("quiz-1-6"))
+        self.assertLess(ids.index("practice-1-wifi"), ids.index("quiz-1-13"))
 
 
 if __name__ == "__main__":

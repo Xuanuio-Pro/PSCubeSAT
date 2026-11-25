@@ -22,6 +22,8 @@ export async function authorizedFetch(path, options = {}) {
       '/api/admin/signup',
       '/api/auth/forgot-password',
       '/api/auth/reset-password',
+      '/api/auth/verify-email',
+      '/api/auth/resend-verification',
     ].includes(path)) {
     clearAuthToken();
     window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));

@@ -440,7 +440,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
         self.body = fixtures.settings_payload(await self.fixture.draft())
         for item in self.body["lessons"]:
             active = item["lesson_id"] == "document" or item["lesson_id"].startswith("summary-")
-            item["enabled"] = active or item["lesson_id"] == "Lab2-01a_Battery_I2C"
+            item["enabled"] = active or item["lesson_id"] == "practice-2-max17048"
             item["required"] = active
             if item["lesson_id"] == "document":
                 item["params"] = {"markdown": "Hướng dẫn định hướng trong dữ liệu kiểm thử."}
@@ -489,7 +489,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
         lessons = (
             ["document", "summary-0"]
             if lab == 0
-            else ["Lab2-01a_Battery_I2C", "summary-2"]
+            else ["practice-2-max17048", "summary-2"]
             if lab == 2
             else [f"summary-{lab}"]
         )
@@ -533,7 +533,16 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual((await self.call(4, "POST", "/api/compile", payload)).status_code, 403)
             await self.complete(1)
+            self.assertEqual((await self.call(4, "GET", source)).status_code, 200)
             self.assertEqual((await self.call(4, "POST", "/api/compile", payload)).status_code, 200)
+            self.assertEqual(
+                (
+                    await self.call(
+                        4, "POST", "/api/compile", {**payload, "lesson_id": "practice-2-max17048"}
+                    )
+                ).status_code,
+                200,
+            )
             self.assertFalse((await self.path())["labs"][2]["completed"])
         await self.complete(2)
         await self.complete(3)
@@ -632,7 +641,7 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
         for item in body["lessons"]:
             if item["lesson_id"] == "summary-1":
                 item.update(enabled=False, required=False)
-            if item["lesson_id"] == "Lab1-01_Blink_LED":
+            if item["lesson_id"] == "practice-1-led":
                 item.update(
                     enabled=True,
                     required=True,
@@ -643,17 +652,29 @@ class LearningAPITests(unittest.IsolatedAsyncioTestCase):
                 )
         await self.apply(body)
         await self.complete(0)
+        ex_res = await self.call(4, "GET", f"/api/curriculum/exercises?class_id={self.class_a}")
+        self.assertEqual(ex_res.status_code, 200, ex_res.text)
+        ex_ids = {item["id"] for item in ex_res.json()["exercises"]}
+        self.assertTrue(
+            {"Lab1-01_Blink_LED", "Lab1-02_Control_Multiple_LEDs", "Lab1-03_PWM_LED"} <= ex_ids
+        )
+        sub_source = await self.call(
+            4,
+            "GET",
+            f"/api/curriculum/exercises/Lab1-02_Control_Multiple_LEDs/source?class_id={self.class_a}",
+        )
+        self.assertEqual(sub_source.status_code, 200, sub_source.text)
         payload = {
             "idempotency_key": "submission-first-key",
             "code": "void setup() {} void loop() {}",
         }
         result = await self.call(
-            4, "POST", self.base + "/lessons/Lab1-01_Blink_LED/submissions", payload
+            4, "POST", self.base + "/lessons/practice-1-led/submissions", payload
         )
         self.assertEqual(result.status_code, 201, result.text)
         submission = result.json()
         repeat = await self.call(
-            4, "POST", self.base + "/lessons/Lab1-01_Blink_LED/submissions", payload
+            4, "POST", self.base + "/lessons/practice-1-led/submissions", payload
         )
         self.assertEqual(repeat.json()["id"], submission["id"])
         self.assertEqual((await self.path())["labs"][3]["access"], "locked")

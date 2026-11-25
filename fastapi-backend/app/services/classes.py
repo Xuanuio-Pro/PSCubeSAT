@@ -109,6 +109,68 @@ async def update_user(db, actor, user_id, changes):
     return target
 
 
+async def delete_user(db, actor, user_id):
+    """Soft-delete an account (admin only).
+
+    The row is kept (deleted_at) so progress, attempts, audit and class history stay intact and
+    RESTRICT foreign keys hold; sessions stop working at once because get_current_user ignores
+    deleted users. The email stays reserved. Active class memberships are closed so the person
+    leaves every roster.
+    """
+    target = (
+        await db.execute(
+            select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise LMSError(404, "CONFIG_INVALID", "Không tìm thấy tài khoản.")
+    if target.id == actor.id:
+        raise LMSError(403, "FORBIDDEN_ROLE", "Không thể tự xóa tài khoản của chính mình.")
+    if target.role == UserRole.admin:
+        raise LMSError(403, "FORBIDDEN_ROLE", "Không thể xóa tài khoản quản trị.")
+    teaching = (
+        await db.execute(
+            select(Classroom.code)
+            .join(ClassMembership, ClassMembership.class_id == Classroom.id)
+            .where(
+                ClassMembership.user_id == target.id,
+                ClassMembership.role == MembershipRole.teacher,
+                ClassMembership.status == MembershipStatus.active,
+                Classroom.status != ClassStatus.archived,
+            )
+        )
+    ).scalars().all()
+    if teaching:
+        raise LMSError(
+            409,
+            "CONFIG_INVALID",
+            "Giảng viên còn phụ trách lớp đang hoạt động. Hãy lưu trữ lớp hoặc chuyển giảng viên trước khi xóa.",
+            {"classes": sorted(teaching)},
+        )
+    now = datetime.now(timezone.utc)
+    before = {"role": target.role, "status": target.status}
+    memberships = (
+        await db.execute(
+            select(ClassMembership).where(
+                ClassMembership.user_id == target.id,
+                ClassMembership.status == MembershipStatus.active,
+            )
+        )
+    ).scalars().all()
+    for membership in memberships:
+        membership.status = MembershipStatus.removed
+        membership.removed_at = now
+    target.status = AccountStatus.locked
+    target.deleted_at = now
+    target.updated_at = now
+    await revoke_open_resets(db, target.id)
+    audit(db, actor.id, "user.delete", f"user:{target.id}", before, {"deleted": True})
+    await db.commit()
+    LOGIN_FAILURES.reset(f"email:{target.email}")
+    LOGIN_FAILURES.reset_prefix(f"pair:{target.email}:")
+    return {"user_id": target.id, "deleted": True}
+
+
 async def reset_user_password(db, actor, user_id):
     """Replace a forgotten password with a one-time-shown temporary one. Never logged or audited."""
     target = (

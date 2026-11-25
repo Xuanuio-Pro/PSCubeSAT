@@ -3,6 +3,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
+from typing import Literal
 
 from loguru import logger
 from sqlalchemy import func, select, update
@@ -17,6 +18,41 @@ from app.models.tables import AccountStatus, AuditLog, PasswordResetToken, User,
 from app.services.email_service import resolve_frontend_base_url, send_password_reset_email
 
 _PENDING_REQUEST_TTL_HOURS = 24
+_SMTP_FAILURE_COOLDOWN_SECONDS = 60
+_last_smtp_failure_at: datetime | None = None
+
+
+def _is_smtp_failing() -> bool:
+    global _last_smtp_failure_at
+    if _last_smtp_failure_at is None:
+        return False
+    now = datetime.now(timezone.utc)
+    if (now - _last_smtp_failure_at).total_seconds() < _SMTP_FAILURE_COOLDOWN_SECONDS:
+        return True
+    _last_smtp_failure_at = None
+    return False
+
+
+def _reset_smtp_failure_state() -> None:
+    global _last_smtp_failure_at
+    _last_smtp_failure_at = None
+
+
+async def _queue_admin_request(
+    db: AsyncSession, user_id: int, client_ip: str | None, now: datetime
+) -> None:
+    await revoke_open_resets(db, user_id)
+    db.add(
+        PasswordResetToken(
+            user_id=user_id,
+            token_hash=None,
+            status="pending",
+            source="admin_request",
+            requested_ip=client_ip,
+            expires_at=now + timedelta(hours=_PENDING_REQUEST_TTL_HOURS),
+        )
+    )
+    await db.commit()
 
 
 def hash_reset_token(raw_token: str) -> str:
@@ -33,14 +69,15 @@ def _as_utc(value: datetime) -> datetime:
 
 async def revoke_open_resets(
     db: AsyncSession, user_id: int, *, exclude_id: int | None = None
-) -> None:
+) -> int:
     stmt = update(PasswordResetToken).where(
         PasswordResetToken.user_id == user_id,
         PasswordResetToken.status.in_(("pending", "issued")),
     )
     if exclude_id is not None:
         stmt = stmt.where(PasswordResetToken.id != exclude_id)
-    await db.execute(stmt.values(status="revoked"))
+    result = await db.execute(stmt.values(status="revoked"))
+    return result.rowcount or 0
 
 
 async def pending_reset_map(db: AsyncSession, user_ids: list[int]) -> dict[int, datetime]:
@@ -66,18 +103,26 @@ async def request_password_reset(
     email: str,
     client_ip: str | None,
     request_origin: str | None,
+    channel: Literal["email", "admin"] = "email",
 ) -> dict[str, str]:
-    """Create either an emailed reset token (SMTP enabled) or an admin-queued request (no SMTP).
+    """Create either an emailed reset token (SMTP enabled) or an admin-queued request.
 
-    Always returns the same generic message to avoid leaking account existence.
+    Always returns the same generic message per mode/outcome to avoid leaking account existence.
     """
     settings = get_settings()
     smtp_enabled = settings.smtp_configured
-    delivery_mode = "email" if smtp_enabled else "admin"
-    generic_message = (
-        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email."
-        if smtp_enabled
-        else "Nếu email tồn tại và đang hoạt động, yêu cầu cấp lại mật khẩu đã được gửi tới quản trị viên."
+    use_email = smtp_enabled and channel != "admin"
+
+    admin_message = (
+        "Nếu email tồn tại và đang hoạt động, yêu cầu cấp lại mật khẩu đã được gửi tới quản trị viên."
+    )
+    email_message = (
+        "Nếu email tồn tại và đang hoạt động, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu qua email. "
+        "Nếu không nhận được thư sau vài phút, yêu cầu sẽ được chuyển tới quản trị viên."
+    )
+    smtp_error_message = (
+        "Hệ thống gửi email tự động đang gặp sự cố. "
+        "Nếu email tồn tại và đang hoạt động, yêu cầu cấp lại mật khẩu đã được chuyển tới quản trị viên."
     )
 
     email_clean = email.strip().lower()
@@ -86,62 +131,65 @@ async def request_password_reset(
             select(User).where(func.lower(User.email) == email_clean, User.deleted_at.is_(None))
         )
     ).scalar_one_or_none()
-    if user is None or user.status != AccountStatus.active:
-        return {"message": generic_message, "delivery_mode": delivery_mode}
-
     now = datetime.now(timezone.utc)
-    if not smtp_enabled and user.role == UserRole.admin:
-        # Admin accounts cannot be reset by another admin in /admin/users.
-        return {"message": generic_message, "delivery_mode": delivery_mode}
+
+    if not use_email:
+        if user is not None and user.status == AccountStatus.active and user.role != UserRole.admin:
+            # Admin accounts cannot be reset by another admin in /admin/users.
+            await _queue_admin_request(db, user.id, client_ip, now)
+            logger.info("[PasswordReset] Queued admin reset request for user_id={}", user.id)
+        return {"message": admin_message, "delivery_mode": "admin"}
+
+    if _is_smtp_failing():
+        # Still persist valid requests in DB during cooldown while keeping responses identical.
+        if user is not None and user.status == AccountStatus.active and user.role != UserRole.admin:
+            await _queue_admin_request(db, user.id, client_ip, now)
+            logger.info(
+                "[PasswordReset] SMTP recently failed; queued admin reset request for user_id={}",
+                user.id,
+            )
+        return {"message": smtp_error_message, "delivery_mode": "smtp_error"}
+
+    if user is None or user.status != AccountStatus.active:
+        return {"message": email_message, "delivery_mode": "email"}
 
     await revoke_open_resets(db, user.id)
-
-    if smtp_enabled:
-        raw_token = secrets.token_urlsafe(32)
-        ttl_minutes = settings.password_reset_token_ttl_minutes
-        row = PasswordResetToken(
-            user_id=user.id,
-            token_hash=hash_reset_token(raw_token),
-            status="issued",
-            source="email",
-            requested_ip=client_ip,
-            expires_at=now + timedelta(minutes=ttl_minutes),
+    raw_token = secrets.token_urlsafe(32)
+    ttl_minutes = settings.password_reset_token_ttl_minutes
+    row = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_reset_token(raw_token),
+        status="issued",
+        source="email",
+        requested_ip=client_ip,
+        expires_at=now + timedelta(minutes=ttl_minutes),
+    )
+    db.add(row)
+    await db.commit()
+    reset_url = f"{resolve_frontend_base_url(request_origin)}/reset-password?token={raw_token}"
+    try:
+        await send_password_reset_email(user.email, reset_url, ttl_minutes)
+        _reset_smtp_failure_state()
+        logger.info("[PasswordReset] Sent reset email for {}", mask_email(user.email))
+    except Exception as exc:
+        global _last_smtp_failure_at
+        _last_smtp_failure_at = now
+        logger.warning(
+            "[PasswordReset] SMTP delivery failed for {} ({}); falling back to admin queue",
+            mask_email(user.email),
+            type(exc).__name__,
         )
-        db.add(row)
+        if user.role != UserRole.admin:
+            row.status = "pending"
+            row.token_hash = None
+            row.source = "admin_request"
+            row.expires_at = now + timedelta(hours=_PENDING_REQUEST_TTL_HOURS)
+        else:
+            row.status = "revoked"
         await db.commit()
-        reset_url = f"{resolve_frontend_base_url(request_origin)}/reset-password?token={raw_token}"
-        try:
-            await send_password_reset_email(user.email, reset_url, ttl_minutes)
-            logger.info("[PasswordReset] Sent reset email for {}", mask_email(user.email))
-        except Exception as exc:
-            logger.warning(
-                "[PasswordReset] SMTP delivery failed for {} ({}); falling back to admin queue",
-                mask_email(user.email),
-                type(exc).__name__,
-            )
-            if user.role != UserRole.admin:
-                row.status = "pending"
-                row.token_hash = None
-                row.source = "admin_request"
-                row.expires_at = now + timedelta(hours=_PENDING_REQUEST_TTL_HOURS)
-            else:
-                row.status = "revoked"
-            await db.commit()
-    else:
-        db.add(
-            PasswordResetToken(
-                user_id=user.id,
-                token_hash=None,
-                status="pending",
-                source="admin_request",
-                requested_ip=client_ip,
-                expires_at=now + timedelta(hours=_PENDING_REQUEST_TTL_HOURS),
-            )
-        )
-        await db.commit()
-        logger.info("[PasswordReset] Queued admin reset request for user_id={}", user.id)
+        return {"message": smtp_error_message, "delivery_mode": "smtp_error"}
 
-    return {"message": generic_message, "delivery_mode": delivery_mode}
+    return {"message": email_message, "delivery_mode": "email"}
 
 
 def _invalid_token_error() -> LMSError:
@@ -224,6 +272,8 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
 
     user.password_hash = await run_in_threadpool(hash_password, new_password)
     user.updated_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # the reset link proved ownership of the mailbox
     row.status = "used"
     row.used_at = now
     await revoke_open_resets(db, user.id, exclude_id=row.id)

@@ -1,72 +1,74 @@
 # Nhật ký quyết định
 
-## 25/11/2026 — Sửa lỗi phát hiện khi chạy thật 39 bài trên board
+## 24/11/2026 — Phân phối toàn bộ 35 tài liệu Doc từ `docs.zip` & nâng cấp hiển thị KaTeX / Mermaid
 
-- Lab3-04: nút GPIO 4 chỉ được tính khi chuyển HIGH→LOW. Trên chồng bo vệ tinh GPIO 4 là chân Buck của EPS, luôn ở mức LOW; bản cũ đọc theo mức nên bo reset khoảng 6 s một lần ngay khi khởi động. Giữ GPIO 4 (không đổi chân) để PCB thí nghiệm rời vẫn chạy như upstream; trên chồng bo, sketch in hướng dẫn dùng lệnh `f`.
-- Lab4-02a: ghi rõ ACCEL_CONFIG/GYRO_CONFIG về ±2 g / ±250 °/s. MPU6500 giữ dải ±8 g / ±500 °/s do thư viện đặt khi chỉ reset ESP32, nên hệ số 16384/131 cho gia tốc nhỏ đi khoảng 4 lần.
-- Lab1-03_Button/Lab1-04 báo "nhấn" ngay khi khởi động chỉ vì lúc test chúng chạy trên chồng bo. Theo `lesson-reading.js`, Lab 1 chạy trên PCB rời, nên đây không phải lỗi code. Panel `lab1Io` mới có ghi chú về việc này.
-- Trực quan: thêm panel `lab1Io` (trạng thái LED/nút cho Lab1-01, 1-03_Button, 1-04, 1-07, lấy từ dòng log). Lab4-06 in trạng thái GPS chưa fix và gửi ảnh về qua Serial. Lab7-01/7-02 in `[LORA TX] n goi telemetry` sau mỗi đợt phát; dòng này là yêu cầu phát ở OBC, không phải ACK của trạm mặt đất. Lab7-01 gửi `gps.valid=false` khi chưa fix. Bộ giải mã phát sự kiện `gps:waiting` khi JSON báo chưa fix, để System Check có bằng chứng GPS.
-- V4–V11: các thông tin không có trong schema telemetry (hướng la bàn, số vệ tinh, SOC/tốc độ sạc/chế độ nguồn, tiến độ nhận ảnh, chu kỳ task khai báo, dòng `[BOOT]`) được truyền bằng sự kiện activity, không thêm trường vào `shared/telemetry.schema.json`. Lý do: schema dùng chung với backend và MQTT, còn các giá trị này chỉ phục vụ hiển thị trong bài thực hành.
-- Panel 3D chỉ dùng chế độ "số đếm thô" của Lab4-02a khi log thật sự có dòng `raw_accel:` (bản nháp cũ). Sketch hiện tại in m/s² như Lab4-02b, nên trước đó panel luôn ở trạng thái "chờ IMU".
-- Lab7-02 bỏ panel camera: lệnh `f` chỉ lưu ảnh vào SD, không gửi ảnh về; kết quả chụp vẫn hiện ở "Kết quả thực hành".
-- Bản nháp C++/Blockly của sinh viên lưu trong trình duyệt không tự cập nhật khi mã mẫu đổi (quy tắc 3: không xóa bản nháp). Ai đã dán Lab4-02a cũ phải tải lại mã mẫu để có bản sửa dải đo.
+- **Hoàn thiện 35 tệp tài liệu phía server (`fastapi-backend/app/firmware/curriculum/lab{0..8}/doc-*.md`):**
+  - Tách 9 tệp `lab{0..8}-*.md` trong `docs.zip` thành 35 tệp Markdown riêng cho từng bài `document`, loại bỏ toàn bộ khối `### ❓ Câu Hỏi Củng Cố Kiến Thức` (vì ngay sau mỗi Doc đã có bài `quiz` chấm trên server) và phần `## 💻 Hướng Dẫn Thực Hành` ở cuối tệp.
+  - Ánh xạ **theo chủ đề bài học** ở 2 điểm lệch so với file gốc:
+    - **Lab 1** (zip có 6 mục Doc, giáo trình có 8 bài Doc): ánh xạ `1.1` → `doc-1-1.md`, `1.2` → `doc-1-2.md`, `1.3` (74HC595) → `doc-1-5.md`, `1.4` (UART) → `doc-1-6.md`, `1.5` (Wi-Fi/HTTP) → `doc-1-7.md`, `1.6` (`millis()`) → `doc-1-8.md`; biên tập `doc-1-3.md` (GPIO & LEDC PWM) và `doc-1-4.md` (Nút nhấn, Pull-up & Debounce) từ hướng dẫn Breakout PCB và Bài 1.1/1.3/1.4 trong `lab1-obc.md` cùng lý thuyết chuẩn.
+    - **Lab 4 (`doc-4-7.md`):** mục `Doc 4.7` trong zip không có thân bài nên kết hợp tiêu đề Doc 4.7 với kiến trúc thu thập đa cảm biến khép kín & sơ đồ ghép kênh 74HC4066.
+    - **Lab 5:** tách `Doc 5.3` phần LoRa CSS / E32 / RF Configurator vào `doc-5-2.md` (`document-5-lora`), và ghép `Doc 5.2` (Đóng gói, CRC-16, CCSDS) với phần Kiến trúc Trạm Mặt Đất vào `doc-5-3.md` (`document-5-2`).
+  - Xuất lại `seed.json` và đồng bộ nhánh `legacy` trong `scripts/export-curriculum.mjs` + `LabLayout.jsx` để đường `/lab` (kể cả Lab 0 `document`) và `/classes` dùng chung bộ 35 tài liệu chuẩn.
+- **Nâng cấp `DocViewer.jsx`:** bổ sung `remark-math` + `rehype-katex` hiển thị công thức toán, lazy-load `mermaid` vẽ sơ đồ luồng/kiến trúc (`securityLevel: 'strict'`, fallback code block nếu lỗi) và render các khối cảnh báo `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
+- **Ghi đè đồng bộ cho các lớp hiện có (`--reset-doc-overrides`):** bổ sung cờ tùy chọn `--reset-doc-overrides` trong `curriculum_seed.py --sync-classes` (`reset_doc_overrides` ở `upgrade_class_to_course_version`), tạo `ClassCourseVersion` `version + 1` sạch sẽ theo immutability triggers và xóa khóa `params["markdown"]` cũ trên các bài `document` (trừ `summary-*`) để toàn bộ lớp hiện có dùng tài liệu mới ngay lập tức mà vẫn giữ nguyên `enabled`, `required`, tiến độ, bài nộp và ngân hàng câu hỏi.
 
-## 25/11/2026 — Gỡ 8 bài thực hành cũ khỏi catalog
+## 24/11/2026 — Nạp bộ câu hỏi mặc định CubeSAT (60 Quiz + 9 Lab Test) & rút đề ngẫu nhiên 5 / 20 câu
 
-- Xóa `Lab2-01_Detect_Battery_Voltage`, `Lab3-01_Save_To_MicroSD`, `Lab4-01_Detect_Environment`, `Lab4-02_Detect_IMU_Attitude`, `Lab4-03_Detect_GPS_Rawdata`, `Lab4-04_Camera_Snapshot`, `Lab5-01_Send_Telemetry`, `Lab5-02_Receive_Command` (file `.cpp` và mục trong `catalog.json`; catalog còn 39 bài, trùng với các bài trong `seed.json`).
-- Đây là ngoại lệ có chủ đích với quy tắc 3 (giữ ID bài thực hành), theo yêu cầu của Xuân. Nó thay quyết định "giữ nguyên ID 8 bài cha" ở mục ngày 25/11 bên dưới. Lý do: upstream PTITCube đã xóa các repo này ngày 24/11, các bài không còn trong `seed.json`, và báo cáo kiểm tra code tìm ra lỗi ở 2 bài (Lab2-01 đọc điện áp đứng yên, Lab5-02 không in lệnh nhận được).
-- Rủi ro còn lại: các ID này nằm trong giáo trình từ 11/11 đến 18/11/2026. Lớp nào xuất bản trong khoảng đó trên server mà còn ghim phiên bản giáo trình cũ sẽ không tải được mã mẫu cho các bài này (`GET /api/curriculum/exercises/{id}` trả 404). DB dev không có tham chiếu nào; DB server chưa được kiểm tra. Tiến độ `lab_progress` và bản nháp trình duyệt không bị xóa. Biên dịch vẫn chạy với mã người dùng gửi lên.
+- **Kho ngân hàng câu hỏi CubeSAT chỉ nằm ở phía server (`fastapi-backend/app/firmware/curriculum/lab{0..8}/`):**
+  - Nhập toàn bộ 43 tệp câu hỏi CSV từ bộ `quizzes.zip` (Lab 0–8 Doc & Practice) thành **60 tệp CSV theo từng bài `quiz`** (tối thiểu 5 câu/bài; các bài thực hành tách theo `source_reference` / từ khóa chuyên đề của từng Lab, và `quiz-doc-4-6` sử dụng nhóm câu hỏi I2C/Multiplexer trong Lab 4 do chưa có file `Doc4.6` riêng) và **9 tệp `labtest-{0..8}.csv`** tổng hợp loại trùng toàn bộ câu hỏi của từng Lab (`200–223` câu/Lab Test), tổng cộng **4.013 câu hỏi** chuẩn CubeSAT. Thay thế `default-question-bank.csv` (10 câu mẫu tin học cũ) bằng 10 câu fallback từ Lab 0 Doc 0.1. Đáp án và giải thích hoàn toàn không nằm trong `seed.json` hay bundle frontend (`AGENTS.md` quy tắc 5).
+- **Rút đề ngẫu nhiên theo cấu hình (`num_questions`):**
+  - Đổi mặc định chính sách ở `sample_questions.py` và `quizzes.py`: bài `quiz` mặc định rút ngẫu nhiên **5 câu** (`pass_score = 4`, `10 phút`, không giới hạn lượt), bài `labtest` mặc định rút ngẫu nhiên **20 câu** (`pass_score = 16`, `20 phút`, `5 lượt/đợt`, chờ `30 phút`); nếu ngân hàng có ít câu đã duyệt hơn `num_questions`, server rút hết số câu hiện có và hạ `pass_score = min(pass_score, draw)`. Giảng viên có thể tùy chỉnh `num_questions` trên cả `PolicyForm` và cấu hình chương trình lớp (`ALLOWED_PARAMS["quiz" | "labtest"]`). Nâng trần bản nháp mỗi phiên bản ngân hàng từ `200` lên `500` để nạp trọn bộ ngân hàng Lab Test (`~223` câu).
+- **Chuẩn hóa kiểm tra đáp án công thức & trùng câu hỏi:**
+  - `QuestionInput.valid_choices` đổi sang so sánh bằng NFKC + gộp khoảng trắng + `casefold()` thay vì `normalized()` (vốn xóa dấu `+`, `-`, `*`, `/`), tránh báo lỗi giả cho các lựa chọn công thức toán học như `+50°C` vs `-50°C` hoặc `(NIR - Red)` vs `(NIR * Red)`.
+  - `validate_distinct` dùng tập khóa `normalized(prompt)` (O(N)) thay cho ngưỡng `SequenceMatcher >= 0.9` nhằm tránh chặn các cặp câu hỏi kỹ thuật hợp lệ khác tham số (`CPOL = 0` vs `CPHA = 0`, `OBC` vs `C&DH`, `cao nhất` vs `thấp nhất`) và tăng tốc seed/publish ngân hàng Lab Test >200 câu.
+- **Làm mới an toàn cho tất cả các lớp hiện có (`refresh_default_banks_for_class`):**
+  - Tích hợp vào `sync_classes_to_latest_course` (`--sync-classes`): với mỗi lớp đang có, giữ nguyên toàn bộ câu hỏi do giảng viên tự soạn; chỉ thay các câu từ ngân hàng tin học cũ (`is_legacy_generic_prompt`) hoặc ngân hàng trống bằng bộ câu CubeSAT mới bằng cách tạo phiên bản ngân hàng `version + 1` (không sửa đè bản `published` để tôn trọng PostgreSQL immutability triggers và giữ nguyên lịch sử `QuizAttempt`), tự xuất bản lại nếu trước đó đang `published`, và cập nhật các `QuizPolicy` còn giữ nguyên mặc định cũ `(3, 2, 10)` / `(10, 8, 15)` / `(5, 4, 10)` sang `(5, 4, 10)` / `(20, 16, 20)`. Chạy lặp lại `--sync-classes` là idempotent.
+- **Ôn tập chấm ở máy chủ cho đường `/lab` và `/labN/questions`:**
+  - Bổ sung `GET /api/curriculum/legacy/labs/{lab_id}/questions`, `GET .../quiz/{lesson_id}` (rút ngẫu nhiên 5/20 câu đã xóa sạch `correct_choice_id` và giải thích), và `POST .../quiz/{lesson_id}/grade` (chấm cả 4 dạng câu hỏi ở server rồi mới trả giải thích), toàn bộ đều chặn bằng `legacy_restricted` (`403 MEMBERSHIP_REQUIRED` cho sinh viên lớp pilot). Frontend dùng `LegacyQuizPanel.jsx` trên `LabLayout` và `LabQuestionsPage`.
 
-## 25/11/2026 — Sửa dứt điểm lỗi "Compiler sandbox chưa sẵn sàng hoặc trả dữ liệu không hợp lệ"
+## 23/11/2026 — Gộp 11 nhóm thực hành nhiều bài con (179 → 164 bài học)
 
-- Nguyên nhân thật là image compiler và backend lệch phiên bản cấu hình build. Backend băm `build_config.py` (pin thư viện, revision override) và chỉ nhận artifact từ image build với đúng cấu hình đó. Hai đường gây lệch:
-  - Hai `dev.py` cùng nghe cổng 8005 (Windows cho bind trùng), bản cũ vẫn trả lời request.
-  - `setup-local` chỉ build image compiler khi chưa có image. Container backend local được build lại nhưng `pscubesat-compiler:1` vẫn cũ, hoặc ngược lại.
-- Sửa:
-  - `setup-local.ps1/.sh` luôn build image compiler, dùng `--provenance=false`. Cache lớp làm lần build không đổi mất vài giây (cả lần cài lại khoảng 25 s), và ID image giữ nguyên nên `catalog.json` ghi được ID ổn định.
-  - `dev.py` từ chối khởi động khi cổng 8005 đã có backend.
-  - Lỗi lệch cấu hình có mã riêng `COMPILER_VERSION_MISMATCH` kèm hướng dẫn, thay cho thông báo chung chung.
-  - `prepare.py` không chép `README.md` override vào thư viện, `.dockerignore` loại file này để sửa tài liệu không làm hỏng cache image.
-- Stack local `pscubesat-local` được dựng lại bằng `compose down` (giữ volume) và `setup-local.ps1 install`. Kiểm tra:
-  - 47/47 sketch biên dịch trong chính container backend local.
-  - Thư viện trong image khớp từng file với `74065b6` cùng override.
-  - `catalog.json` ghi image `sha256:c5122d4e…`.
-- Đã xóa image `pscubesat-compiler:v6-backup`, cùng bản v8 tạm và các image backend/frontend cũ. Giữ `pscubesat-compiler:v7-candidate` để quay lui.
-- `deploy/initialize-cubesat.sh` (server) vốn đã build image compiler ở mỗi lần triển khai, nên không đổi. Không thêm `--provenance` ở đó vì chưa biết bản Docker trên server.
+- **Gộp đúng theo mục cấp 1 của README (26 bài con → 11 bài thực hành cha):**
+  - Hợp nhất 11 mục thực hành có nhiều sketch con thành 11 bài `practice` cha trong `src/data/curriculum.js` và `seed.json`, đưa tổng số bài toàn khóa Lab 0–8 từ 179 về **164 bài** (`[10, 31, 12, 23, 35, 15, 12, 14, 12]`): `practice-1-led` (3 bài), `practice-1-button` (2), `practice-1-uart` (2), `practice-1-wifi` (3), `practice-2-max17048` (2), `practice-3-sd` (2), `practice-4-bmp280` (2), `practice-4-imu` (2), `practice-4-nmea-raw` (2), `practice-4-camera` (2), `practice-5-lora` (4).
+  - Chuẩn hóa tiêu đề hiển thị sidebar của 13 bài thực hành đơn khớp tên đề mục README (như `Thực hành Component 74HC595 & LED 7 Đoạn`, `Thực hành Component Tiết Kiệm Điện`, …) trong khi giữ nguyên ID kỹ thuật (`Lab1-06_7_Segment_LED`, `Lab2-02_Power_Saving`, …) và toàn bộ 39 bài thực hành phần cứng. Sửa luôn lỗi tiền tố `Lab1-10` / `Lab1-11` trong `Lab1ConnectionNotice.jsx`.
+- **Tab bài con bên trong bài học & giữ nguyên draft/tải mẫu/nạp:**
+  - Cả `/classes/.../learn` (`ClassLearningPage`) và `/labN` (`LabLayout`) dùng chung `PracticeExerciseTabs` để chuyển qua lại từng bài con; mỗi bài con giữ nguyên khóa nháp `localStorage` C++/Blockly riêng, tải file `.ino` riêng, biên dịch/flash và bộ giải mã trực quan `TelemetryContext`. Liên kết sâu `?lesson=<childId>` tự chuyển về bài cha và mở đúng tab con tương ứng.
+  - Phía server (`curriculum_access.py`, `/api/curriculum/exercises`), truy cập `.ino` hoặc compile bằng ID bài con đi qua kiểm quyền bật bài & tiên quyết của bài cha.
+- **Nộp gộp một lượt & quy tắc nâng cấp an toàn:**
+  - Khi sinh viên nộp bài trên bài thực hành gộp, client tự động gộp mã C++ đã lưu của tất cả các bài con theo tiêu đề `// === <exercise_id> ===` vào một `PracticeSubmission` để giảng viên chấm một lần.
+  - Khi nâng cấp lớp từ giáo trình 179 bài cũ lên 164 bài (`upgrade_class_to_course_version`), `LessonProgress` của nhóm gộp chỉ chuyển `completed` khi **tất cả** bài con đã `completed`/`waived`; nếu mới xong một phần thì chuyển `in_progress` và giữ lịch sử bài nộp kèm tiêu đề bài con.
+  - `npm run db:seed` mặc định chạy `app.services.curriculum_seed --quiet --sync-classes` với `enable_all_lessons=False` (có thêm cờ tùy chọn `--enable-all-lessons`) để tự động nâng cấp mọi lớp còn ở phiên bản giáo trình cũ khi khởi động/triển khai mà vẫn giữ nguyên lựa chọn bật/tắt bài của giảng viên trên các lớp đã ở bản mới nhất; lớp tạo mới mặc định dùng `latest_published_course_version` (164 bài gộp).
 
-## 25/11/2026 — Cập nhật PTITCube-Library `74065b6` và 39 sketch theo các repo PTITCube (24/11)
+## 23/11/2026 — Chuẩn hóa toàn bộ khung Lab 0–8 theo README (179 bài) & đưa 44 Quiz Lab 2–8 lên `/classes`
 
-- Thư viện: ghim `PTITCube-Library@74065b64f670…`, cũng là bản mà mọi repo Lab vendor trong `lib/PTITCube`. Bố cục mới `CDH/{Scheduler,Storage,WDT}`, `MUX/{MUX,Camera,GPS}`, nên override được dựng lại theo đường dẫn mới, revision compiler **v8** (`compiler/overrides/README.md`). Upstream đã tự nhận các bản vá CDH (console ESP32-S3, timeout WiFi) và MPU6500, nên bỏ override tương ứng.
-- Giữ các bản vá vẫn còn cần: UART2 dùng một instance và đổi baud tại chỗ; camera không MUX giữ 115200; kiểm tra JPEG khi chụp; GPS fix tối đa 5 s; Storage đếm byte ghi (sửa luôn `touch`); cảm biến trả NaN thay vì giá trị cũ.
-- Thêm bản vá mới: mutex bus dạng **đệ quy**. Thư viện tự khóa I2C/SPI trong `Sensor::update()`/`logData()`, còn Lab7-02 đã giữ khóa đó khi gọi, nên mỗi lần gọi lại chờ 100 ms rồi chạy mà không có khóa.
-- Đơn vị từ trường của thư viện đổi từ Gauss sang **µT**: sketch không nhân 100 nữa; nhãn `[TELEMETRY] Mag` trên giao diện dùng hệ số 1.
-- Sketch: merge 3 chiều (base = commit upstream cũ trong `catalog.json`, ours = bản local, theirs = upstream 24/11), giữ nguyên ID bài (quy tắc 3) dù upstream đổi tên repo:
-  - Lab 1 đánh số lại 01–11.
-  - Lab3-04 → `Lab3-04_Watchdog_Timer`; Lab5-03 → `Lab5-03_Ground_Station_Demo`.
-  - Lab4-05/06 đổi chỗ (`Lab4-05_Read_All_Sensors` ↔ repo `Lab4-06_Read_All_Sensors`).
-  - `repositoryUrl` trỏ tới repo mới.
-- Theo upstream về logic, API và log; chỉ giữ hoặc thêm bản vá an toàn và trung thực:
-  - GPS chỉ in tọa độ khi `hasFix()` (Lab4-03c, đọc tổng hợp, Lab5-03); upstream in 0,0 khi chưa fix.
-  - Lab4-02a đọc byte cao/thấp tách riêng.
-  - Lab4-01a không in số rác khi thiếu BMP280.
-  - Camera: kiểm tra JPEG, tên ảnh không ghi đè, gửi ảnh về Camera Viewer.
-  - Thẻ nhớ: báo lưu theo kết quả ghi thật.
-  - Lab3-05 khôi phục debounce.
-  - Lab5-01a kiểm tra AUX.
-  - Lab7-02: cờ atomic, khóa LoRa/UART2, JSON `null` cho NaN.
-- Lab7-02 upstream bỏ MQTT và lệnh dạng chữ, chuyển sang lệnh 1 ký tự `a`–`f`/`p`/`r` qua LoRa. Làm theo upstream: panel `network` bỏ, thêm `groundStation`. MQTT cho Lab 7 làm lại theo `Docs/MQTT_PLAN_2026-11-18.md`.
-- Giao diện: bộ đọc log (`src/telemetry/practice.js`) nhận cả định dạng log mới lẫn cũ (bản nháp cũ của sinh viên vẫn hiển thị). Shell Lab3-02: thư viện trả chuỗi rỗng khi thành công, sketch in `OK`. Lệnh nhanh: Lab3-04 `f`, Lab3-02 `rmdir demo`, Lab4-06 `p`.
-- `camera-slave` nhận thêm `capture`/`photo` (mọi kiểu chữ) như ESP32_CAM_Firmware upstream. Phần còn lại của firmware camera upstream (đèn flash PWM, ngủ khi rảnh) chưa merge.
-- Bài "cha" không còn repo upstream (8 bài) giữ nguyên ID, biên dịch lại với thư viện mới.
-- Đối chiếu log ↔ trực quan hóa: `tests/practice-firmware-logs.test.js` liệt kê mọi dòng mà 39 sketch và thư viện in ra (kể cả nhánh lỗi), kèm dữ liệu panel phải đọc được. Test cũng kiểm tra mỗi panel của bài đều có nguồn dữ liệu từ log, và mọi chuỗi in trong sketch đều có trong danh mục. Quy ước:
-  - Điện áp MAX17048 ≤ 0,5 V coi là chưa đọc được (cùng ngưỡng với Lab 7), không hiển thị 0 V.
-  - "Hello World #n" của Lab 3 không còn bị tính là sự kiện Serial của Lab 1.
-  - Lab 3.5 có thẻ Dispatcher; System Check của Lab 7.2 bỏ hàng WiFi/MQTT.
-- Tiêu đề bài ("Yêu cầu thực hành") sửa cho khớp code: 4.1b, 4.2a, 4.6, 5.1a (không cấu hình thanh ghi), 5.1b (không đóng gói CRC), 5.2b (chỉ nhận và in lệnh).
-- Chưa làm, cần nhóm chốt:
-  - Đổi thứ tự 4.5/4.6 trong giáo trình (ảnh hưởng thứ tự mở khoá và phiên bản khóa học của lớp).
-  - Đối chiếu tên bài và mô tả mới của README `PTITCube/.github` (commit `3ba1246`).
-  - Kiểm thử trên phần cứng thật.
+- **Khung rỗng Lab 0–8 (179 bài học khớp 100% README):**
+  - Bổ sung thư mục khung rỗng phía server `fastapi-backend/app/firmware/curriculum/lab2/` … `lab8/` (các file `video-*.json` để `url: ""` và `doc-*.md` rỗng để fallback về mô tả ngắn trong `lesson-reading.js` cho tới khi giảng viên điền nội dung thật) và cập nhật `LAB_FILES` trong `scripts/export-curriculum.mjs`.
+  - Đưa toàn bộ **44 bài Câu hỏi kiểm tra (`quiz-doc-*`, `quiz-practice-*`) của Lab 2–8** vào `seed.json` và `/classes` như bài `quiz` thật do server chấm điểm (tổng **60 bài `quiz` + 9 bài `labtest`** trên toàn 9 Lab: `10, 37, 13, 24, 39, 18, 12, 14, 12` = **179 bài**). Vẫn giữ `checkpointId` trên đối tượng nguồn để giao diện legacy hoạt động không hồi quy; bỏ bước tự sắp xếp lại theo nhóm ở `export-curriculum.mjs` để giữ đúng thứ tự README (bao gồm việc đưa nhóm `Video 4.5` → `Doc 4.6 (74HC4066)` → `Lab4-05_Camera_Multiplexer` lên trước `Doc 4.7` → `Lab4-06_Read_All_Sensors` ở Lab 4).
+  - Lớp tạo mới và lớp đồng bộ mặc định bật 100% cả 9 Lab và 179/179 bài học (`course_configuration.defaults`); các bài `quiz` và `labtest` tự nạp sẵn 3/10 câu mẫu từ `default-question-bank.csv` (trừ câu trả lời không bao giờ nằm trong bundle hay `seed.json`) để xuất bản được ngay, giảng viên toàn quyền bật/tắt hoặc sửa từng bài sau.
+- **Thống nhất 12 ID kỹ thuật bài thực hành khớp tên README (`0023_readme_id_alignment`):**
+  - Đổi tên ID kỹ thuật + file `.cpp` + `catalog.json` cho 8 bài Lab 1 (`Lab1-04_Button`…`Lab1-11_Web_Server_LED`), `Lab3-04_Watchdog_Timer`, 2 bài Lab 4 đảo số/vị trí (`Lab4-05_Camera_Multiplexer`, `Lab4-06_Read_All_Sensors`) và `Lab5-03_Ground_Station_Demo` — trong khi giữ nguyên `upstream_url` / `repositoryUrl` trỏ về các kho GitHub thật để tránh liên kết hỏng và giữ nguyên nội dung/hash `.cpp` đã kiểm chứng biên dịch.
+  - Migration `0023_readme_id_alignment` chuyển khóa `lesson_progress` trong `lab_progress` (có `downgrade` đầy đủ theo thứ tự đảo ngược tránh va chạm); `PRACTICE_ID_RENAMES` trong `course_configuration.py` chuyển tiếp cấu hình và `LessonProgress`/`PracticeSubmission` khi nâng cấp lớp; `LEGACY_EXERCISES` trong `project-files.js` giữ đọc lại được bản nháp trình duyệt đã lưu theo bất kỳ ID cũ nào.
+
+## 23/11/2026 — Đồng bộ số bài tối đa giữa các lớp & cập nhật Lab 1 (37 bài)
+
+- **Mặc định bật 100% số bài mỗi lab (`course_configuration.defaults`):** mọi bài học của từng lab (bao gồm cả các bài `video` chưa gắn URL, với `required=false` cho video) mặc định `enabled=true` để lớp mới tạo tự động có đủ số bài bật tối đa giống nhau; giảng viên vẫn có thể bật/tắt riêng từng bài sau đó.
+- **Nâng cấp phiên bản giáo trình cho các lớp hiện có (`upgrade_class_to_course_version` & `--sync-classes`):** không sửa đè các bản ghi `class_course_versions`, `class_lesson_settings`, `prerequisites`, `question_banks` đã xuất bản (tôn trọng immutability triggers); tạo `version + 1` ở trạng thái `draft`, nhân bản/giữ nguyên ngân hàng câu hỏi đã soạn, nạp câu hỏi mẫu cho bài mới phát sinh, sao chép `lesson_progress` / `practice_submissions` / `completion_overrides` theo `lesson_id`, rồi tự xuất bản lại nếu lớp trước đó đang ở trạng thái `published`. Bổ sung nút "Cập nhật lên giáo trình mới nhất" (`POST /api/classes/{class_id}/upgrade-course-version`) để tránh lệch phiên bản về sau.
+- **Chuẩn hóa danh sách & tên hiển thị Lab 1 (37 bài):** cập nhật mục tiêu, nhóm nội dung và tiêu đề/mô tả Lab 1 theo đề cương chuẩn; giữ nguyên ID kỹ thuật cũ của 8 bài thực hành (`Lab1-03_Button`…`Lab1-10_Web_Server_LED`) để bảo toàn tiến độ/bản nháp trình duyệt và khớp repo upstream, trong khi nhãn và tiêu đề hiển thị đánh số liên tiếp `Lab1-04_Button`…`Lab1-11_Web_Server_LED`. Khắc phục mapping `'doc-1-3'`/`'doc-1-4'` trong `export-curriculum.mjs` và xuất lại `seed.json`.
+
+## 22/11/2026 — Không giới hạn lượt Quiz và đợt 5 lượt / chờ 30 phút cho Lab Test
+
+- **Mặc định mới:** bài `quiz` không giới hạn số lượt làm (`max_attempts = NULL`, `cooldown_minutes = 0`) để sinh viên có thể làm lại ngay đến khi đạt mà không bị kẹt tiến trình sang bài tiếp theo; bài `labtest` giới hạn **5 lượt mỗi đợt** và **chờ 30 phút** (`max_attempts = 5`, `cooldown_minutes = 30`) khi hết đợt chưa đạt.
+- **Công bố đáp án khi có thời gian chờ:** với chính sách `after_pass` / `after_attempts`, nếu bài có `cooldown_minutes > 0` (hoặc không giới hạn lượt), đáp án và giải thích **không** công bố khi hết đợt mà chưa đạt (tránh lộ đáp án trước khi làm lại); chỉ công bố khi sinh viên đạt điểm (và khóa làm lại), khi đóng bài (`after_close`) hoặc khi giảng viên đặt `cooldown_minutes = 0`.
+- **Cơ chế tính thời gian chờ & cấp thêm lượt:** thời gian chờ tính theo đồng hồ server từ mốc kết thúc lượt cuối của đợt (`expires_at` nếu hết giờ, ngược lại `submitted_at`). Hết thời gian chờ tự mở đợt `max_attempts` lượt mới (lặp lại đến khi đạt). Giảng viên cấp thêm lượt (`attempt-grants`) trong lúc chờ sẽ mở khóa ngay cho đúng số lượt được cấp; nếu dùng hết vẫn chưa đạt thì bắt đầu chu kỳ chờ mới.
+- **Tùy chỉnh của giảng viên & mở kẹt dữ liệu cũ:** giảng viên có thể bật/tắt không giới hạn lượt và chỉnh `cooldown_minutes` (`0..1440`) ở cả Cấu hình chương trình và Chính sách bài test. Migration `0022_quiz_attempts_and_cooldown` cập nhật các `quiz_policies` còn ở mặc định cũ (`max_attempts = 3`) sang mặc định mới mà không ghi đè cấu hình đã tùy chỉnh; với sinh viên chưa đạt từng bị ghi `revealed_at` do luật 3 lượt cũ trên bài nay chuyển sang không giới hạn/có thời gian chờ, hệ thống bỏ qua cờ khóa đó để sinh viên làm lại mà vẫn giữ nguyên bản ghi `quiz_attempts` cũ.
+
+## 21/11/2026 — Nạp sẵn câu hỏi mẫu cho Quiz (3 câu) và Lab Test (10 câu) khi cấu hình lớp
+
+- **Nguồn câu hỏi mẫu chỉ ở server:** đặt tệp gốc `fastapi-backend/app/firmware/curriculum/default-question-bank.csv` (10 câu từ mẫu CSV chuẩn, không đưa vào `seed.json` hay bundle frontend). Khi cần thay đề mẫu cho từng lab/bài sau này, chỉ cần đặt file phía server theo thứ tự ưu tiên: `lab{N}/{lesson_id}.csv|json` → `lab{N}/{quiz|labtest}.csv|json` → `default-question-bank.csv`. File khung rỗng (như `{"questions": []}`) tự rơi xuống mức tiếp theo.
+- **Xoay vòng cho quiz và 10 câu cho Lab Test:** trong fallback (hoặc file `lab{N}/quiz.*`), mỗi bài `quiz` theo thứ tự trong lab nhận 3 câu xoay vòng `(quiz_index * 3) % N` (không trùng trong một bài); mỗi `labtest` nhận đủ 10 câu.
+- **Trạng thái khởi tạo & mặc định lớp mới:** `seed_banks` (khóa hàng lớp chống race) khởi tạo ngân hàng ở `draft` với các câu mẫu ở `approved` (gắn `reviewer` là giảng viên/quản trị viên tạo), giúp giảng viên thêm/sửa/xóa câu ngay mà không cần fork. Chính sách mặc định: quiz 3 câu (đạt 2/3, 10 phút, 3 lượt), Lab Test 10 câu (đạt 8/10, 15 phút, 3 lượt). Các bài `quiz` và `labtest` của lớp mới mặc định `enabled=true`, `required=true`.
+- **Tự xuất bản cùng cấu hình lớp & chặn câu nháp:** khi xuất bản cấu hình chương trình lớp, mọi bài `quiz`/`labtest` đang bật thuộc lab đang bật nếu có ngân hàng `draft` với `>= 1` câu đã duyệt và `0` câu nháp sẽ được tự động xuất bản trong cùng transaction (`bank.publish`). Nếu còn câu nháp chưa duyệt, xuất bản bị chặn với mã `QUIZ_DRAFT_UNAPPROVED` để giảng viên không bỏ sót câu mới thêm. Thêm `POST .../question-bank/load-samples` (nạp bổ sung câu mẫu chưa có, không ghi đè/trùng câu hiện có) và nút "Nạp câu hỏi mẫu" trên UI.
+- **Migration `0021_default_sample_quiz_banks`:** nạp 1 lần vào các ngân hàng `draft` đang trống (0 câu) của lớp cũ và cập nhật policy `labtest-*` chưa tùy chỉnh (5/4/10 phút → 10/8/15 phút); không đụng tới ngân hàng đã có câu, ngân hàng đã xuất bản hay `class_lesson_settings` cũ. `downgrade` giữ nguyên dữ liệu để không làm mất nội dung soạn thảo.
 
 ## 19/11/2026 — Áp giao diện mới của Quân (`quanna1402:fix/frontend-v1`)
 
@@ -251,32 +253,29 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Lab4-04b đổi tên: "Chụp ảnh bằng thư viện PTIT_Camera, lưu thẻ SD và gửi ảnh về trình duyệt qua Serial". ID không đổi.
 - Hiển thị ảnh camera qua MQTT: hoãn, kế hoạch riêng ở `Docs/MQTT_PLAN_2026-11-18.md`.
 
-## 2026-11-25 — Lab 7: System Check thay bảng SD / "Kết quả thực hành", widget trong cửa sổ Trạm mặt đất
-- Lab7-01/02: thẻ "🛰️ Trạm mặt đất" nằm ngay sau Serial Monitor; bỏ bảng "Thẻ SD / Hệ thống tệp" và "Kết quả thực hành". Trạng thái và log 5 dòng gần nhất của Thẻ nhớ SD và Đường truyền LoRa hiển thị trong System Check.
-- Mỗi dòng System Check là Active (xanh) khi có số đo hoặc báo cáo của phân hệ trong 10 giây gần nhất, Inactive (xám) khi không có, Lỗi (đỏ) khi báo cáo mới nhất là lỗi. 10 giây vì Lab 7 phát mỗi 4 giây và tạm dừng viễn trắc khi đang xử lý lệnh. Ảnh lưu bằng lệnh f và log lệnh b (ghi/đọc pin trên SD) được tính là hoạt động của thẻ SD.
-- Lab 7 không làm mờ (opacity) các bảng khi chưa có dữ liệu mới; System Check thể hiện độ mới thay cho việc làm mờ. Các lab khác giữ nguyên.
-- Cửa sổ Trạm mặt đất (`/groundstation?lesson=Lab7-…`) có bản sao các widget (tư thế 3D, GPS, điện áp, môi trường, System Check), lấy dữ liệu **chỉ từ cổng USB-TTL của trạm mặt đất** (gói LoRa thu được), không chia sẻ dữ liệu từ cổng USB của vệ tinh. Lý do: cửa sổ trạm mặt đất phải phản ánh đúng những gì đường truyền LoRa mang về. Ở trạm mặt đất mọi dòng nhận được đều tính là RX của LoRa; gói downlink rút gọn nên có thể thiếu trường (ví dụ Lab7-01 không gửi gia tốc trong gói định kỳ).
+## 2026-11-19 — Chính sách mật khẩu mạnh khi đặt mật khẩu mới
+- Quyết định: mật khẩu mới phải có tối thiểu 8 ký tự, ít nhất 1 chữ cái in hoa và 1 ký tự đặc biệt (không phải chữ, số hay khoảng trắng); giữ giới hạn 72 byte UTF-8. Áp dụng ở server (`validate_new_password` trong `app/schemas/auth.py`) cho đăng ký, đăng ký admin đầu tiên, đổi mật khẩu và đặt lại mật khẩu; frontend dùng `src/utils/passwordPolicy.js` để báo trước và hiển thị yêu cầu.
+- Không áp dụng cho đăng nhập: tài khoản cũ có mật khẩu yếu vẫn đăng nhập được, chỉ phải theo quy tắc mới khi đổi hoặc đặt lại. Không buộc đổi mật khẩu hàng loạt.
+- Không thêm yêu cầu chữ số hay danh sách mật khẩu phổ biến (ngoài phạm vi). `scripts/create_admin.py` (CLI) không đi qua schema nên chưa áp dụng.
 
-## 2026-11-25 — Lab 8: kích thước widget dashboard
-- Mỗi loại widget có kích thước mặc định và tối thiểu (đơn vị lưới, 1 hàng = 60 px); không kéo nhỏ hơn mức tối thiểu được. Lưới nhỏ nhất giữ 4 cột để vừa chiều rộng tối thiểu.
-- Đồ thị, bản đồ, mô hình 3D và Terminal lấp đầy ô widget theo chiều cao còn lại thay vì cao cố định 300–350 px. Bản đồ tự đo lại kích thước khi widget đổi cỡ và luôn hiển thị (tâm mặc định PTIT Hà Đông) khi chưa có fix GPS.
-- Dashboard Lab 8 không làm mờ panel khi chưa có mẫu mới, giống Lab 7.
-- Đồ thị, Gauge, Cảnh báo ngưỡng và Bảng số liệu chọn được trường dữ liệu (⚙ trên tiện ích): điện áp, nhiệt độ, độ ẩm, áp suất, gia tốc/con quay/từ trường X·Y·Z, độ cao, vĩ độ/kinh độ. Một đồ thị chỉ vẽ các trường cùng đơn vị (một trục Y); chọn trường khác đơn vị sẽ thay bằng đồ thị mới. Danh sách trường lấy từ schema telemetry, không có trường "ảo".
-- Bảng tiện ích bổ sung các panel của các lab trước (Môi trường, System Check, LoRa, Trạm mặt đất, WiFi/MQTT, Thẻ SD, Kết quả lệnh, Phát hiện sự cố, LED/Nút nhấn, Bảng lệnh). Bỏ khỏi bảng: WiFi/MQTT, LED/Nút nhấn, Thẻ SD; bỏ trường độ ẩm (bộ cảm biến PTITCube không có).
-- Bố cục dashboard lưu theo tài khoản trong trình duyệt (`localStorage`, khóa `ptit:dashboard:v1:user:<id>`), cùng cách lưu bản nháp code; không lưu cho khách. Không lưu ở server để không thêm bảng/migration cho một tùy chọn giao diện; đổi máy thì về bố cục mặc định. Khi đọc lại, khối đã bị gỡ khỏi bảng và cấu hình không hợp lệ được bỏ qua hoặc trả về mặc định.
-- Bảng lệnh mặc định: ping, status, uptime, get_sensor, get_eps, get_gps, capture, pause, resume, help; học viên chọn thêm/bớt từ danh sách gợi ý hoặc gõ lệnh riêng.
+## 2026-11-19 — Quên mật khẩu tự phục vụ qua email
+- Quyết định: dùng luồng email có sẵn (link một lần, TTL `PASSWORD_RESET_TOKEN_TTL_MINUTES`, mặc định 30 phút) làm đường chính; bật bằng cách điền `SMTP_*` và `FRONTEND_URL` trong `fastapi-backend/.env` (mẫu ở `.env.example`) rồi khởi động lại backend. Không điền thì giữ hành vi cũ: yêu cầu chuyển về admin tại `/admin/users`.
+- Gửi mail lỗi vẫn rơi về hàng chờ admin; thông báo chung nay nói rõ khả năng đó và vẫn giống hệt với email không tồn tại để không lộ thông tin tài khoản.
+- Rủi ro: Gmail cá nhân có hạn mức thư/ngày; `FRONTEND_URL` sai sẽ làm link trong email trỏ sai. Chưa kiểm thử gửi thư thật vì chưa có thông tin SMTP.
 
-## 2026-11-25 — Ảnh camera chỉ lưu trên thẻ SD, không hiện trên trình duyệt
-- Nguyên nhân gặp thực tế: bản nháp Lab4-04a viết từ phiên bản code cũ (giống upstream PTITCube) chỉ ghi ảnh vào SD và in "Camera: Saved ...", không gọi `sendImageOverSerial()`, nên không có `IMG_BEGIN/IMG_CHUNK/IMG_END`. Trình duyệt không thể đọc thẻ SD của OBC; ảnh chỉ đến được nếu firmware gửi lại qua Serial (hoặc MQTT).
-- Không tự sửa bản nháp của học viên và không cài việc gửi ảnh vào thư viện (các bài 4-04b/4-06 đã tự gửi, sẽ bị gửi trùng). Thay vào đó Camera Viewer phát hiện "đã lưu trên thiết bị nhưng sau 4 giây không có IMG_BEGIN", giải thích lý do và cho xem/sao chép hàm `sendImageOverSerial()` cùng chỗ cần gọi.
-- Bộ giải mã phát sự kiện tiến độ khi đang nhận ảnh qua Serial (mỗi ~3 KB) và đánh dấu ảnh đã thật sự về trình duyệt (`browser: true`) để phân biệt với dòng "Saved" của firmware.
+## 2026-11-20 — Xác minh email khi đăng ký
+- Quyết định: khi SMTP đã cấu hình, đăng ký tạo tài khoản chưa xác minh (`users.email_verified_at` rỗng), gửi liên kết một lần (hash trong `email_verification_tokens`, hết hạn sau `EMAIL_VERIFICATION_TTL_HOURS`, mặc định 24 giờ) và không cấp token. Đăng nhập bằng email/mật khẩu bị chặn bằng mã `EMAIL_NOT_VERIFIED` (HTTP 403) cho đến khi xác minh; chỉ báo sau khi mật khẩu đúng nên không lộ tài khoản. Mã này là mã mới ngoài danh sách dùng chung trong AGENTS.md.
+- Khi SMTP chưa cấu hình, đăng ký coi tài khoản là đã xác minh và cấp token như trước. Quy tắc chặn chỉ áp dụng khi SMTP bật, nên tắt SMTP không làm khóa người dùng đang chờ xác minh.
+- Tài khoản hiện có được backfill `email_verified_at = created_at` (migration `0020_email_verification`); đăng nhập Google, admin đầu tiên và hoàn tất đặt lại mật khẩu qua email cũng đánh dấu đã xác minh.
+- Gửi lại thư xác minh: phản hồi luôn giống nhau với email lạ; mỗi lần gửi thu hồi liên kết cũ; có giới hạn tần suất theo IP.
+- Downgrade xóa cột và bảng token (chỉ mất trạng thái xác minh mới; upgrade lại backfill tất cả là đã xác minh).
+- Test: `app/tests/conftest.py` ép `smtp_host` rỗng cho mọi test để `.env` cục bộ không làm đổi luồng hay gửi thư thật.
 
-## 2026-11-25 — Ảnh camera lên trình duyệt qua MQTT, ẩn khỏi code học viên
-Thay cho mục "Ảnh camera chỉ lưu trên thẻ SD" ở trên (bỏ hướng dẫn tự chép hàm `sendImageOverSerial()`).
-- Học viên chỉ code chụp và lưu ảnh vào `/photos` trên thẻ SD. Việc đẩy ảnh lên máy chủ nằm trong lớp nền của thư viện (`compiler/overrides/CDH/PTITCloud.*`, bản build v9), chạy ở mọi bài: một task ưu tiên thấp quét `/photos` mỗi 2 giây và publish mỗi JPEG mới (kích thước ổn định qua 2 lần quét, có SOI/EOI, ≤ 2 MB) lên `sensors/<uid>/image`. Ảnh có sẵn trên thẻ lúc bo khởi động không gửi lại.
-- Cấu hình WiFi + MQTT do web app gửi qua Serial và bo lưu trong NVS (không nằm trong mã nguồn hay file .bin). Khi `cdh.begin()`, bo in `[CLOUD] CFG? v1 uid=… ssid=…` và chờ 2 giây (0,6 giây nếu đã có cấu hình). Web app trả `@PTITCLOUD KEEP` nếu bo đã đúng thiết bị/WiFi của tài khoản; nếu không thì gọi `POST /api/devices/cloud/provision` rồi gửi cấu hình. Bo của tài khoản khác bị xóa cấu hình (`CLEAR`) để ảnh không lọt sang tài khoản đó. Dòng cấu hình không hiện trong Serial Monitor, và `cdh.read()` không bao giờ trả các dòng `@PTITCLOUD` cho sketch.
-- Mỗi tài khoản có một thiết bị "CubeSat của tôi (ảnh camera)" (model `ptitcube-cloud`), tạo khi cấp cấu hình lần đầu. `per_device`: mỗi lần cấp sẽ rotate secret riêng `dev_<uid>`. `shared` (HiveMQ demo hiện tại): mọi bo dùng chung `DEVICE_MQTT_USERNAME/PASSWORD`, không có phân quyền theo thiết bị. Đây là rủi ro đã chấp nhận cho demo: một bo có thể publish vào topic của bo khác, nhưng backend vẫn chỉ lưu ảnh cho thiết bị đã đăng ký và chỉ chủ thiết bị xem được.
-- WiFi lấy từ `DEVICE_WIFI_SSID/PASSWORD` (WiFi phòng lab); nếu trống thì Camera Viewer cho học viên nhập WiFi (chỉ giữ trong bộ nhớ trang, bo lưu vào NVS). Lớp nền chỉ bật WiFi khi sketch chưa tự bật WiFi, và không gửi khi sketch đang phát AP.
-- Camera Viewer tải ảnh của thiết bị này cả khi đang dùng Serial, tải ngay khi bo báo `[CLOUD] PHOTO SENT`, và bỏ bản trùng với ảnh đã nhận qua Serial (cùng số byte; các bài mẫu 4-04a/4-04b/4-06 vẫn gửi qua Serial).
-- Rủi ro còn lại: TLS dùng `setInsecure()` (chưa kiểm tra chứng chỉ). Đọc thẻ SD song song với sketch dựa vào khóa FATFS của ESP-IDF và khóa bus SPI của thư viện. Một bo chạy sẵn khi mở cổng (không reset) chỉ nhận cấu hình nếu sketch đọc `cdh`; nếu không thì phải nhấn RST. Bo chưa cấu hình sẽ chậm khởi động thêm 2 giây. Chưa thử trên phần cứng.
-- Sửa sau thử phần cứng (19:08): bản Lab4-04a cũ luôn đặt lại bộ đếm sau khi khởi động và ghi đè `/photos/uart_img_0.jpg`, nên lớp nền coi tệp là "đã có lúc khởi động" và không gửi. Giờ tệp đã biết mà đổi kích thước được coi là ảnh mới (ghi đè cùng kích thước vẫn bị bỏ qua, hiếm gặp). Bo in `[CLOUD] READY photos=<n>` khi bắt đầu theo dõi thẻ SD. Camera Viewer báo rõ nếu sau 30 giây bo vẫn chưa gửi ảnh. Bo chưa từng cấu hình không còn in lỗi `nvs_open failed`.
+## 2026-11-20 — Xóa tài khoản (admin)
+- Quyết định: `DELETE /api/admin/users/{id}` xóa mềm (`deleted_at`, trạng thái khóa), không xóa dòng dữ liệu, vì các khóa ngoại RESTRICT (lớp, thành viên, audit, thiết bị) và quy tắc không phá dữ liệu cũ. Phiên đăng nhập hiện có mất hiệu lực ngay, tài khoản bị gỡ khỏi mọi lớp (membership chuyển `removed`), yêu cầu đặt lại mật khẩu đang mở bị thu hồi, ghi `audit_logs` (`user.delete`, không lưu email).
+- Chỉ admin; không xóa chính mình, không xóa tài khoản admin; giảng viên còn phụ trách lớp chưa lưu trữ bị từ chối (409, trả danh sách mã lớp) để lớp không mồ côi. Tiến độ học tập, bài làm và báo cáo của tài khoản vẫn được giữ.
+- Email của tài khoản đã xóa vẫn bị giữ (chỉ mục duy nhất), nên chưa đăng ký lại được bằng email đó. Giải phóng email hoặc khôi phục tài khoản là việc riêng nếu cần.
+
+## 2026-11-20 — Không cấp thêm quyền Admin qua giao diện hoặc API
+- Quyết định: bỏ nút "Cấp quyền Admin" ở `/admin/users` và chặn ở server: `AdminUserPatch.role` chỉ nhận `teacher` hoặc `user`, gửi `admin` bị từ chối 422. Các tài khoản admin đã tạo giữ nguyên (đăng nhập, Khóa/Mở khóa, bảo vệ admin cuối cùng không đổi).
+- Admin mới chỉ tạo được qua `POST /api/admin/signup` (khi hệ thống chưa có admin) hoặc `scripts/create_admin.py`. Hạ quyền admin vẫn không có trên giao diện.

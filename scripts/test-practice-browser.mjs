@@ -39,7 +39,7 @@ await page.route('**/api/**', async intercepted => {
   if (pathname.startsWith('/api/progress')) return reply({});
   if (pathname.endsWith('/source')) {
     sourceAuthorized = true;
-    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab3-04_Watchdog_And_Event.cpp', import.meta.url), 'utf8');
+    const source = await readFile(new URL('../fastapi-backend/app/firmware/curriculum/Lab3-04_Watchdog_Timer.cpp', import.meta.url), 'utf8');
     return intercepted.fulfill({ status: 200, contentType: 'text/plain', body: source });
   }
   return reply({});
@@ -147,7 +147,7 @@ try {
   await emit('  X:   0.00 m/s^2 | Y:   0.00 m/s^2 | Z:   9.81 m/s^2');
   for (const [panel, count] of [['Tư thế 3D', 1], ['Định vị GPS', 0], ['Camera', 0], ['Môi trường', 0]]) assert.equal(await page.getByRole('region', { name: panel, exact: true }).count(), count);
   console.log('PASS IMU burst read: SI acceleration drives the 3D viewer only');
-  await select('Lab3-04_Watchdog_And_Event');
+  await select('Lab3-04_Watchdog_Timer');
   await emit('[OBC HEARTBEAT] Uptime: 1500 ms | Đã đá chó canh (Feed WDT) thành công.');
   await emit('[SỰ CỐ C&DH] >>> Tác vụ bị treo vô hạn (Infinite Loop)! NGỪNG ĐÁ CHÓ CANH... <<<');
   await page.locator('.practice-evidence--error').filter({ hasText: 'NGỪNG ĐÁ CHÓ CANH' }).waitFor();
@@ -156,25 +156,25 @@ try {
   assert.equal(await page.getByRole('heading', { name: /System Check/ }).count(), 0);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Tải mã mẫu ESP32 (.ino)', exact: true }).click();
-  assert.equal((await download).suggestedFilename(), 'Lab3-04_Watchdog_And_Event.ino');
+  assert.equal((await download).suggestedFilename(), 'Lab3-04_Watchdog_Timer.ino');
   assert.ok(sourceAuthorized);
   console.log('PASS Lab3-04 watchdog: hang and FDIR recovery evidence, correct source download');
-  for (const id of ['Lab1-01_Blink_LED', 'Lab1-06_Serial_Communication', 'Lab1-07_Serial_Control_LED']) {
+  for (const id of ['Lab1-01_Blink_LED', 'Lab1-07_Serial_Communication', 'Lab1-08_Serial_Control_LED']) {
     await select(id);
     assert.equal(await page.locator('.lab-visual-stack .card').count(), 1);
     assert.equal(await page.getByRole('heading', { name: /LED \/ Serial|Phản hồi Serial \/ Echo|Command Uplink/ }).count(), 0);
   }
-  await select('Lab1-08_WiFi_Connection');
+  await select('Lab1-09_WiFi_Connection');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('192.168.1.22');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'IP address: 192.168.1.22' }).waitFor();
   assert.equal(await page.locator('.lab1-connection-notice a').count(), 0);
-  await select('Lab1-09_WiFi_AP_Mode');
+  await select('Lab1-10_WiFi_AP_Mode');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('AP IP address:'); await emit('192.168.4.1'); await emit('Số lượng thiết bị đang kết nối: 2');
   await page.locator('.lab1-connection-notice').filter({ hasText: 'Thiết bị đang kết nối: 2' }).waitFor();
   assert.match(await page.locator('.lab1-connection-notice').innerText(), /IP address: 192\.168\.4\.1/);
-  await select('Lab1-10_Web_Server_LED');
+  await select('Lab1-11_Web_Server_LED');
   assert.equal(await page.locator('.lab1-connection-notice').count(), 0);
   await emit('WiFi connected.'); await emit('IP address: 192.168.1.23');
   await page.locator('.lab1-connection-notice').waitFor();
@@ -195,7 +195,7 @@ try {
   assert.equal(await page.getByRole('heading', { name: 'Thẻ SD / Hệ thống tệp', exact: true }).count(), 0);
   await page.getByRole('button', { name: '➕ mkdir demo', exact: true }).click();
   assert.ok((await page.evaluate(() => window.__practiceTest.writes)).includes('mkdir demo\n'));
-  await select('Lab5-03_Satellite_Comm_System');
+  await select('Lab5-03_Ground_Station_Demo');
   const commandCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: /Command Uplink/ }) });
   assert.ok(await commandCard.getByRole('textbox').isDisabled());
   await page.getByLabel('Vai trò cổng lệnh', { exact: true }).selectOption('gs');

@@ -35,6 +35,13 @@ class LessonQuizTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
 
+    async def clear_bank(self, bank_id):
+        from sqlalchemy import delete
+
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank_id))
+            await db.commit()
+
     async def add_approved(self, bank_id, count):
         async with self.sessions() as db:
             for index in range(count):
@@ -72,6 +79,8 @@ class LessonQuizTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_publish_needs_an_approved_question_and_enabling_needs_a_published_bank(self):
         bank = await self.bank()
+        await self.clear_bank(bank["id"])
+        bank = await self.bank()
         short = await self.call(
             2, "POST", self.bank_url + "/publish", {"expected_revision": bank["revision"]}
         )
@@ -89,6 +98,7 @@ class LessonQuizTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pass_completes_the_quiz_lesson_and_answers_stay_private(self):
         bank = await self.bank()
+        await self.clear_bank(bank["id"])
         await self.add_approved(bank["id"], 4)
         published = await self.call(
             2, "POST", self.bank_url + "/publish", {"expected_revision": bank["revision"]}

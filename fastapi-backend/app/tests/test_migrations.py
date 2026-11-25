@@ -361,13 +361,13 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                     {"lab": lab, "data": data},
                 )
         await self.run_alembic("upgrade", "head")
-        self.assertEqual(await self.lesson_ids(1), {"Lab1-06_Serial_Communication", "video-1-4"})
+        self.assertEqual(await self.lesson_ids(1), {"Lab1-07_Serial_Communication", "video-1-4"})
         self.assertEqual(
             await self.lesson_ids(3),
             {"Lab3-02_Linux_FS_Commands", "Lab3-03_Multitasking_Scheduler"},
         )
         self.assertEqual(await self.lesson_ids(6), {"video-6-1"})
-        self.assertEqual(await self.lesson_ids(4), {"Lab4-06_Camera_Multiplexer"})
+        self.assertEqual(await self.lesson_ids(4), {"Lab4-05_Camera_Multiplexer"})
         self.assertEqual(await self.lesson_ids(7), set())
         async with self.engine.connect() as conn:
             self.assertEqual(
@@ -384,3 +384,76 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.lesson_ids(1), {"Lab1-02_Serial_Communication", "video-1-3"})
         self.assertEqual(await self.lesson_ids(6), {"Lab6-01_Multitasking_Scheduler", "video-6-1"})
         self.assertEqual(await self.lesson_ids(7), {"Lab7-01_Camera_Multiplexer"})
+
+    async def test_0023_readme_id_alignment_upgrade_and_downgrade(self):
+        await self.run_alembic("upgrade", "0022_quiz_attempts_and_cooldown")
+        async with self.engine.begin() as conn:
+            await conn.execute(
+                text("INSERT INTO users(email,password_hash) VALUES('align@example.com','x')")
+            )
+            seed_rows = {
+                1: [
+                    "Lab1-03_Button",
+                    "Lab1-04_LED_Button",
+                    "Lab1-05_7_Segment_LED",
+                    "Lab1-06_Serial_Communication",
+                    "Lab1-07_Serial_Control_LED",
+                    "Lab1-08_WiFi_Connection",
+                    "Lab1-09_WiFi_AP_Mode",
+                    "Lab1-10_Web_Server_LED",
+                ],
+                3: ["Lab3-04_Watchdog_And_Event"],
+                4: ["Lab4-06_Camera_Multiplexer", "Lab4-05_Read_All_Sensors"],
+                5: ["Lab5-03_Satellite_Comm_System"],
+            }
+            for lab, lessons in seed_rows.items():
+                data = '{"' + '": {"completed": true}, "'.join(lessons) + '": {"completed": true}}'
+                await conn.execute(
+                    text(
+                        "INSERT INTO lab_progress(user_id,lab_id,lesson_progress) "
+                        "VALUES(1,:lab,CAST(:data AS jsonb))"
+                    ),
+                    {"lab": lab, "data": data},
+                )
+        await self.run_alembic("upgrade", "head")
+        self.assertEqual(
+            await self.lesson_ids(1),
+            {
+                "Lab1-04_Button",
+                "Lab1-05_LED_Button",
+                "Lab1-06_7_Segment_LED",
+                "Lab1-07_Serial_Communication",
+                "Lab1-08_Serial_Control_LED",
+                "Lab1-09_WiFi_Connection",
+                "Lab1-10_WiFi_AP_Mode",
+                "Lab1-11_Web_Server_LED",
+            },
+        )
+        self.assertEqual(await self.lesson_ids(3), {"Lab3-04_Watchdog_Timer"})
+        self.assertEqual(
+            await self.lesson_ids(4),
+            {"Lab4-05_Camera_Multiplexer", "Lab4-06_Read_All_Sensors"},
+        )
+        self.assertEqual(await self.lesson_ids(5), {"Lab5-03_Ground_Station_Demo"})
+
+        await self.run_alembic("downgrade", "0022_quiz_attempts_and_cooldown")
+        self.assertEqual(
+            await self.lesson_ids(1),
+            {
+                "Lab1-03_Button",
+                "Lab1-04_LED_Button",
+                "Lab1-05_7_Segment_LED",
+                "Lab1-06_Serial_Communication",
+                "Lab1-07_Serial_Control_LED",
+                "Lab1-08_WiFi_Connection",
+                "Lab1-09_WiFi_AP_Mode",
+                "Lab1-10_Web_Server_LED",
+            },
+        )
+        self.assertEqual(await self.lesson_ids(3), {"Lab3-04_Watchdog_And_Event"})
+        self.assertEqual(
+            await self.lesson_ids(4),
+            {"Lab4-06_Camera_Multiplexer", "Lab4-05_Read_All_Sensors"},
+        )
+        self.assertEqual(await self.lesson_ids(5), {"Lab5-03_Satellite_Comm_System"})
+        await self.run_alembic("upgrade", "head")

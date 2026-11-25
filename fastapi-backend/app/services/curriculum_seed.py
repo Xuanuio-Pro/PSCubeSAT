@@ -84,16 +84,43 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", type=Path)
     parser.add_argument("--quiet", action="store_true", help="Print one summary line only.")
+    parser.add_argument(
+        "--sync-classes",
+        action="store_true",
+        help="Upgrade existing classes to the latest published course version cleanly.",
+    )
+    parser.add_argument(
+        "--enable-all-lessons",
+        action="store_true",
+        help="When syncing classes, also enable any disabled labs/lessons.",
+    )
+    parser.add_argument(
+        "--reset-doc-overrides",
+        action="store_true",
+        help="When syncing classes, clear saved per-class markdown overrides on document lessons so defaults from seed apply.",
+    )
     args = parser.parse_args()
     async with get_session_maker()() as db:
         report = await seed_curriculum(db)
         await db.commit()
+        if args.sync_classes:
+            from app.services.course_configuration import sync_classes_to_latest_course
+
+            report["synced_classes"] = await sync_classes_to_latest_course(
+                db,
+                enable_all_lessons=args.enable_all_lessons,
+                reset_doc_overrides=args.reset_doc_overrides,
+            )
     output = json.dumps(report, ensure_ascii=False, indent=2)
     if args.report:
         args.report.write_text(output + "\n", encoding="utf-8")
     if args.quiet:
         lessons = sum(lab["total"] for lab in report["labs"])
-        print(f"Curriculum seed ready: {report['course_version_id']} ({lessons} lessons)")
+        upgraded_count = sum(1 for item in report.get("synced_classes", []) if item.get("upgraded"))
+        sync_note = f", synced {upgraded_count} class(es)" if upgraded_count else ""
+        print(
+            f"Curriculum seed ready: {report['course_version_id']} ({lessons} lessons{sync_note})"
+        )
     else:
         print(output)
 

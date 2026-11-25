@@ -9,5 +9,6 @@ rồi `npm run curriculum:seed` (hoặc khởi động lại backend để seed 
 | Doc 1.1, 1.2 (`document-1-1`, `document-1-2`) | `doc-1-1.md`, `doc-1-2.md` | Markdown tài liệu |
 | Doc 1.3 - 1.8 (`doc-1-3` ... `doc-1-8`) | `doc-1-3.md` ... `doc-1-8.md` | Markdown tài liệu |
 
-Bài thực hành `Lab1-01` ... `Lab1-10` dùng mã `.cpp` ở thư mục cha, không đổi. Các mục `quiz-1-1` ... `quiz-1-13`
-và `labtest-1` chỉ là khung; câu hỏi/đáp án do giảng viên soạn trong ngân hàng câu hỏi (chỉ ở server).
+Bài thực hành `Lab1-01` ... `Lab1-11` dùng mã `.cpp` ở thư mục cha, không đổi. Các mục `quiz-1-1` ... `quiz-1-13`
+và `labtest-1` khi khởi tạo lớp tự nạp câu mẫu từ server (ưu tiên file riêng trong `lab1/` nếu có, mặc định lấy từ
+`../default-question-bank.csv`: 3 câu xoay vòng cho mỗi quiz, 10 câu cho Lab Test); đáp án chỉ lưu ở server.

@@ -54,10 +54,10 @@
       }
     },
     {
-      "id": "Lab1-03_Button",
-      "file": "Lab1-03_Button.cpp",
-      "upstream_commit": "10294ed026d7224809ffbe9c479eb2d95697753a",
-      "upstream_url": "https://github.com/PTITCube/Lab1-04_Button/blob/10294ed026d7224809ffbe9c479eb2d95697753a/src/main.cpp",
+      "id": "Lab1-04_Button",
+      "file": "Lab1-04_Button.cpp",
+      "upstream_commit": "068216b917ca67b8de8e75a1f2e0b14e58098006",
+      "upstream_url": "https://github.com/PTITCube/Lab1-03_Button/blob/068216b917ca67b8de8e75a1f2e0b14e58098006/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-04_Button (2026-11-24); exercise ID kept. Prints BUTTON: Pressed/Released."
@@ -71,10 +71,10 @@
       }
     },
     {
-      "id": "Lab1-04_LED_Button",
-      "file": "Lab1-04_LED_Button.cpp",
-      "upstream_commit": "6c97a8be30ba35e2aa4fda3a7ac7579d011b4d73",
-      "upstream_url": "https://github.com/PTITCube/Lab1-05_LED_Button/blob/6c97a8be30ba35e2aa4fda3a7ac7579d011b4d73/src/main.cpp",
+      "id": "Lab1-05_LED_Button",
+      "file": "Lab1-05_LED_Button.cpp",
+      "upstream_commit": "9e468ea820a1ecb705c5eea451fe26fe368aab5c",
+      "upstream_url": "https://github.com/PTITCube/Lab1-04_LED_Button/blob/9e468ea820a1ecb705c5eea451fe26fe368aab5c/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-05_LED_Button (2026-11-24); exercise ID kept. Prints LED: ON/OFF on each press."
@@ -88,10 +88,10 @@
       }
     },
     {
-      "id": "Lab1-05_7_Segment_LED",
-      "file": "Lab1-05_7_Segment_LED.cpp",
-      "upstream_commit": "1b4bf0731b36f5a9964eb2b7599ede0146f91fbc",
-      "upstream_url": "https://github.com/PTITCube/Lab1-06_7_Segment_LED/blob/1b4bf0731b36f5a9964eb2b7599ede0146f91fbc/src/main.cpp",
+      "id": "Lab1-06_7_Segment_LED",
+      "file": "Lab1-06_7_Segment_LED.cpp",
+      "upstream_commit": "d641e8393152dc4ebc6f56d20d7a2ff4e9602e24",
+      "upstream_url": "https://github.com/PTITCube/Lab1-05_7_Segment_LED/blob/d641e8393152dc4ebc6f56d20d7a2ff4e9602e24/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-06_7_Segment_LED (2026-11-24); exercise ID kept. No Serial output upstream."
@@ -105,10 +105,10 @@
       }
     },
     {
-      "id": "Lab1-06_Serial_Communication",
-      "file": "Lab1-06_Serial_Communication.cpp",
-      "upstream_commit": "606fc84d7ab444960cf05bc8aec0f74c3ba0897e",
-      "upstream_url": "https://github.com/PTITCube/Lab1-07_Serial_Communication/blob/606fc84d7ab444960cf05bc8aec0f74c3ba0897e/src/main.cpp",
+      "id": "Lab1-07_Serial_Communication",
+      "file": "Lab1-07_Serial_Communication.cpp",
+      "upstream_commit": "8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b",
+      "upstream_url": "https://github.com/PTITCube/Lab1-06_Serial_Communication/blob/8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-07_Serial_Communication. Keeps the local bounded, nonblocking echo (upstream only prints the greeting)."
@@ -122,10 +122,10 @@
       }
     },
     {
-      "id": "Lab1-07_Serial_Control_LED",
-      "file": "Lab1-07_Serial_Control_LED.cpp",
-      "upstream_commit": "a52847f1926ce69284c5a9dbd6dd8360201fcfa6",
-      "upstream_url": "https://github.com/PTITCube/Lab1-08_Serial_Control_LED/blob/a52847f1926ce69284c5a9dbd6dd8360201fcfa6/src/main.cpp",
+      "id": "Lab1-08_Serial_Control_LED",
+      "file": "Lab1-08_Serial_Control_LED.cpp",
+      "upstream_commit": "05c3d08b35cbeec36817613b87976c3931d343b5",
+      "upstream_url": "https://github.com/PTITCube/Lab1-07_Serial_Control_LED/blob/05c3d08b35cbeec36817613b87976c3931d343b5/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-08_Serial_Control_LED; behavior unchanged."
@@ -139,10 +139,10 @@
       }
     },
     {
-      "id": "Lab1-08_WiFi_Connection",
-      "file": "Lab1-08_WiFi_Connection.cpp",
-      "upstream_commit": "b805069dd86b2e6f6d75148a3b7476c6c226ce44",
-      "upstream_url": "https://github.com/PTITCube/Lab1-09_WiFi_Connection/blob/b805069dd86b2e6f6d75148a3b7476c6c226ce44/src/main.cpp",
+      "id": "Lab1-09_WiFi_Connection",
+      "file": "Lab1-09_WiFi_Connection.cpp",
+      "upstream_commit": "02729eeed59d75f95d77fcb51f87656311f5c40a",
+      "upstream_url": "https://github.com/PTITCube/Lab1-08_WiFi_Connection/blob/02729eeed59d75f95d77fcb51f87656311f5c40a/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-09_WiFi_Connection. Keeps the bounded 15 s wait and reconnect logs (upstream waits forever)."
@@ -156,10 +156,10 @@
       }
     },
     {
-      "id": "Lab1-09_WiFi_AP_Mode",
-      "file": "Lab1-09_WiFi_AP_Mode.cpp",
-      "upstream_commit": "7b2d25057cd7a754a33cb1257031b076f7769eef",
-      "upstream_url": "https://github.com/PTITCube/Lab1-10_WiFi_AP_Mode/blob/7b2d25057cd7a754a33cb1257031b076f7769eef/src/main.cpp",
+      "id": "Lab1-10_WiFi_AP_Mode",
+      "file": "Lab1-10_WiFi_AP_Mode.cpp",
+      "upstream_commit": "7622a1c4a05969988884ab19845c8536a3d8f7ed",
+      "upstream_url": "https://github.com/PTITCube/Lab1-09_WiFi_AP_Mode/blob/7622a1c4a05969988884ab19845c8536a3d8f7ed/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-10_WiFi_AP_Mode. Checks the softAP return value before reporting the AP IP."
@@ -173,10 +173,10 @@
       }
     },
     {
-      "id": "Lab1-10_Web_Server_LED",
-      "file": "Lab1-10_Web_Server_LED.cpp",
-      "upstream_commit": "f5460b657122c977a530af26e00043362f34badf",
-      "upstream_url": "https://github.com/PTITCube/Lab1-11_Web_Server_LED/blob/f5460b657122c977a530af26e00043362f34badf/src/main.cpp",
+      "id": "Lab1-11_Web_Server_LED",
+      "file": "Lab1-11_Web_Server_LED.cpp",
+      "upstream_commit": "6788696718d8e3281e9cf917e503a34bed3a9e70",
+      "upstream_url": "https://github.com/PTITCube/Lab1-10_Web_Server_LED/blob/6788696718d8e3281e9cf917e503a34bed3a9e70/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo renamed Lab1-11_Web_Server_LED. Bounded WiFi wait, reconnect, delayed HTTP server start."
@@ -309,10 +309,10 @@
       }
     },
     {
-      "id": "Lab3-04_Watchdog_And_Event",
-      "file": "Lab3-04_Watchdog_And_Event.cpp",
-      "upstream_commit": "33b70a439788244e84543784414fae617764c10c",
-      "upstream_url": "https://github.com/PTITCube/Lab3-04_Watchdog_Timer/blob/33b70a439788244e84543784414fae617764c10c/src/main.cpp",
+      "id": "Lab3-04_Watchdog_Timer",
+      "file": "Lab3-04_Watchdog_Timer.cpp",
+      "upstream_commit": "932741750f6b079521ba0dbefff0b530a3e628ec",
+      "upstream_url": "https://github.com/PTITCube/Lab3-04_Watchdog_And_Event/blob/932741750f6b079521ba0dbefff0b530a3e628ec/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo is now Lab3-04_Watchdog_Timer; exercise ID kept. Verbatim: cdh.wdt* API, 3 s TWDT, fault via GPIO 4 or f/fault/freeze over Serial, reset-reason report.",
@@ -498,27 +498,10 @@
       }
     },
     {
-      "id": "Lab4-05_Read_All_Sensors",
-      "file": "Lab4-05_Read_All_Sensors.cpp",
-      "upstream_commit": "126ba36a88f6c945563f8bbd3469f7278414771c",
-      "upstream_url": "https://github.com/PTITCube/Lab4-06_Read_All_Sensors/blob/126ba36a88f6c945563f8bbd3469f7278414771c/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Upstream repo is now Lab4-06_Read_All_Sensors; exercise ID kept. One TELEM line; GPS only with hasFix() (upstream printed 0,0). Adds an Accel line so the 3D attitude view has raw acceleration."
-      ],
-      "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-06_Camera_Multiplexer",
-      "file": "Lab4-06_Camera_Multiplexer.cpp",
-      "upstream_commit": "7e99ead021ffe89deef94c71ec4d535c06bda922",
-      "upstream_url": "https://github.com/PTITCube/Lab4-05_Camera_Multiplexer/blob/7e99ead021ffe89deef94c71ec4d535c06bda922/src/main.cpp",
+      "id": "Lab4-05_Camera_Multiplexer",
+      "file": "Lab4-05_Camera_Multiplexer.cpp",
+      "upstream_commit": "e62e4bf749f17df0ef79947e0755bd8d1c603c06",
+      "upstream_url": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer/blob/e62e4bf749f17df0ef79947e0755bd8d1c603c06/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo is now Lab4-05_Camera_Multiplexer; exercise ID kept. Capture on p (was automatic), GPS printed with a fix; unique filenames preserve captures.",
@@ -527,8 +510,42 @@
       "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "source_sha256": "f66301d19937dce43d208d45f93c75fd19b39f6a9e3651e9dcc66ac1447adb06",
+        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "result": "passed"
+      }
+    },
+    {
+      "id": "Lab4-06_Read_All_Sensors",
+      "file": "Lab4-06_Read_All_Sensors.cpp",
+      "upstream_commit": "4a18b32a35ab56da6042ed86ddda7435beb69f8a",
+      "upstream_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors/blob/4a18b32a35ab56da6042ed86ddda7435beb69f8a/src/main.cpp",
+      "board": "esp32",
+      "notes": [
+        "Upstream 2026-11 adds GPS; coordinates are printed only with a fresh fix (hasFix), never 0,0."
+      ],
+      "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
+      "verified_build": {
+        "board": "esp32",
+        "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
+        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "result": "passed"
+      }
+    },
+    {
+      "id": "Lab5-01_Send_Telemetry",
+      "file": "Lab5-01_Send_Telemetry.cpp",
+      "upstream_commit": "4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06",
+      "upstream_url": "https://github.com/PTITCube/Lab5-01_Send_Telemetry/blob/4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06/src/main.cpp",
+      "board": "esp32",
+      "notes": [
+        "Imported from upstream Lab5-01_Send_Telemetry without added Serial instrumentation; visualization shows only what the sketch prints."
+      ],
+      "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
+      "verified_build": {
+        "board": "esp32",
+        "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
+        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
         "result": "passed"
       }
     },
@@ -603,10 +620,10 @@
       }
     },
     {
-      "id": "Lab5-03_Satellite_Comm_System",
-      "file": "Lab5-03_Satellite_Comm_System.cpp",
-      "upstream_commit": "2f546e280043584be961075b253771561b173b95",
-      "upstream_url": "https://github.com/PTITCube/Lab5-03_Ground_Station_Demo/blob/2f546e280043584be961075b253771561b173b95/src/main.cpp",
+      "id": "Lab5-03_Ground_Station_Demo",
+      "file": "Lab5-03_Ground_Station_Demo.cpp",
+      "upstream_commit": "a156004a4ce2a541fc5f31e1fd2413bb7b6b047a",
+      "upstream_url": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/a156004a4ce2a541fc5f31e1fd2413bb7b6b047a/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo is now Lab5-03_Ground_Station_Demo; exercise ID kept. Commands arrive via LoRa. gps and telemetry reply no-fix/null instead of 0,0.",

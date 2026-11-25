@@ -97,6 +97,15 @@ def register(bank_path, lab_path, target_dep):
     ):
         return await banks.change_question(db, access, target, request, action="import")
 
+    @router.post(bank_path + "/load-samples")
+    async def load_samples(
+        request: RevisionInput,
+        target=Depends(target_dep),
+        access: ClassAccess = Depends(teacher),
+        db: AsyncSession = Depends(get_db),
+    ):
+        return await banks.load_samples(db, access, target, request)
+
     @router.post(bank_path + "/publish")
     async def publish(
         request: RevisionInput,

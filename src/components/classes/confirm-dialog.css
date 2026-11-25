@@ -12,6 +12,7 @@
 }
 
 .confirm-dialog {
+  position: relative;
   width: min(100%, 440px);
   display: grid;
   grid-template-columns: auto 1fr;
@@ -24,6 +25,55 @@
   color: var(--text-body, #1d3b58);
   font-family: inherit;
   animation: confirm-pop 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.confirm-dialog.confirm-wide {
+  width: min(100%, 560px);
+}
+
+.confirm-code {
+  display: block;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, #b7cfe3);
+  background: var(--bg-page, #f4f9fd);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.confirm-note {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-muted, #4b6a85);
+}
+
+.confirm-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--status-danger-border, #fda4af);
+  background: var(--status-danger-bg, #ffe4e6);
+  color: var(--status-danger-text, #9f1239);
+  cursor: pointer;
+}
+
+.confirm-close:hover {
+  background: var(--status-danger-dot, #e11d48);
+  color: #ffffff;
+}
+
+.confirm-close:focus-visible {
+  outline: 2px solid var(--status-danger-dot, #e11d48);
+  outline-offset: 2px;
 }
 
 .confirm-icon {

@@ -60,7 +60,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
         for item in self.body["lessons"]:
             # Same fixture as test_learning: every enabled lesson gates the next one.
             active = item["lesson_id"] == "document" or item["lesson_id"].startswith("summary-")
-            item["enabled"] = active or item["lesson_id"] == "Lab2-01a_Battery_I2C"
+            item["enabled"] = active or item["lesson_id"] == "practice-2-max17048"
             item["required"] = active
             if item["lesson_id"] == "document":
                 item["params"] = {"markdown": "Định hướng học tập."}
@@ -99,7 +99,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
                 )
             body = deepcopy(self.body)
             for item in body["lessons"]:
-                if item["lesson_id"] == "Lab1-01_Blink_LED":
+                if item["lesson_id"] == "practice-1-led":
                     item.update(
                         enabled=True,
                         required=True,
@@ -110,7 +110,7 @@ class LearningPostgresTests(unittest.IsolatedAsyncioTestCase):
                     )
             await self.apply(body)
             await self.complete(0)  # Lab 1 opens only after Lab 0 is completed.
-            url = self.base + "/lessons/Lab1-01_Blink_LED/submissions"
+            url = self.base + "/lessons/practice-1-led/submissions"
             submission = {
                 "idempotency_key": "parallel-submit-first",
                 "code": "void setup() {} void loop() {}",

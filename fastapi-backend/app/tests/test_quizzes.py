@@ -51,16 +51,24 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
 
-    async def set_reveal(self, reveal):
+    async def set_reveal(self, reveal, *, max_attempts=3, cooldown_minutes=0):
         bank = await self.bank()
         policy = {k: v for k, v in bank["policy"].items() if k != "revision"}
-        policy.update(expected_revision=bank["policy"]["revision"], reveal_policy=reveal)
+        policy.update(
+            expected_revision=bank["policy"]["revision"],
+            reveal_policy=reveal,
+            max_attempts=max_attempts,
+            cooldown_minutes=cooldown_minutes,
+        )
         response = await self.call(2, "PUT", self.base + "/labs/0/quiz-policy", policy)
         self.assertEqual(response.status_code, 200, response.text)
 
     async def prepare(self, count=5, reveal="after_attempts"):
+        from sqlalchemy import delete
+
         bank = await self.bank()
         async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
             for index in range(count):
                 db.add(
                     QuestionVersion(
@@ -79,9 +87,8 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         )
         if response.status_code != 200:
             return response
-        # The default is now `after_pass`; most fixtures here exercise the stricter older rule.
-        if reveal != "after_pass":
-            await self.set_reveal(reveal)
+        # These legacy-limit tests exercise hard-cap (3 attempts, no cooldown) behavior.
+        await self.set_reveal(reveal, max_attempts=3, cooldown_minutes=0)
         self.assertEqual(response.status_code, 200, response.text)
         body = deepcopy(self.learning.body)
         for item in body["lessons"]:
@@ -122,11 +129,11 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         async with self.sessions() as db:
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionBank))).scalar_one(),
-                25,  # 9 Lab Test banks + 16 quiz lessons (quiz-0-1..3, quiz-1-1..13)
+                69,  # 9 Lab Test banks + 60 quiz lessons across Lab 0-8
             )
             self.assertEqual(
                 (await db.execute(select(func.count()).select_from(QuestionVersion))).scalar_one(),
-                0,
+                4013,  # All 60 lesson quiz CSVs + 9 combined Lab Test CSVs across Lab 0-8
             )
         for count in (0,):
             async with self.sessions() as db:
@@ -184,7 +191,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         for _ in range(3):
             attempt = (await self.start()).json()
             await self.correct(attempt)
-            future = now() + timedelta(minutes=11)
+            future = now() + timedelta(minutes=21)
             with patch("app.services.quizzes.now", return_value=future):
                 late = await self.call(
                     4,
@@ -249,6 +256,12 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_crud_import_review_and_ai_hidden(self):
+        from sqlalchemy import delete
+
+        bank = await self.bank()
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
         bank = await self.bank()
         self.assertFalse(bank["ai_available"])
         content = question()
@@ -340,7 +353,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         await self.learning.complete(0)
         attempt = (await self.start()).json()
         await self.correct(attempt)
-        future = now() + timedelta(minutes=11)
+        future = now() + timedelta(minutes=21)
         with (
             patch("app.services.quizzes.now", return_value=future),
             patch("app.services.question_generation.now", return_value=future),
@@ -381,6 +394,12 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         writer.writeheader()
         writer.writerow(row)
         bank = await self.bank()
+        from sqlalchemy import delete
+
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
+        bank = await self.bank()
         response = await self.call(
             2,
             "POST",
@@ -412,8 +431,14 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changed.status_code, 422)
 
     async def test_four_question_types_import_and_student_attempt_grading(self):
+        from sqlalchemy import delete
+
         from app.services.exam_import import SAMPLE_EXAM_TEXT
 
+        bank = await self.bank()
+        async with self.sessions() as db:
+            await db.execute(delete(QuestionVersion).where(QuestionVersion.bank_id == bank["id"]))
+            await db.commit()
         bank = await self.bank()
         imported = await self.call(
             2,
@@ -540,6 +565,31 @@ class QuizValidationTests(unittest.TestCase):
         for mutation in ({"correct_choice_id": "missing"}, {"choices": [value["choices"][0]] * 4}):
             with self.assertRaises(ValueError):
                 QuestionInput.model_validate({**value, **mutation})
+        # Math operators (+ vs -, - vs *) stay distinct even if NFKC/whitespace-normalized.
+        formula_q = QuestionInput.model_validate(
+            {
+                **value,
+                "choices": [
+                    {"id": "a", "text": "+50°C"},
+                    {"id": "b", "text": "-50°C"},
+                    {"id": "c", "text": "NDVI = (NIR - Red) / (NIR + Red)"},
+                    {"id": "d", "text": "NDVI = (NIR * Red) / (NIR + Red)"},
+                ],
+            }
+        )
+        self.assertEqual(len(formula_q.choices), 4)
+        with self.assertRaises(ValueError):
+            QuestionInput.model_validate(
+                {
+                    **value,
+                    "choices": [
+                        {"id": "a", "text": " +50 °C "},
+                        {"id": "b", "text": "+50 °C"},
+                        {"id": "c", "text": "-50 °C"},
+                        {"id": "d", "text": "0 °C"},
+                    ],
+                }
+            )
         with self.assertRaises(Exception):
             validate_distinct([value], [{**value, "prompt": value["prompt"] + "!"}])
 
