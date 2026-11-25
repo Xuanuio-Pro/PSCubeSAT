@@ -83,7 +83,7 @@ sequenceDiagram
     participant Space as Không gian Quỹ đạo LEO
 
     Rocket->>Deployer: Gửi xung điện kích hoạt nhả chốt cửa (NEA)
-    Deployer->>Deployer: Mở nắp cửa ống phóng; giải phóng lò xo đẩy chính
+    Deployer->>Deployer: Mở nắp cửa ống phóng, giải phóng lò xo đẩy chính
     Deployer->>CubeSat: Lò xo đáy tạo xung lực đẩy dọc thanh ray (Vận tốc thoát: 1.0 - 1.5 m/s)
     CubeSat->>Space: Tách ly hoàn toàn khỏi ống phóng vào quỹ đạo tự do
     CubeSat->>CubeSat: Công tắc hành trình (Deployment Switch) bật lên: Cấp nguồn cho bo EPS

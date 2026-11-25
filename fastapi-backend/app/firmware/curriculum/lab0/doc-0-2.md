@@ -45,12 +45,12 @@ Cảm biến áp suất khí quyển & nhiệt độ BMP280"]
         EPS -->|Đường nguồn 3.3V & 5V ổn áp| ADCS
         EPS -->|Đường nguồn 3.3V & 5V ổn áp| PAYLOAD
         
-        OBC_CDH <-->|Bus I2C (SDA / SCL)| EPS
-        OBC_CDH <-->|Bus I2C (SDA / SCL)| ADCS
-        OBC_CDH <-->|Bus I2C (SDA / SCL)| ENV
-        OBC_CDH <-->|Bus UART (TX / RX)| COM
-        OBC_CDH <-->|Bus UART (TX / RX)| CAM
-        OBC_CDH <-->|Bus SPI (MOSI/MISO/SCK/CS)| OBC_CDH
+        OBC_CDH <-->|"Bus I2C (SDA / SCL)"| EPS
+        OBC_CDH <-->|"Bus I2C (SDA / SCL)"| ADCS
+        OBC_CDH <-->|"Bus I2C (SDA / SCL)"| ENV
+        OBC_CDH <-->|"Bus UART (TX / RX)"| COM
+        OBC_CDH <-->|"Bus UART (TX / RX)"| CAM
+        OBC_CDH <-->|"Bus SPI (MOSI/MISO/SCK/CS)"| OBC_CDH
     end
 ```
 

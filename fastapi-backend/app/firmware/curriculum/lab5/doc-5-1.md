@@ -14,9 +14,9 @@ $$\lambda = \frac{c}{f} = \frac{3 \times 10^8\text{ m/s}}{433 \times 10^6\text{ 
 
 ### 3. Phương trình Suy hao Truyền sóng trong Không gian Tự do (Friis FSPL)
 Khi sóng điện từ lan truyền từ ăng-ten phát hình cầu ra không gian vô tận, mật độ công suất sóng bị suy giảm theo bình phương khoảng cách. Công thức suy hao truyền sóng trong không gian tự do (**Free-Space Path Loss - FSPL**) của Harald T. Friis:
-$$\text{FSPL} = \left(\frac{4\pi d}{\lambda}
-\right)^2 = \left(\frac{4\pi d f}{c}
-\right)^2$$
+$$
+\text{FSPL} = \left(\frac{4\pi d}{\lambda}\right)^2 = \left(\frac{4\pi d f}{c}\right)^2
+$$
 Chuyển đổi sang đơn vị logarit Decibel (dB):
 $$\text{FSPL (dB)} = 20 \log_{10}(d\text{ [km]}) + 20 \log_{10}(f\text{ [MHz]}) + 32.44$$
 - **Tính toán Thực tế cho CubeSat Quỹ đạo LEO:**
@@ -31,7 +31,7 @@ flowchart LR
 Công suất P_tx = +20 dBm (100mW)"] -->|Antenna Gain G_tx = +2 dBi| SPACE["Không gian Tự do LEO
 Suy hao FSPL = -143.2 dB
 Khí quyển L_atm = -1.5 dB"]
-    SPACE -->|Antenna Gain G_rx = +12 dBi (Yagi)| RX["Máy thu Trạm Mặt đất
+    SPACE -->|"Antenna Gain G_rx = +12 dBi (Yagi)"| RX["Máy thu Trạm Mặt đất
 Độ nhạy S_rx = -140 dBm"]
     RX --> MARGIN["Độ Dự trữ Tuyến Link Margin >= +6 dB
 (Kênh truyền Ổn định)"]
@@ -56,8 +56,9 @@ $$\text{Margin} = P_\text{rx} - S_\text{rx} = (-112.55\text{ dBm}) - (-140\text{
 
 ### 5. Hiệu ứng Dịch Tần Doppler trên Quỹ đạo LEO
 Do vệ tinh bay với vận tốc quỹ đạo cực lớn (v ≈ 7.6 km/s), tần số sóng vô tuyến thu được tại trạm mặt đất bị dịch chuyển theo hiệu ứng Doppler:
-$$f_\text{rx} = f_0 \left(1 + \frac{v_\text{los}}{c}
-\right)$$
+$$
+f_\text{rx} = f_0 \left(1 + \frac{v_\text{los}}{c}\right)
+$$
 Trong đó: $v_\text{los}$ là vận tốc dọc theo đường ngắm (Line-of-Sight Velocity).
 - Khi vệ tinh vừa mọc ở phía chân trời và bay lại gần trạm: $v_\text{los} > 0$, tần số thu được dịch lên cao nhất ($+\Delta f$).
 - Khi vệ tinh bay ngang qua đỉnh đầu (CPA - Closest Point of Approach): $v_\text{los} = 0$, tần số thu được đúng bằng tần số danh định $f_0$.

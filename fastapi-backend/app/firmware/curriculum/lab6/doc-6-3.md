@@ -20,8 +20,7 @@ flowchart LR
     BLIND["Đáy Lỗ Ren Kín (Blind Hole) Bị Kẹt Khí"]
     
     BLIND -->|Khí Thoát Tự Do Qua Tâm Ốc| VENT
-    VENT --> VACUUM["Không gian Chân không Siêu cao TVAC"]
-    Note over VENT,VACUUM: Triệt tiêu Hoàn toàn Hiện tượng Rò rỉ Ảo (Virtual Leak)
+    VENT -->|"Triệt tiêu Hoàn toàn Hiện tượng Rò rỉ Ảo (Virtual Leak)"| VACUUM["Không gian Chân không Siêu cao TVAC"]
 ```
 
 ### 3. Bảng Cân Đối Khối Lượng (Mass Budget) & Cân Bằng Trọng Tâm (Center of Mass - CoM)

@@ -21,7 +21,7 @@ sequenceDiagram
         TX->>RX: 1 Bit Chẵn Lẻ (Even / Odd / None)
     end
     TX->>RX: 1 hoặc 2 Bit STOP (Kéo lên mức HIGH 3.3V)
-    Note over TX,RX: Kết thúc khung truyền; trở về trạng thái rảnh HIGH
+    Note over TX,RX: Kết thúc khung truyền, trở về trạng thái rảnh HIGH
 ```
 
 ### 2. Cấu hình Cổng Serial & Khung Truyền SERIAL_8N1

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../contexts/auth-api';
 import { Notice } from '../classes/LmsCommon';
+import '../classes/classes.css';
 import '../classes/quiz.css';
 
 function formatChoiceIds(value) {
@@ -105,7 +106,7 @@ export default function LegacyQuizPanel({ labId, lessonId, title = '', kind = 'q
             Đề ngẫu nhiên {quiz.num_questions} câu từ ngân hàng {quiz.total_pool} câu · Đạt từ {quiz.pass_score}/{quiz.num_questions} câu · Tham khảo {quiz.time_limit_minutes} phút
           </p>
         </div>
-        <button type="button" onClick={loadQuiz} disabled={loading || submitting}>
+        <button type="button" className="quiz-btn quiz-btn--secondary" onClick={loadQuiz} disabled={loading || submitting}>
           Làm đề ngẫu nhiên khác
         </button>
       </div>
@@ -269,13 +270,13 @@ export default function LegacyQuizPanel({ labId, lessonId, title = '', kind = 'q
         {!result ? (
           <>
             <p>Đã trả lời {Object.keys(selections).length}/{quiz.items.length} câu. Đáp án chỉ kiểm tra trên máy chủ sau khi nộp.</p>
-            <button type="button" className="lms-primary" disabled={submitting || loading} onClick={submit}>
+            <button type="button" className="quiz-btn quiz-btn--primary" disabled={submitting || loading} onClick={submit}>
               {submitting ? 'Đang chấm…' : 'Nộp bài & xem giải thích'}
             </button>
           </>
         ) : (
           <div className="lms-actions">
-            <button type="button" className="lms-primary" onClick={loadQuiz} disabled={loading}>
+            <button type="button" className="quiz-btn quiz-btn--primary" onClick={loadQuiz} disabled={loading}>
               Làm đề ngẫu nhiên khác
             </button>
           </div>
