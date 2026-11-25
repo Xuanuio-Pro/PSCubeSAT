@@ -1,5 +1,12 @@
 # Nhật ký quyết định
 
+## 25/11/2026 — Gộp PR #7 của Trung với code của Xuân (nhánh integration/xuan-trung)
+
+- Cấu trúc giáo trình lấy theo Trung: bài thực hành gộp nhóm có `exercises` và mã mới (Lab1-04_Button … Lab1-11_Web_Server_LED, Lab4-05_Camera_Multiplexer, Lab4-06_Read_All_Sensors, Lab5-03_Ground_Station_Demo, Lab3-04_Watchdog_Timer). Mọi xung đột dữ liệu giáo trình giải quyết theo bên Trung.
+- Giữ lại từ phía Xuân: nội dung firmware đã sửa (Lab3-04 bắt cạnh GPIO 4, Lab4-02a cấu hình dải đo...), override MUX/CDH, panel `lab1Io`, dashboard, cloud device. Test/telemetry/visualization của Xuân được đổi sang mã bài mới.
+- `catalog.json`: Lab4-05_Camera_Multiplexer và Lab4-06_Read_All_Sensors dùng bản ghi build đã xác minh khớp đúng hash file hiện tại; bỏ mục mồ côi `Lab5-01_Send_Telemetry` (không còn file, không bài nào dùng).
+- Chưa chạy `alembic upgrade/downgrade` trên DB sạch: tài khoản DB dev không có quyền tạo database. Cần chạy trên môi trường có quyền trước khi vào `develop`.
+
 ## 24/11/2026 — Phân phối toàn bộ 35 tài liệu Doc từ `docs.zip` & nâng cấp hiển thị KaTeX / Mermaid
 
 - **Hoàn thiện 35 tệp tài liệu phía server (`fastapi-backend/app/firmware/curriculum/lab{0..8}/doc-*.md`):**

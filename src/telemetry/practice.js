@@ -5,6 +5,8 @@ import { reduceNetworkReport } from './network-report.js';
 /** @type {Array<[RegExp, string[]]>} */
 const EXERCISE_PANELS = [
   [/^Lab1-(09|1[01])/, ['lab1Connection']],
+  // Lab1 sketches that log the LED / button state; 1-02, 1-03_PWM and 1-05 print nothing (the LEDs are the evidence).
+  [/^Lab1-(01|04_Button|05|08)/, ['lab1Io']],
   [/^Lab2-/, ['voltage']],
   // Lab3-01a/b only log to the SD card: the Serial Monitor is the whole view.
   [/^Lab3-01/, []],
@@ -14,15 +16,18 @@ const EXERCISE_PANELS = [
   [/^Lab4-02/, ['attitude']],
   [/^Lab4-03/, ['gps']],
   [/^Lab4-04/, ['camera']],
-  [/^Lab4-05/, ['gps', 'camera']],
+  [/^Lab4-06/, ['environment', 'attitude', 'gps']],
   [/^Lab5-01/, ['radio']],
   // Uplink commands are sent from the separate ground-station window, not from the OBC's USB port.
   [/^Lab5-0[23]/, ['radio', 'groundStation']],
   // Lab3-04 (watchdog) and Lab3-05 (event queue) report events, not measurements: activity log only.
   [/^Lab3-0[45]/, []],
-  [/^Lab4-06/, ['environment', 'attitude', 'gps']],
-  [/^Lab7-01/, ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system']],
-  [/^Lab7-02/, ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system']],
+  [/^Lab4-05/, ['gps', 'camera']],
+  // Lab7 (PTITCube 2026-11-24) takes its single-letter commands over LoRa, from the ground-station window.
+  // The ground-station link comes right after the Serial Monitor; SD and LoRa evidence live in System Check.
+  [/^Lab7-01/, ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system']],
+  // Lab7-02 saves photos to SD only (command f over LoRa), so a camera panel would never show an image.
+  [/^Lab7-02/, ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system']],
   [/^Lab8-/, ['dashboard']],
 ];
 
@@ -34,10 +39,10 @@ export function practiceProfile(id = '') {
   const panels = [...(EXERCISE_PANELS.find(([pattern]) => pattern.test(id))?.[1] ?? [])];
   let commands = [];
   if (id.startsWith('Lab1-08')) commands = ['1', '0'];
-  if (id.startsWith('Lab3-02')) commands = ['pwd', 'ls', 'mkdir demo', 'cd demo', 'touch note.txt', 'rm note.txt', 'cd ..', 'rm demo'];
-  if (id.startsWith('Lab3-04')) commands = ['h'];
+  if (id.startsWith('Lab3-02')) commands = ['pwd', 'ls', 'mkdir demo', 'cd demo', 'touch note.txt', 'rm note.txt', 'cd ..', 'rmdir demo'];
+  if (id.startsWith('Lab3-04')) commands = ['f'];
   if (id.startsWith('Lab3-05')) commands = ['A'];
-  if (id.startsWith('Lab4-04') || id.startsWith('Lab4-06')) commands = ['p'];
+  if (id.startsWith('Lab4-04') || id.startsWith('Lab4-05')) commands = ['p'];
   const note = scheduler
     ? 'Lab3-03 sinh gói viễn trắc giả lập (điện áp, nhiệt độ ngẫu nhiên) và tác vụ tự chẩn đoán trên Core 0. Các số liệu TELEM là minh họa, không phải phép đo; LED nhịp tim không có log.'
     : id.startsWith('Lab3-04') ? 'Gửi f (hoặc nhấn nút GPIO 4 trên PCB thí nghiệm rời; trên chồng bo vệ tinh GPIO 4 là chân Buck nên nút không dùng được) để mô phỏng treo: tác vụ ngừng nạp Watchdog, TWDT reset bo sau khoảng 3 giây và log khởi động báo nguyên nhân Task Watchdog Reset.'
@@ -46,7 +51,7 @@ export function practiceProfile(id = '') {
       : lab === 5 ? 'Log phát LoRa chỉ xác nhận yêu cầu gửi tại OBC. Cần phản hồi từ trạm mặt đất để xác nhận nhận thành công; Lệnh uplink gửi từ cửa sổ Trạm mặt đất (USB-TTL + LoRa), không gửi qua USB Serial của OBC.'
       : lab === 8 ? 'Mẫu Lab8 là khung chương trình. Hãy bổ sung nhiệm vụ và xuất JSON telemetry để dashboard có dữ liệu.'
         : /^Lab4-02a/.test(id) ? 'Bản mẫu đọc burst 14 byte và quy đổi theo dải mặc định ±2g / ±250°/s. Nếu cấu hình thanh ghi khác dải này, giá trị m/s² và rad/s sẽ sai tỷ lệ.'
-          : /^Lab4-04|^Lab4-05/.test(id) ? 'Ảnh lưu trên thẻ SD chỉ hiện ở đây khi firmware gửi lại ảnh về trình duyệt (IMG_BEGIN/IMG_CHUNK/IMG_END — Lab4-04a, Lab4-04b) hoặc imageData.'
+          : /^Lab4-04|^Lab4-05/.test(id) ? 'Ảnh lưu vào thư mục /photos trên thẻ SD được bo tự gửi lên máy chủ qua MQTT và hiện ở đây, không cần viết code gửi ảnh. Lần đầu, giữ kết nối Serial khi bo khởi động để trình duyệt cấu hình WiFi cho bo.'
             : 'Hiển thị theo dữ liệu thực nhận. Trường không được xuất hoặc quá hạn sẽ hiện —; log khởi tạo chưa chứng minh toàn bộ hệ thống hoạt động.';
   return { id, lab, scheduler, serialOnly, panels, commands, note };
 }

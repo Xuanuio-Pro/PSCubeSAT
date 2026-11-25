@@ -6,7 +6,7 @@ const time = at => new Date(at).toLocaleTimeString();
 /** LED / button state as the Lab 1 sketch reports it. A log line is the sketch's own report, not an electrical readback. */
 export default function Lab1IoPanel() {
   const { activity, exerciseId, mode, link } = useTelemetry();
-  const button = /^Lab1-03_Button/.test(exerciseId ?? '');
+  const button = /^Lab1-04_Button/.test(exerciseId ?? '');
   const group = button ? 'button' : 'led';
   const events = activity.events.filter(event => event.group === group);
   const last = events.at(-1);

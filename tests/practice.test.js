@@ -211,7 +211,7 @@ test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter an
 });
 test('each exercise shows only the panels its reference sketch has data for', () => {
   const expected = {
-    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [], 'Lab1-08': [],
+    'Lab1-01': ['lab1Io'], 'Lab1-02': [], 'Lab1-03_PWM_LED': [], 'Lab1-04': ['lab1Io'], 'Lab1-05': ['lab1Io'], 'Lab1-06': [], 'Lab1-07': [], 'Lab1-08': ['lab1Io'],
     'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'], 'Lab1-11': ['lab1Connection'],
     'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
     'Lab3-01a': [], 'Lab3-01b': [], 'Lab3-02': ['shell', 'commands'],
@@ -220,7 +220,7 @@ test('each exercise shows only the panels its reference sketch has data for', ()
     'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
     'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'], 'Lab4-03c': ['gps'],
     'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
-    'Lab4-05': ['gps', 'camera'], 'Lab4-06': ['environment', 'attitude', 'gps'],
+    'Lab4-05': ['gps', 'camera', 'commands'], 'Lab4-06': ['environment', 'attitude', 'gps'],
     'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
     'Lab5-02a': ['radio', 'groundStation'], 'Lab5-02b': ['radio', 'groundStation'], 'Lab5-03': ['radio', 'groundStation'],
     'Lab7-01': ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system'],
@@ -229,7 +229,7 @@ test('each exercise shows only the panels its reference sketch has data for', ()
   };
   for (const fixture of fixtures) {
     const plan = visualizationPlan(practiceProfile(fixture.id));
-    // Lab1-03_Button and Lab1-03_PWM_LED share a prefix: a full ID entry wins.
+    // Lab1-04_Button and Lab1-03_PWM_LED share a prefix: a full ID entry wins.
     assert.deepEqual(plan.panels, expected[fixture.id] ?? expected[fixture.id.split('_')[0]], fixture.id);
     assert.ok(!plan.panels.includes('telemetry'), `${fixture.id}: raw telemetry table duplicates dedicated panels`);
   }
@@ -379,7 +379,7 @@ test('new short-label sensor lines report NaN and missing fixes as unavailable, 
   assert.equal(nan.frame, null);
   assert.deepEqual(nan.invalidate, ['temperatureC', 'pressureHpa']);
   assert.ok(env(entry('BMP280 unavailable: check wiring (SDA 21, SCL 22)')).events.some(event => event.group === 'sensor' && event.phase === 'error'));
-  const all = createPracticeDecoder('Lab4-05_Read_All_Sensors');
+  const all = createPracticeDecoder('Lab4-06_Read_All_Sensors');
   const noFix = all(entry('TELEM: T: 28.5C | P: 1012.2hPa | Roll: 0.0 | Pitch: -0.0 | GPS: (no fix, 3sats)'));
   assert.equal(noFix.frame.temperatureC, 28.5);
   assert.equal(noFix.frame.gpsLat, null);
@@ -396,7 +396,7 @@ test('simulated Lab3-03 TELEM and radio replies never become voltage or environm
   assert.deepEqual(telemetry.events.map(event => [event.name, event.illustrative, event.value]), [['TelemGen', true, 24.5]]);
   const queue = createPracticeDecoder('Lab3-05_Event_Driven_Queue');
   assert.deepEqual(queue(entry('Event: Temp Alert: 33 C (t=2000ms)')).events.map(event => [event.name, event.illustrative]), [['Dispatcher', true]]);
-  const radio = createPracticeDecoder('Lab5-03_Satellite_Comm_System');
+  const radio = createPracticeDecoder('Lab5-03_Ground_Station_Demo');
   const reply = radio(entry('CMD: sensor -> Temp: 28.5C | Press: 1012.2hPa'));
   assert.equal(reply.frame, null);
   assert.ok(reply.events.some(event => event.group === 'radio' && event.phase === 'received'));
@@ -422,8 +422,8 @@ test('extra log details travel as activity events, never as invented measurement
   // Satellites in use while searching: GGA field 7 and the "(N sats" text lines.
   const gga = events('Lab4-03a_GPS_UART', ['$GNGGA,023130.998,,,,,0,0,,,M,,M,,*5D', '$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47']);
   assert.deepEqual(gga.map(event => [event.phase, event.satellites]), [['waiting', 0], ['sample', 8]]);
-  assert.equal(events('Lab4-06_Camera_Multiplexer', ['GPS: Đang quét tìm vệ tinh... (3 sats, chưa có fix)'])[0].satellites, 3);
-  assert.equal(events('Lab4-05_Read_All_Sensors', ['TELEM: T: 29.2C | P: 1026.1hPa | Roll: 3.7 | Pitch: 0.1 | GPS: (no fix, 0sats)']).find(event => event.group === 'gps').satellites, 0);
+  assert.equal(events('Lab4-05_Camera_Multiplexer', ['GPS: Đang quét tìm vệ tinh... (3 sats, chưa có fix)'])[0].satellites, 3);
+  assert.equal(events('Lab4-06_Read_All_Sensors', ['TELEM: T: 29.2C | P: 1026.1hPa | Roll: 3.7 | Pitch: 0.1 | GPS: (no fix, 0sats)']).find(event => event.group === 'gps').satellites, 0);
   // Firmware compass heading (Lab4-02a/b line and Lab7-01 imu.yaw).
   assert.deepEqual(events('Lab4-02b_IMU_Library', ['Roll:   4.3, Pitch:  -1.5, Head:   6.8']).map(({ group, roll, pitch, heading }) => [group, roll, pitch, heading]), [['attitude', 4.3, -1.5, 6.8]]);
   assert.deepEqual(events('Lab4-02b_IMU_Library', ['Roll:    nan, Pitch:    nan, Head:    nan']), []);

@@ -64,8 +64,8 @@ class CurriculumTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("attachment;", response.headers["content-disposition"])
         self.assertIn("Lab3-04_Watchdog_Timer.ino", response.headers["content-disposition"])
-        self.assertIn("esp_task_wdt_init(WDT_TIMEOUT_SEC, true)", response.text)
-        self.assertIn("esp_task_wdt_reset()", response.text)
+        self.assertIn("cdh.wdtInit(WDT_TIMEOUT_SEC)", response.text)
+        self.assertIn("cdh.wdtFeed()", response.text)
         metadata = next(
             item
             for item in curriculum.catalog()["exercises"]

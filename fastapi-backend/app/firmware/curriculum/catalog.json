@@ -500,8 +500,8 @@
     {
       "id": "Lab4-05_Camera_Multiplexer",
       "file": "Lab4-05_Camera_Multiplexer.cpp",
-      "upstream_commit": "e62e4bf749f17df0ef79947e0755bd8d1c603c06",
-      "upstream_url": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer/blob/e62e4bf749f17df0ef79947e0755bd8d1c603c06/src/main.cpp",
+      "upstream_commit": "7e99ead021ffe89deef94c71ec4d535c06bda922",
+      "upstream_url": "https://github.com/PTITCube/Lab4-05_Camera_Multiplexer/blob/7e99ead021ffe89deef94c71ec4d535c06bda922/src/main.cpp",
       "board": "esp32",
       "notes": [
         "Upstream repo is now Lab4-05_Camera_Multiplexer; exercise ID kept. Capture on p (was automatic), GPS printed with a fix; unique filenames preserve captures.",
@@ -510,42 +510,25 @@
       "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "f66301d19937dce43d208d45f93c75fd19b39f6a9e3651e9dcc66ac1447adb06",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-06_Read_All_Sensors",
       "file": "Lab4-06_Read_All_Sensors.cpp",
-      "upstream_commit": "4a18b32a35ab56da6042ed86ddda7435beb69f8a",
-      "upstream_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors/blob/4a18b32a35ab56da6042ed86ddda7435beb69f8a/src/main.cpp",
+      "upstream_commit": "126ba36a88f6c945563f8bbd3469f7278414771c",
+      "upstream_url": "https://github.com/PTITCube/Lab4-06_Read_All_Sensors/blob/126ba36a88f6c945563f8bbd3469f7278414771c/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11 adds GPS; coordinates are printed only with a fresh fix (hasFix), never 0,0."
+        "Upstream repo is now Lab4-06_Read_All_Sensors; exercise ID kept. One TELEM line; GPS only with hasFix() (upstream printed 0,0). Adds an Accel line so the 3D attitude view has raw acceleration."
       ],
-      "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
+      "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab5-01_Send_Telemetry",
-      "file": "Lab5-01_Send_Telemetry.cpp",
-      "upstream_commit": "4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06",
-      "upstream_url": "https://github.com/PTITCube/Lab5-01_Send_Telemetry/blob/4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab5-01_Send_Telemetry without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
