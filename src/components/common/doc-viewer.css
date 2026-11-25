@@ -539,3 +539,107 @@
 .doc-tok--plain {
   color: #d4d4d4;
 }
+
+/* Figures (PNG from PTITCube-Figs): always fit the column, click to zoom. */
+.doc-content .doc-figure,
+.doc-figure {
+  margin: 1.25rem 0;
+  max-width: 100%;
+  text-align: center;
+}
+
+.doc-figure-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, #d5e4f0);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(10, 65, 116, 0.05);
+  cursor: zoom-in;
+  font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.doc-figure-frame:hover,
+.doc-figure-frame:focus-visible {
+  border-color: var(--brand-primary-dark, #0284c7);
+  box-shadow: 0 4px 16px rgba(10, 65, 116, 0.12);
+}
+
+.doc-figure-frame img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+.doc-figure-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: var(--cubesat-navy, #0a4174);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+
+.doc-figure-frame:hover .doc-figure-zoom,
+.doc-figure-frame:focus-visible .doc-figure-zoom {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .doc-figure-zoom {
+    opacity: 0.9;
+  }
+}
+
+.doc-figure figcaption {
+  margin-top: 8px;
+  color: var(--text-muted, #415e78);
+  font-size: 0.86rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.doc-figure-missing {
+  padding: 20px 16px;
+  border: 1px dashed var(--border-strong, #b8d0e4);
+  border-radius: 12px;
+  color: var(--text-muted, #415e78);
+  font-size: 0.9rem;
+}
+
+.doc-figure-modal-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Inline math: digits, units and \text{} follow the body font and size so sentences
+   like "2.7 K ≈ −270.45 °C" don't switch to serif mid-line. Variables (.mathnormal)
+   and display formulas keep KaTeX fonts. */
+.doc-content :not(.katex-display) > .katex {
+  font-family: inherit;
+  font-size: 1.02em;
+}
+
+.doc-content :not(.katex-display) > .katex .mord.text,
+.doc-content :not(.katex-display) > .katex .textrm {
+  font-family: inherit;
+}

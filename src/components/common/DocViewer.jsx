@@ -11,6 +11,7 @@ import {
   normalizeCodeLanguage,
   tokenizeCodeLines,
 } from './code-highlight.js';
+import { isImageOnlyParagraph } from './markdown-figure.js';
 import { normalizeDisplayMath } from './markdown-math.js';
 import { clampZoom, computeFitZoom, computeInlineMermaidLayout, parseSvgDimensions } from './mermaid-svg.js';
 import './doc-viewer.css';
@@ -76,25 +77,164 @@ function ExpandIcon() {
   );
 }
 
+/**
+ * Full-screen viewer shared by Mermaid diagrams and doc images: zoom buttons,
+ * Ctrl + wheel, drag-to-pan and Escape to close.
+ *
+ * @param {{
+ *   title: string,
+ *   dims: { width: number, height: number } | null,
+ *   initialFit?: boolean,
+ *   onClose: () => void,
+ *   children: import('react').ReactNode,
+ * }} props
+ */
+function ZoomModal({ title, dims, initialFit = false, onClose, children }) {
+  const [zoom, setZoom] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const canvasRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
+
+  const fitZoom = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !dims) return 1;
+    // The canvas padding (24px each side) is not usable drawing area.
+    return computeFitZoom(dims, canvas.clientWidth - 48, canvas.clientHeight - 48);
+  }, [dims]);
+
+  useEffect(() => {
+    // Large figures open fitted to the screen; small ones are never upscaled on open.
+    if (initialFit) setZoom(Math.min(1, fitZoom()));
+  }, [initialFit, fitZoom]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    /** @param {KeyboardEvent} event */
+    const onKeyDown = event => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  /** @param {import('react').WheelEvent<HTMLDivElement>} event */
+  const handleWheel = useCallback(event => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? 0.15 : -0.15;
+    setZoom(z => clampZoom(z + delta));
+  }, []);
+
+  /** @param {import('react').MouseEvent<HTMLDivElement>} event */
+  const startDrag = useCallback(event => {
+    const canvas = canvasRef.current;
+    if (event.button !== 0 || !canvas) return;
+    dragRef.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: canvas.scrollLeft,
+      scrollTop: canvas.scrollTop,
+    };
+    setIsDragging(true);
+  }, []);
+
+  /** @param {import('react').MouseEvent<HTMLDivElement>} event */
+  const moveDrag = useCallback(event => {
+    const state = dragRef.current;
+    const canvas = canvasRef.current;
+    if (!state.active || !canvas) return;
+    event.preventDefault();
+    canvas.scrollLeft = state.scrollLeft - (event.clientX - state.startX);
+    canvas.scrollTop = state.scrollTop - (event.clientY - state.startY);
+  }, []);
+
+  const endDrag = useCallback(() => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    setIsDragging(false);
+  }, []);
+
+  if (typeof document === 'undefined') return null;
+
+  const stageStyle = dims
+    ? { width: `${Math.round(dims.width * zoom)}px`, minWidth: `${Math.round(dims.width * zoom)}px` }
+    : { width: `${Math.round(zoom * 100)}%` };
+
+  return createPortal(
+    <div
+      className="doc-mermaid-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={event => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="doc-mermaid-modal">
+        <div className="doc-mermaid-modal-header">
+          <div className="doc-mermaid-modal-title">
+            <strong>{title}</strong>
+            <span>Kéo chuột để di chuyển · Ctrl + cuộn để thu phóng</span>
+          </div>
+          <div className="doc-mermaid-modal-controls">
+            <button type="button" className="doc-mermaid-btn" onClick={() => setZoom(z => clampZoom(z - 0.25))} aria-label="Thu nhỏ">
+              −
+            </button>
+            <span className="doc-mermaid-zoom-value">{Math.round(zoom * 100)}%</span>
+            <button type="button" className="doc-mermaid-btn" onClick={() => setZoom(z => clampZoom(z + 0.25))} aria-label="Phóng to">
+              +
+            </button>
+            <button type="button" className="doc-mermaid-btn" onClick={() => setZoom(1)}>
+              100%
+            </button>
+            <button type="button" className="doc-mermaid-btn" onClick={() => setZoom(fitZoom())}>
+              Vừa màn hình
+            </button>
+            <button
+              type="button"
+              className="doc-mermaid-btn doc-mermaid-btn--close"
+              aria-label="Đóng cửa sổ phóng to"
+              onClick={onClose}
+            >
+              ✕ Đóng
+            </button>
+          </div>
+        </div>
+        <div
+          ref={canvasRef}
+          className={`doc-mermaid-modal-canvas ${isDragging ? 'is-dragging' : ''}`}
+          onWheel={handleWheel}
+          onMouseDown={startDrag}
+          onMouseMove={moveDrag}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+        >
+          <div className="doc-mermaid-modal-stage" style={stageStyle}>
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function MermaidDiagram({ code }) {
   const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [svg, setSvg] = useState('');
   const [failed, setFailed] = useState(false);
   const [inlineMode, setInlineMode] = useState(/** @type {'readable' | 'actual' | 'fit'} */ ('fit'));
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalZoom, setModalZoom] = useState(1);
   const [isDraggingInline, setIsDraggingInline] = useState(false);
-  const [isDraggingModal, setIsDraggingModal] = useState(false);
 
   const inlineViewportRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const modalCanvasRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const dragStateRef = useRef({
-    target: /** @type {'inline' | 'modal' | null} */ (null),
-    startX: 0,
-    startY: 0,
-    scrollLeft: 0,
-    scrollTop: 0,
-  });
+  const dragStateRef = useRef({ active: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -155,90 +295,39 @@ function MermaidDiagram({ code }) {
     };
   }, [code, reactId]);
 
-  useEffect(() => {
-    if (!isModalOpen || typeof document === 'undefined') return undefined;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    /** @param {KeyboardEvent} event */
-    const onKeyDown = event => {
-      if (event.key === 'Escape') {
-        setIsModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [isModalOpen]);
-
   const dims = useMemo(() => parseSvgDimensions(svg), [svg]);
   const layout = useMemo(() => computeInlineMermaidLayout(dims, inlineMode), [dims, inlineMode]);
+  const openModal = useCallback(() => setIsModalOpen(true), []);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
-  const openModal = useCallback(() => {
-    setModalZoom(1);
-    setIsModalOpen(true);
-  }, []);
-
-  const handleZoomIn = useCallback(() => setModalZoom(z => clampZoom(z + 0.25)), []);
-  const handleZoomOut = useCallback(() => setModalZoom(z => clampZoom(z - 0.25)), []);
-  const handleZoomReset = useCallback(() => setModalZoom(1), []);
-  const handleZoomFit = useCallback(() => {
-    const canvas = modalCanvasRef.current;
-    if (!canvas) {
-      setModalZoom(1);
-      return;
-    }
-    setModalZoom(computeFitZoom(dims, canvas.clientWidth, canvas.clientHeight));
-  }, [dims]);
-
-  /** @param {import('react').WheelEvent<HTMLDivElement>} event */
-  const handleModalWheel = useCallback(event => {
-    if (!event.ctrlKey && !event.metaKey) return;
-    event.preventDefault();
-    const delta = event.deltaY < 0 ? 0.15 : -0.15;
-    setModalZoom(z => clampZoom(z + delta));
-  }, []);
-
-  /**
-   * @param {'inline' | 'modal'} target
-   * @param {import('react').MouseEvent<HTMLDivElement>} event
-   */
-  const startDrag = useCallback((target, event) => {
-    if (event.button !== 0) return;
-    const container = target === 'inline' ? inlineViewportRef.current : modalCanvasRef.current;
-    if (!container) return;
+  /** @param {import('react').MouseEvent<HTMLDivElement>} event */
+  const startDrag = useCallback(event => {
+    const container = inlineViewportRef.current;
+    if (event.button !== 0 || !container) return;
     dragStateRef.current = {
-      target,
+      active: true,
       startX: event.clientX,
       startY: event.clientY,
       scrollLeft: container.scrollLeft,
       scrollTop: container.scrollTop,
     };
-    if (target === 'inline') {
-      setIsDraggingInline(true);
-    } else {
-      setIsDraggingModal(true);
-    }
+    setIsDraggingInline(true);
   }, []);
 
   /** @param {import('react').MouseEvent<HTMLDivElement>} event */
   const moveDrag = useCallback(event => {
     const state = dragStateRef.current;
-    if (!state.target) return;
-    const container = state.target === 'inline' ? inlineViewportRef.current : modalCanvasRef.current;
-    if (!container) return;
+    const container = inlineViewportRef.current;
+    if (!state.active || !container) return;
     event.preventDefault();
     container.scrollLeft = state.scrollLeft - (event.clientX - state.startX);
     container.scrollTop = state.scrollTop - (event.clientY - state.startY);
   }, []);
 
   const endDrag = useCallback(() => {
-    if (!dragStateRef.current.target) return;
-    dragStateRef.current.target = null;
+    if (!dragStateRef.current.active) return;
+    dragStateRef.current.active = false;
     setIsDraggingInline(false);
-    setIsDraggingModal(false);
   }, []);
 
   if (failed || !svg) {
@@ -252,10 +341,6 @@ function MermaidDiagram({ code }) {
   const inlineStageStyle = layout.fitContainer
     ? { width: '100%', maxWidth: dims ? `${Math.round(dims.width)}px` : '100%' }
     : { width: `${layout.displayWidthPx}px`, minWidth: `${layout.displayWidthPx}px` };
-
-  const modalStageStyle = dims
-    ? { width: `${Math.round(dims.width * modalZoom)}px`, minWidth: `${Math.round(dims.width * modalZoom)}px` }
-    : { width: `${Math.round(modalZoom * 100)}%` };
 
   return (
     <div className="doc-mermaid-card">
@@ -306,7 +391,7 @@ function MermaidDiagram({ code }) {
       <div
         ref={inlineViewportRef}
         className={`doc-mermaid-viewport ${!layout.fitContainer ? 'is-scrollable' : ''} ${isDraggingInline ? 'is-dragging' : ''}`}
-        onMouseDown={layout.fitContainer ? undefined : event => startDrag('inline', event)}
+        onMouseDown={layout.fitContainer ? undefined : startDrag}
         onMouseMove={layout.fitContainer ? undefined : moveDrag}
         onMouseUp={layout.fitContainer ? undefined : endDrag}
         onMouseLeave={layout.fitContainer ? undefined : endDrag}
@@ -324,78 +409,67 @@ function MermaidDiagram({ code }) {
         )}
       </div>
 
-      {isModalOpen &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <div
-            className="doc-mermaid-modal-backdrop"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Xem sơ đồ toàn màn hình"
-            onClick={event => {
-              if (event.target === event.currentTarget) setIsModalOpen(false);
-            }}
-          >
-            <div className="doc-mermaid-modal">
-              <div className="doc-mermaid-modal-header">
-                <div className="doc-mermaid-modal-title">
-                  <strong>Xem sơ đồ toàn màn hình</strong>
-                  <span>Kéo chuột để di chuyển · Ctrl + cuộn để thu phóng</span>
-                </div>
-                <div className="doc-mermaid-modal-controls">
-                  <button
-                    type="button"
-                    className="doc-mermaid-btn"
-                    onClick={handleZoomOut}
-                    aria-label="Thu nhỏ sơ đồ"
-                  >
-                    −
-                  </button>
-                  <span className="doc-mermaid-zoom-value">{Math.round(modalZoom * 100)}%</span>
-                  <button
-                    type="button"
-                    className="doc-mermaid-btn"
-                    onClick={handleZoomIn}
-                    aria-label="Phóng to sơ đồ"
-                  >
-                    +
-                  </button>
-                  <button type="button" className="doc-mermaid-btn" onClick={handleZoomReset}>
-                    100%
-                  </button>
-                  <button type="button" className="doc-mermaid-btn" onClick={handleZoomFit}>
-                    Vừa màn hình
-                  </button>
-                  <button
-                    type="button"
-                    className="doc-mermaid-btn doc-mermaid-btn--close"
-                    aria-label="Đóng cửa sổ phóng to"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    ✕ Đóng
-                  </button>
-                </div>
-              </div>
-              <div
-                ref={modalCanvasRef}
-                className={`doc-mermaid-modal-canvas ${isDraggingModal ? 'is-dragging' : ''}`}
-                onWheel={handleModalWheel}
-                onMouseDown={event => startDrag('modal', event)}
-                onMouseMove={moveDrag}
-                onMouseUp={endDrag}
-                onMouseLeave={endDrag}
-              >
-                <div
-                  className="doc-mermaid-modal-stage"
-                  style={modalStageStyle}
-                  dangerouslySetInnerHTML={{ __html: svg }}
-                />
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {isModalOpen && (
+        <ZoomModal title="Xem sơ đồ toàn màn hình" dims={dims} onClose={closeModal}>
+          <div dangerouslySetInnerHTML={{ __html: svg }} />
+        </ZoomModal>
+      )}
     </div>
+  );
+}
+
+/**
+ * Markdown image rendered as a framed figure that always fits the column;
+ * clicking it opens the shared zoom viewer.
+ *
+ * @param {{ src?: string, alt?: string, title?: string }} props
+ */
+function DocImage({ src, alt = '', title }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [dims, setDims] = useState(/** @type {{ width: number, height: number } | null} */ (null));
+  const closeModal = useCallback(() => setIsOpen(false), []);
+
+  if (!src || failed) {
+    return (
+      <figure className="doc-figure">
+        <div className="doc-figure-missing">Không tải được hình{alt ? `: ${alt}` : ''}</div>
+      </figure>
+    );
+  }
+
+  return (
+    <figure className="doc-figure">
+      <button
+        type="button"
+        className="doc-figure-frame"
+        onClick={() => setIsOpen(true)}
+        title={title || 'Bấm để phóng to hình'}
+        aria-label={`Phóng to hình${alt ? `: ${alt}` : ''}`}
+      >
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          onLoad={event => {
+            const img = event.currentTarget;
+            if (img.naturalWidth > 0) setDims({ width: img.naturalWidth, height: img.naturalHeight });
+          }}
+          onError={() => setFailed(true)}
+        />
+        <span className="doc-figure-zoom" aria-hidden="true">
+          <ExpandIcon />
+          <span>Phóng to</span>
+        </span>
+      </button>
+      {alt && <figcaption>{alt}</figcaption>}
+      {isOpen && (
+        <ZoomModal title={alt || 'Xem hình toàn màn hình'} dims={dims} initialFit onClose={closeModal}>
+          <img className="doc-figure-modal-img" src={src} alt={alt} draggable={false} />
+        </ZoomModal>
+      )}
+    </figure>
   );
 }
 
@@ -492,6 +566,14 @@ function CodeBlock({ code, language = '' }) {
 }
 
 const markdownComponents = {
+  // A <figure> may not live inside <p>; standalone images render as block figures.
+  p({ node, children, ...props }) {
+    if (isImageOnlyParagraph(node)) return <>{children}</>;
+    return <p {...props}>{children}</p>;
+  },
+  img({ node: _node, src, alt, title }) {
+    return <DocImage src={typeof src === 'string' ? src : undefined} alt={alt || ''} title={title || undefined} />;
+  },
   pre({ children, ...props }) {
     const first = Children.toArray(children).find(child => isValidElement(child));
     if (isValidElement(first)) {

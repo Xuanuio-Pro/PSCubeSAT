@@ -1,47 +1,43 @@
-# Doc 1.6: Giao tiếp Nối tiếp Bất đồng bộ UART & Kỹ thuật Xử lý Luồng Dữ liệu Serial
+# Doc 1.6: Giao tiếp UART
 
-### 1. Nguyên lý Giao tiếp UART Bất đồng bộ
+### 1. Nguyên lý truyền dữ liệu
 
-Giao tiếp **UART (Universal Asynchronous Receiver-Transmitter)** là chuẩn truyền thông nối tiếp điểm - điểm (Point-to-Point) không đồng bộ kinh điển nhất trong kỹ thuật nhúng và hàng không vũ trụ:
+**UART** truyền dữ liệu nối tiếp giữa hai thiết bị mà không cần chung đường xung nhịp. Hai bên cần dùng cùng tốc độ truyền và căn thời điểm theo cạnh tín hiệu.
 
-- **Tính chất Bất đồng bộ (Asynchronous):** Không có đường dây phát xung nhịp Clock chung giữa hai thiết bị. Hai bên truyền và nhận phải được cài đặt cùng một tốc độ truyền định trước (**Baud rate**) và tự căn chỉnh thời gian dựa trên các cạnh chuyển tiếp của tín hiệu.
-- **Cấu trúc Đường truyền:** Chỉ sử dụng đúng 2 dây tín hiệu:
-  - `TX (Transmit)`: Đường xuất dữ liệu từ thiết bị phát.
-  - `RX (Receive)`: Đường nhận dữ liệu vào thiết bị thu (Nối chéo: TX_A → RX_B và RX_A → TX_B).
+- Dùng hai đường tín hiệu:
+  - `TX`: truyền dữ liệu.
+  - `RX`: nhận dữ liệu. Nối chéo hai thiết bị: `TX_A` → `RX_B`, `RX_A` → `TX_B`.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Note over TX,RX: Đường dây ở trạng thái rảnh: Mức HIGH (3.3V)
-    TX->>RX: 1 Bit START (Kéo xuống mức LOW 0V)
-    TX->>RX: Bit D0 (LSB - Bit trọng số thấp nhất truyền trước)
-    TX->>RX: Bit D1 ... Bit D6
-    TX->>RX: Bit D7 (MSB - Bit trọng số cao nhất)
-    opt Bit Parity
-        TX->>RX: 1 Bit Chẵn Lẻ (Even / Odd / None)
-    end
-    TX->>RX: 1 hoặc 2 Bit STOP (Kéo lên mức HIGH 3.3V)
-    Note over TX,RX: Kết thúc khung truyền, trở về trạng thái rảnh HIGH
-```
+![Sơ đồ kết nối UART hai chiều](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/lab1_uart_connection.png)
 
-### 2. Cấu hình Cổng Serial & Khung Truyền SERIAL_8N1
+![Sơ đồ khung truyền UART 8-N-1](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/lab1_uart_timing_sequence.png)
 
-Khung truyền nối tiếp chuẩn mực nhất của ngành công nghiệp là **SERIAL_8N1**:
+### 2. Khung truyền SERIAL_8N1
 
-- **8 Bit Dữ liệu (Data bits):** Đủ để truyền chính xác 1 byte dữ liệu hoặc 1 ký tự mã ASCII chuẩn ($0 - 255$).
-- **No Parity (Không kiểm tra chẵn lẻ):** Không thêm bit kiểm tra, giúp tối ưu hóa băng thông truyền dẫn.
-- **1 Bit Stop (1 Dừng):** Duy trì mức cao tối thiểu trong thời gian 1 bit trước khi cho phép bắt đầu khung truyền tiếp theo.
-- **Thời gian truyền 1 Byte:**
-  Tổng số bit cần truyền cho 1 byte là: 1 Start + 8 Data + 1 Stop = 10 bit.
-  Ở tốc độ baud chuẩn 115200 bps, thời gian truyền 1 bit là:
+Khung **SERIAL_8N1** gồm:
+
+- 8 bit dữ liệu, tương ứng 1 byte.
+- Không có bit kiểm tra chẵn lẻ.
+- 1 bit bắt đầu và 1 bit dừng.
+
+Mỗi byte cần truyền 10 bit. Ở tốc độ 115200 bps, thời gian truyền là:
+
 $$T_{\text{bit}} = \frac{1}{115200} \approx 8.68\,\mu\text{s} \implies T_{\text{byte}} = 10 \times 8.68\,\mu\text{s} \approx 86.8\,\mu\text{s}$$
 
-  Tốc độ truyền dữ liệu hữu ích cực đại đạt: ≈ 11520 Byte/s ≈ 11.25 KB/s.
+Tốc độ dữ liệu tối đa xấp xỉ 11520 byte/s, tương đương 11.25 KB/s.
 
-### 3. Ba Cổng UART Phần cứng trên ESP32
+### 3. Ba cổng UART trên ESP32
 
-Vi điều khiển ESP32 tích hợp sẵn 3 khối phần cứng UART độc lập:
+ESP32 có ba cổng UART: `UART0`, `UART1` và `UART2`. Ma trận GPIO cho phép gán tín hiệu TX/RX cho các chân phù hợp trên NodeMCU-32S:
 
-1. **UART0 (Serial):** Cổng UART nối tiếp mặc định được nối trực tiếp với chip nạp USB-UART trên bo mạch, dùng cho việc nạp mã nguồn từ Web IDE và in nhật ký gỡ lỗi ra cửa sổ Serial Monitor.
-2. **UART1:** Cổng UART thứ hai trên chip, có thể được ánh xạ (remap) linh hoạt qua ma trận chuyển mạch GPIO Matrix sang các chân ngoại vi thích hợp (như kết nối module LoRa).
-3. **UART2 (Serial2):** Cổng nối tiếp phần cứng được dành riêng cho việc giao tiếp với module vệ tinh định vị GNSS L76X hoặc cụm cảm biến Camera Payload.
+![Vị trí ba cổng UART trên ESP32 NodeMCU-32S](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/Lab1.1_esp32.png)
+
+1. **UART0 (`Serial`, TX: `GPIO1`, RX: `GPIO3`):** Nối với chip USB-UART CP2102 hoặc CH340, dùng để nạp mã và xem nhật ký ở 115200 bps.
+2. **UART1 (`Serial1`):** Chân mặc định `GPIO9` và `GPIO10` dùng chung với bộ nhớ Flash. Khi khởi tạo, gán UART1 sang chân GPIO khác bằng `Serial1.begin(baud, SERIAL_8N1, RX_PIN, TX_PIN)`. Ví dụ: kết nối LoRa E32.
+3. **UART2 (`Serial2`, TX: `GPIO17`, RX: `GPIO16`):** Dùng với GNSS L76X ở 9600 bps và camera OV2640 ở 115200 bps thông qua IC 74HC4066.
+
+| Cổng | Đối tượng | Chân | Kết nối và ứng dụng |
+| :--- | :--- | :--- | :--- |
+| **UART0** | `Serial` | TX `GPIO1`<br>RX `GPIO3` | USB-UART; nạp chương trình, xem nhật ký và nhận lệnh CLI. |
+| **UART1** | `Serial1` / `HardwareSerial(1)` | Gán qua ma trận GPIO; không dùng `GPIO9/10`. | Kết nối LoRa E32 (433 MHz). |
+| **UART2** | `Serial2` / `HardwareSerial(2)` | TX `GPIO17`<br>RX `GPIO16` | Nhận NMEA từ GNSS L76X và ảnh JPEG từ OV2640 qua `74HC4066`; độc lập với nạp USB. |

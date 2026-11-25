@@ -286,3 +286,11 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 ## 2026-11-20 — Không cấp thêm quyền Admin qua giao diện hoặc API
 - Quyết định: bỏ nút "Cấp quyền Admin" ở `/admin/users` và chặn ở server: `AdminUserPatch.role` chỉ nhận `teacher` hoặc `user`, gửi `admin` bị từ chối 422. Các tài khoản admin đã tạo giữ nguyên (đăng nhập, Khóa/Mở khóa, bảo vệ admin cuối cùng không đổi).
 - Admin mới chỉ tạo được qua `POST /api/admin/signup` (khi hệ thống chưa có admin) hoặc `scripts/create_admin.py`. Hạ quyền admin vẫn không có trên giao diện.
+
+## 2026-11-25 — Đồng bộ tài liệu từ PTITCube-Docs (commit `aa19e97`)
+- Quyết định: chép nội dung `LabN_DocN.M.md` của repo PTITCube-Docs vào `fastapi-backend/app/firmware/curriculum/labN/doc-N-M.md`, ghép theo chủ đề, không theo số. Giữ nguyên ID bài, nhãn và số doc trên web; tiêu đề H1 đổi sang dạng `# Doc X.Y: <tiêu đề mới>` theo nhãn của web.
+- Lệch số: Lab 1 repo bỏ Doc GPIO/PWM và Doc nút nhấn nên Doc 1.3–1.6 của repo vào `doc-1-5`…`doc-1-8`; `doc-1-3`, `doc-1-4` giữ bản cũ. Lab 5 repo đảo thứ tự: repo 5.3 (LoRa) → `doc-5-2`, repo 5.2 (CRC/CCSDS) → `doc-5-3`.
+- `doc-4-7` giữ bản cũ vì Doc 4.7 trong repo chỉ còn danh sách bài thực hành.
+- Bỏ khi chép: mục "Câu hỏi củng cố/đánh giá" (trùng bài quiz chấm ở server), mục H2 "💻 Hướng dẫn thực hành" (có mã lời giải đầy đủ) và phần nhúng doc lắp ráp (link tương đối `./LabX_DocY.md` không dùng được trên web). Mục khám phá 3D trong Doc 0.2 được giữ.
+- Chưa thêm 6 doc lắp ráp/kết nối mới (1.7, 2.3, 3.5, 4.8, 5.4, 6.4): còn chỗ trống "Vị trí chèn hình", và thêm bài vào giữa lộ trình sẽ đổi chuỗi mở khóa của lớp đang học. Sẽ thêm khi có hình và vị trí bài được chốt.
+- Cấu trúc khóa học giữ nguyên (9 lab, 164 bài). `seed.json` có `source_hash` mới; chạy `npm run db:seed` để tạo phiên bản khóa học mới. Lớp nào đã sửa markdown riêng cho bài doc thì giữ bản sửa đó, trừ khi seed chạy với cờ xóa override.

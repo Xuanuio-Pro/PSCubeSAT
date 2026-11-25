@@ -1,98 +1,76 @@
-# Doc 1.1: Kiến trúc Phần cứng Vi điều khiển ESP32-WROOM-32 & Các Chuẩn Giao tiếp Ngoại vi
+# Doc 1.1: ESP32-WROOM-32 và giao tiếp ngoại vi
 
-### 1. Vai trò Cốt tử của Phân hệ Máy tính trên Bo mạch (OBC - On-Board Computer)
+### 1. Máy tính trên bo mạch
 
-Trong cấu trúc phân tầng của một vệ tinh nhân tạo CubeSat 1U, phân hệ Máy tính trên Bo mạch (**OBC - On-Board Computer**) đóng vai trò như "bộ não hạt nhân" chỉ huy, điều phối và liên kết toàn bộ các phân hệ chức năng khác thành một thực thể thống nhất. Nếu không có OBC hoạt động tin cậy, vệ tinh sẽ chỉ là một khối kim loại vô tri lơ lửng ngoài không gian.
+Máy tính trên bo mạch (OBC) điều phối các phân hệ của vệ tinh CubeSat 1U. OBC thực hiện các nhiệm vụ sau:
 
-Các nhiệm vụ sống còn mà OBC đảm nhiệm bao gồm:
+1. **Khởi động:** Đọc cấu hình từ ROM/Flash, kiểm tra ngoại vi và bắt đầu thời gian im lặng vô tuyến 30 phút sau khi công tắc hành trình phóng nhả.
+2. **Thu thập dữ liệu:** Định kỳ đọc thông số EPS (điện áp, dòng sạc/xả, dung lượng pin, nhiệt độ cell), cảm biến (áp suất khí quyển, gia tốc, vận tốc góc, từ trường Trái Đất, tọa độ GPS) và trạng thái kết cấu; đóng gói thành bản tin nhị phân Beacon.
+3. **Xử lý lệnh:** Nhận gói tin từ trạm mặt đất qua phân hệ COM, giải mã `Opcode` và `Payload`, xác thực `Security Token`, rồi thực hiện lệnh như chụp ảnh, đổi chu kỳ phát Beacon, bật/tắt cảm biến hoặc nạp lại tham số quỹ đạo.
+4. **Lưu trữ:** Ghi dữ liệu cảm biến, ảnh viễn thám và nhật ký bay vào microSD qua SPI, dùng định dạng FAT32.
+5. **Giám sát và phục hồi:** Theo dõi nhịp tim, làm mới Watchdog Timer và khởi động lại phần mềm hoặc cấp nguồn lại khi phát hiện bus bị treo do bức xạ.
 
-1. **Khởi động & Quản lý Trình tự Nạp Hệ thống (Bootstrapping & Sequence Management):** Khi công tắc hành trình phóng nhả ra ngoài không gian, OBC khởi động từ bộ nhớ bất biến ROM/Flash, nạp cấu hình hệ thống, kiểm tra tính toàn vẹn của các ngoại vi và khởi chạy bộ đếm thời gian im lặng vô tuyến 30 phút.
-2. **Thu thập & Đóng gói Dữ liệu Viễn trắc (Telemetry Acquisition & Framing):** Định kỳ quét và đọc các thông số từ phân hệ nguồn EPS (điện áp, dòng sạc/xả, dung lượng pin, nhiệt độ cell), phân hệ cảm biến (áp suất khí quyển, gia tốc, vận tốc góc quay, từ trường Trái Đất, tọa độ GPS) và trạng thái kết cấu để đóng gói thành bản tin nhị phân chuẩn (Beacon).
-3. **Tiếp nhận & Thực thi Mệnh lệnh Điều khiển (Telecommand Processing):** Lắng nghe dữ liệu gói tin từ trạm mặt đất chuyển tiếp qua phân hệ truyền thông COM, giải mã cú pháp mệnh lệnh (Opcode, Payload), xác thực khóa bản quyền bảo mật (Security Token) và thực thi các hành động như: kích hoạt camera chụp ảnh, thay đổi chu kỳ phát beacon, bật/tắt nguồn cảm biến hoặc nạp lại tham số quỹ đạo.
-4. **Quản lý Hệ thống Tệp tin & Lưu trữ Dữ liệu Bay (Data Storage & File Management):** Quản lý quá trình ghi tệp dữ liệu cảm biến, hình ảnh viễn thám và nhật ký hành trình bay (Flight Log) lên thẻ nhớ microSD qua giao diện SPI tốc độ cao định dạng FAT32.
-5. **Giám sát Trạng thái & Tự động Phục hồi Lỗi (FDIR - Fault Detection, Isolation, and Recovery):** Theo dõi nhịp tim hệ thống (Heartbeat), duy trì xung làm tươi bộ định thời Watchdog Timer phần cứng (Hardware Watchdog Timer) và kích hoạt quy trình khởi động lại mềm (Soft Reset) hoặc ngắt mở lại nguồn (Power Cycling) khi phát hiện sự cố treo bus do bức xạ không gian.
-
-```mermaid
-flowchart TD
-    subgraph OBC_Hardware ["🖥️ KIẾN TRÚC PHẦN CỨNG OBC (ESP32-WROOM-32)"]
-        direction TB
-      
-        subgraph Core ["LÕI XỬ LÝ KÉP XTENSA 32-BIT LX6"]
-            CPU0["Core 0 (Protocol Engine)
-Chuyên trách mạng Wi-Fi, HTTP Server
-và giao tiếp ngầm Web Serial"]
-            CPU1["Core 1 (Application Engine)
-Chuyên trách máy trạng thái bay FSM,
-xử lý thuật toán & đọc cảm biến"]
-        end
-      
-        subgraph Memory ["BỘ NHỚ HỆ THỐNG"]
-            ROM["448 KB ROM Nội bộ
-(Bootloader nạp sẵn từ nhà máy)"]
-            SRAM["520 KB SRAM Nội bộ
-(IRAM cho hàm ngắt + DRAM cho ngăn xếp Heap)"]
-            FLASH["4 MB SPI Flash Ngoại vi
-(Lưu trữ Firmware Binary, Phân vùng SPIFFS / NVS)"]
-        end
-      
-        subgraph Peripherals ["NGOẠI VI GIAO TIẾP BO MẠCH"]
-            GPIO["Digital I/O: Điều khiển LED, Đọc Nút nhấn, Công tắc phóng"]
-            ADC["12-bit SAR ADC: Giám sát điện áp nguồn pin, cảm biến analog"]
-            PWM["LEDC PWM: Điều khiển độ sáng LED, xung động cơ rung tư thế"]
-            UART0["UART0: Cổng nạp Firmware và Serial Monitor gỡ lỗi"]
-            UART2["UART2: Cổng giao tiếp với Module GPS L76X & Camera"]
-            I2C_BUS["I2C Master: Bus giao tiếp chung BMP280, MPU6500, MAX17048"]
-            SPI_BUS["SPI Master: Bus giao tiếp tốc độ cao với Thẻ nhớ MicroSD"]
-        end
-      
-        Core <--> Memory
-        CPU1 --> Peripherals
-    end
-```
+![Kiến trúc phần cứng OBC ESP32](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/lab1_obc_architecture.png)
 
 ---
 
-### 2. Thông số Kỹ thuật Chi tiết Vi xử lý ESP32-WROOM-32
+### 2. Thông số ESP32-WROOM-32
 
-Bộ kit vệ tinh giáo dục **PTITCube** lựa chọn vi điều khiển hệ thống trên chip (SoC) **ESP32-WROOM-32** của Espressif Systems nhờ sự kết hợp lý tưởng giữa năng lực tính toán 32-bit mạnh mẽ, dung lượng bộ nhớ dồi dào, khả năng hỗ trợ hệ điều hành thời gian thực FreeRTOS và giá thành tối ưu cho giáo dục:
+Bộ kit PTITCube dùng vi điều khiển **ESP32-WROOM-32** của Espressif Systems. Chip có kiến trúc 32-bit, bộ nhớ tích hợp và hỗ trợ FreeRTOS.
 
-| Khối Chức năng                                    | Thông số Kỹ thuật Chi tiết                                                                                         | Ý nghĩa trong Ứng dụng Không gian & Lab                                                                                                                            |
-| :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Kiến trúc Lõi (CPU Architecture)**        | Dual-core Tensilica Xtensa 32-bit LX6                                                                                   | Hai lõi vật lý hoạt động độc lập; cho phép tách biệt luồng xử lý viễn thông/mạng trên Core 0 và luồng thuật toán bay trên Core 1.               |
-| **Tần số Xung nhịp (Clock Frequency)**      | Có thể cấu hình: 80 MHz, 160 MHz đến tối đa 240 MHz                            | Xung nhịp cao hỗ trợ tính toán ma trận xoay tư thế 3D và xử lý dòng dữ liệu ảnh JPEG mượt mà.                                                         |
-| **Bộ nhớ SRAM Nội bộ**                     | $520\text{ KB}$ SRAM ($512\text{ KB}$ khả dụng)                                                                   | Phân chia thành $192\text{ KB}$ IRAM (chứa mã thực thi tốc độ cao) và $328\text{ KB}$ DRAM (chứa biến dữ liệu, bộ đệm DMA và ngăn xếp tác vụ). |
-| **Bộ nhớ Flash Ngoài**                      | 4 MB (hoặc 16 MB) Flash Quad-SPI                                                                 | Lưu trữ tệp thực thi nhị phân, bảng phân vùng và hệ thống tệp tin nhúng (SPIFFS/LittleFS).                                                                |
-| **Bộ đồng xử lý Công suất Thấp (ULP)** | Co-processor FSM siêu tiết kiệm điện                                                                               | Có thể đọc cảm biến và theo dõi mức pin khi cả hai lõi CPU chính đều ở chế độ ngủ sâu (Deep Sleep).                                                 |
-| **Chuyển đổi Tương tự - Số (ADC)**      | 2 × 12-bit SAR ADC (tối đa 18 kênh)                                                                  | Đo đạc điện áp pin và tín hiệu cảm biến analog với độ phân giải $4096$ mức.                                                                          |
-| **Giao tiếp Nối tiếp (Serial Buses)**       | $3 \times\text{UART}$, $2 \times\text{I2C}$, $3 \times\text{SPI}$, $2 \times\text{I2S}$, $1 \times\text{CAN}$ | Hỗ trợ đầy đủ mọi giao thức giao tiếp công nghiệp vũ trụ.                                                                                                  |
-| **Mạng Không dây Tích hợp**               | Wi-Fi 802.11 b/g/n (2.4 GHz) & Bluetooth v4.2 BR/EDR/BLE                                          | Hỗ trợ mô phỏng truyền nhận dữ liệu tầm gần trong phòng thí nghiệm và kết nối Web LMS.                                                                  |
-| **Điện áp Hoạt động Danh định**        | 3.0V - 3.6V (Chuẩn tối ưu: 3.3V)                                                        | Khớp chuẩn với đường nguồn 3.3V do mạch Buck chuyển đổi từ pin Lithium EPS.                                                                      |
+| Khối | Thông số | Ứng dụng |
+| :--- | :--- | :--- |
+| **Kiến trúc lõi** | Hai lõi Tensilica Xtensa 32-bit LX6 | Có thể tách tác vụ mạng ở Core 0 và thuật toán bay ở Core 1. |
+| **Tần số xung nhịp** | 80, 160 hoặc tối đa 240 MHz | Hỗ trợ xử lý ma trận tư thế 3D và ảnh JPEG. |
+| **SRAM** | $520\text{ KB}$ ($512\text{ KB}$ khả dụng) | $192\text{ KB}$ IRAM cho mã; $328\text{ KB}$ DRAM cho dữ liệu, DMA và ngăn xếp. |
+| **Flash ngoài** | 4 MB hoặc 16 MB, Quad-SPI | Lưu chương trình, bảng phân vùng và SPIFFS/LittleFS. |
+| **Bộ đồng xử lý ULP** | FSM tiết kiệm điện | Đọc cảm biến và theo dõi pin khi hai lõi CPU ở chế độ Deep Sleep. |
+| **ADC** | 2 bộ SAR 12-bit, tối đa 18 kênh | Đo điện áp và tín hiệu tương tự với độ phân giải $4096$ mức. |
+| **Giao tiếp nối tiếp** | 3 UART, 2 I2C, 3 SPI, 2 I2S, 1 CAN | Hỗ trợ các giao thức công nghiệp. |
+| **Không dây** | Wi-Fi 802.11 b/g/n 2.4 GHz; Bluetooth 4.2 BR/EDR/BLE | Truyền dữ liệu tầm gần và kết nối Web LMS. |
+| **Điện áp hoạt động** | 3.0–3.6 V; khuyến nghị 3.3 V | Tương thích nguồn 3.3 V từ mạch Buck của pin Lithium EPS. |
 
 ---
 
-### 3. Sơ đồ Chân Đặc biệt (Strapping Pins) & Lưu ý An toàn Phần cứng
+### 3. Sơ đồ chân NodeMCU-32S (38 chân)
 
-Trên vi điều khiển ESP32, có một số chân GPIO đặc biệt được gọi là **Strapping Pins**. Mức logic điện áp tại các chân này được chip lấy mẫu (sample) ngay tại khoảnh khắc xung Reset nhả ra ($0 \to 1$). Mức logic này quyết định chế độ hoạt động của chip:
+Module **ESP32-WROOM-32** thường được gắn trên bo mạch phát triển **NodeMCU-32S 38 chân** để thử nghiệm và tích hợp vào OBC. Ma trận GPIO cho phép gán linh hoạt nhiều tín hiệu ngoại vi; cần tuân thủ chức năng và giới hạn điện áp của từng chân.
 
-```mermaid
-flowchart LR
-    A["Xung Reset (Chân EN nhả từ 0 lên 1)"] --> B["Chip đọc mức Logic các chân Strapping"]
-    B --> C{"GPIO0 = LOW?"}
-    C -- Đúng --> D["Vào Chế độ DOWNLOAD BOOT
-(Sẵn sàng nạp Firmware mới qua UART)"]
-    C -- Sai (HIGH) --> E["Vào Chế độ SPI FLASH BOOT
-(Khởi chạy chương trình bay lưu trong Flash)"]
-```
+![Sơ đồ chân đầy đủ của bo mạch ESP32 NodeMCU-32S](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/Lab1.1_esp32.png)
 
-| Tên Chân GPIO          | Chức năng Strapping                                             | Mức Logic Boot Bình thường             | Mức Logic Nạp Firmware                   | Cảnh báo An toàn Thiết kế                                                                                                                                                                                                                                          |
-| :----------------------- | :---------------------------------------------------------------- | :----------------------------------------- | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **GPIO 0**         | Quyết định Chế độ Khởi động (Boot Mode)                  | **HIGH (Kéo lên 3.3V)** | **LOW (Nối Mass 0V)**    | Chân này có trở kéo lên nội. Nếu vô tình gắn cảm biến kéo chân này xuống đất khi khởi động, ESP32 sẽ rơi vào chế độ nạp và không bao giờ chạy code bay!                                                                                |
-| **GPIO 2**         | Quyết định Chế độ Khởi động & Nạp Flash                 | **LOW hoặc Không kết nối**       | **LOW (Nối Mass 0V)**    | Thường được nối với LED báo trên bo mạch. Không được kéo chân này lên mức cao bất thường khi boot.                                                                                                                                                |
-| **GPIO 12 (MTDI)** | Quyết định Điện áp Bộ điều áp Nội cho Flash (VDD_SDIO) | **LOW (Điện áp 3.3V)** | **LOW (Điện áp 3.3V)** | **CỰC KỲ NGUY HIỂM:** Nếu GPIO 12 bị kéo lên mức cao (3.3V) khi khởi động, chip sẽ cấu hình đường nguồn cấp Flash nội tụt xuống 1.8V, khiến bộ nhớ Flash không đọc được và làm ESP32 bị brick tạm thời! |
-| **GPIO 15 (MTDO)** | Bật/Tắt Xuất Thông điệp Debug ra Cổng UART0                | **HIGH (Kéo lên 3.3V)** | **HIGH (Kéo lên 3.3V)** | Điều khiển việc chip có in các dòng thông báo ROM Bootloader ra cổng Serial ở tốc độ 115200 hay không.                                                                                                                                                   |
+#### Chức năng các chân NodeMCU-32S
+
+| Nhóm chân | Ký hiệu | Chức năng | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **Nguồn & Điều khiển** | **3V3**, **5V0**, **GND** | `3V3`: Đường nguồn ổn áp 3.3V; `5V0`: Nguồn vào/ra 5V từ cổng USB Type-C; `GND`: Mass chung hệ thống. | Nguồn cấp logic cho ESP32 tối đa 3.3V (không cấp 5V vào chân GPIO). |
+| **Khởi động lại** | **EN** | Tích cực mức `HIGH`; kéo xuống `LOW` để khởi động lại chip. | Kết hợp với `GPIO0` (`IO0`) qua mạch DTR/RTS để nạp firmware tự động. |
+| **Chỉ nhận tín hiệu** | **GPIO36** (`S_VP`), **GPIO39** (`S_VN`), **GPIO34** (`VDET_1`), **GPIO35** (`VDET_2`) | Các kênh ADC 12-bit `ADC1_0`, `ADC1_3`, `ADC1_6`, `ADC1_7`; thuộc vùng RTC. | Không xuất tín hiệu và không có điện trở kéo nội. Dùng đọc cảm biến analog, điện áp hoặc tín hiệu `AUX`. |
+| **Cảm ứng, RTC, DAC và ADC** | **GPIO32** (`TOUCH9 / ADC1_4`), **GPIO33** (`TOUCH8 / ADC1_5`), **GPIO25** (`DAC_1`), **GPIO26** (`DAC_2`), **GPIO27** (`TOUCH7 / ADC2_7`) | Hỗ trợ I/O hai chiều, PWM, ngắt ngoài, DAC 8-bit và dao động 32 kHz. | Dùng điều khiển ngoại vi, UART1 qua ma trận GPIO hoặc PWM. `ADC2` không dùng đồng thời với Wi-Fi. |
+| **Bus I2C Mặc định (Wire)** | **GPIO21** (`WIRE_SDA`), **GPIO22** (`WIRE_SCL`) | Đường dữ liệu `SDA` và xung nhịp `SCL` mặc định của thư viện `Wire.h`. | Giao tiếp chuẩn I2C với **MAX17048** (`0x36`), **BMP280** (`0x76/0x77`), **MPU6500** (`0x68`) và **GY-271** (`0x0D`). |
+| **Cổng UART0** | **GPIO1** (`U0TXD / SERIAL_TX`), **GPIO3** (`U0RXD / SERIAL_RX`) | Nối với chip USB-UART CP2102 hoặc CH340. | Nạp firmware qua Web IDE và xem dữ liệu ở Serial Monitor (115200 bps). Tránh gắn tải gây xung đột mức logic. |
+| **Cổng UART2 (Phần cứng)** | **GPIO17** (`TX2`), **GPIO16** (`RX2`) | Kênh truyền/nhận nối tiếp phần cứng độc lập `Serial2`. | Giao tiếp tốc độ cao với module định vị **GNSS L76X** và **Camera OV2640** thông qua IC đa hóa **74HC4066**. |
+| **Bus VSPI (SPI mặc định)** | **GPIO23** (`VSPI_MOSI`), **GPIO19** (`VSPI_MISO`), **GPIO18** (`VSPI_SCK`), **GPIO5** (`VSPI_SS`) | Giao tiếp SPI tốc độ cao (tối đa 40 MHz); `GPIO5` kiêm chân strapping `SDIO`. | Kết nối khe microSD để lưu nhật ký bay và ảnh JPEG. |
+| **Bus HSPI & JTAG** | **GPIO13** (`HSPI_MOSI / MTCK`), **GPIO12** (`HSPI_MISO / MTDI`), **GPIO14** (`HSPI_SCK / MTMS`), **GPIO15** (`HSPI_SS / MTDO`) | Kênh SPI thứ hai (`HSPI`) đồng thời phục vụ giao diện gỡ lỗi JTAG và ADC2 / Touch. | Trong **Lab 1** (trên bo rời): `GPIO13, 14, 15` dùng điều khiển IC dịch chốt `74HC595`. **Lưu ý:** `GPIO12` và `GPIO15` là chân Strapping nhạy cảm khi khởi động. |
+| **Chân Điều khiển & Strapping** | **GPIO0** (`BOOT`), **GPIO2** (`LED`), **GPIO4** (`ADC2_0 / TOUCH0`) | I/O đa năng hỗ trợ PWM, ADC2, Touch. `GPIO2` thường gắn sẵn LED xanh trên bo; `GPIO0` nối nút `IO0/BOOT`. | Trong **Lab 1**: `GPIO2` điều khiển LED đơn, `GPIO4` đọc nút nhấn `INPUT_PULLUP`. Khi tích hợp kit: dùng điều khiển chân chọn `M0/M1`, nút nhấn hoặc tín hiệu chuyển mạch. |
+| **Chân Flash Nội (! CẤM DÙNG)** | **GPIO6** (`SCK`), **GPIO7** (`D0`), **GPIO8** (`D1`), **GPIO9** (`D2`), **GPIO10** (`D3`), **GPIO11** (`CMD`) | Đường kết nối nội bộ giữa lõi ESP32 và chip nhớ **SPI Flash 4 MB** bên trong vỏ bọc kim loại. | **TUYỆT ĐỐI KHÔNG SỬ DỤNG** làm GPIO thường (cũng không dùng trực tiếp chân UART1 mặc định `GPIO9/10` mà phải remap qua GPIO Matrix). |
+
+---
+
+### 4. Chân Strapping và lưu ý phần cứng
+
+ESP32 lấy mẫu mức logic trên một số chân GPIO khi tín hiệu reset chuyển từ $0$ lên $1$. Mức này quyết định chế độ khởi động:
+
+![Luồng khởi động và chân Strapping Pin ESP32](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/lab1_strapping_flow.png)
+
+| Tên Chân GPIO | Chức năng Strapping | Mức Logic Boot Bình thường | Mức Logic Nạp Firmware | Cảnh báo An toàn Thiết kế |
+| :--- | :--- | :--- | :--- | :--- |
+| **GPIO 0** | Chọn chế độ khởi động | **HIGH (kéo lên 3.3 V)** | **LOW (nối GND)** | Có điện trở kéo lên nội. Nếu bị kéo xuống khi khởi động, ESP32 vào chế độ nạp. |
+| **GPIO 2** | Chọn chế độ khởi động và nạp Flash | **LOW hoặc không nối** | **LOW (nối GND)** | Thường nối với LED trên bo. Không kéo chân lên mức cao khi khởi động. |
+| **GPIO 12 (MTDI)** | Chọn điện áp cho Flash nội (`VDD_SDIO`) | **LOW (3.3 V)** | **LOW (3.3 V)** | Nếu GPIO 12 bị kéo lên HIGH khi khởi động, chip đặt nguồn Flash ở 1.8 V khiến ESP32 không đọc được bộ nhớ. |
+| **GPIO 15 (MTDO)** | Bật/tắt thông báo gỡ lỗi trên UART0 | **HIGH (kéo lên 3.3 V)** | **HIGH (kéo lên 3.3 V)** | Quyết định ROM Bootloader có gửi thông báo qua cổng nối tiếp ở 115200 bps hay không. |
 
 > [!WARNING]
-> **Quy tắc Vàng khi Thiết kế OBC:**
+> **Lưu ý khi thiết kế OBC:**
 >
-> - Tuyệt đối không sử dụng các chân GPIO 6, 7, 8, 9, 10, 11 cho các mục đích thông thường vì các chân này được kết nối trực tiếp bên trong vỏ module với chip nhớ SPI Flash. Bất kỳ tác động điện áp nào lên các chân này đều làm sập vi xử lý ngay lập tức.
-> - Các chân GPIO 34, 35, 36 (VP), 39 (VN) là các chân **Chỉ Có Chiều Nhập (Input Only)**, không có điện trở kéo nội bộ (No internal Pull-up/Pull-down) và không thể cấu hình làm ngõ ra `OUTPUT`.
+> - Không dùng GPIO 6, 7, 8, 9, 10, 11 làm chân GPIO thông thường vì chúng nối trực tiếp với bộ nhớ SPI Flash bên trong module.
+> - GPIO 34, 35, 36 (VP) và 39 (VN) chỉ nhận tín hiệu, không có điện trở kéo nội và không thể cấu hình làm ngõ ra `OUTPUT`.

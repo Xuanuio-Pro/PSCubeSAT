@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { isImageOnlyParagraph } from '../src/components/common/markdown-figure.js';
 import { normalizeDisplayMath } from '../src/components/common/markdown-math.js';
 import {
   clampZoom,
@@ -181,7 +182,7 @@ test('all 35 curriculum docs render without KaTeX errors, raw $$, dropped headin
   assert.equal(unlabeledPreCount, 2);
 });
 
-test('doc-5-1 renders complete sections including FSPL, Mermaid, Link Budget, and Doppler', () => {
+test('doc-5-1 renders complete sections including FSPL, link budget figure, and Doppler', () => {
   const md = readFileSync(
     new URL('../fastapi-backend/app/firmware/curriculum/lab5/doc-5-1.md', import.meta.url),
     'utf8',
@@ -197,10 +198,10 @@ test('doc-5-1 renders complete sections including FSPL, Mermaid, Link Budget, an
     ),
   );
 
-  assert.ok(html.includes('Link Budget'));
+  assert.ok(html.includes('Cân bằng tuyến'));
   assert.ok(html.includes('Doppler'));
   assert.ok(html.includes('katex-display'));
-  assert.ok(html.includes('language-mermaid'));
+  assert.ok(html.includes('lab5_rf_link_budget.png'));
 });
 
 test('parseSvgDimensions parses viewBox, attribute fallback, and rejects invalid SVG', () => {
@@ -331,7 +332,7 @@ test('tokenizeCodeLines keeps unlabeled snippets plain without false coloring', 
   assert.deepEqual(lines, [[{ type: 'plain', value: nmea }]]);
 });
 
-test('all 27 Mermaid diagrams across 35 curriculum docs parse cleanly without DOM leaks', async () => {
+test('every Mermaid diagram in the curriculum docs parses cleanly without DOM leaks', async () => {
   const { JSDOM } = await import('jsdom');
   const dom = new JSDOM('<!doctype html><html><body></body></html>');
   const prevWindow = globalThis.window;
@@ -362,10 +363,42 @@ test('all 27 Mermaid diagrams across 35 curriculum docs parse cleanly without DO
       }
     }
 
-    assert.equal(diagramCount, 27);
+    // Docs now mostly use PNG figures (PTITCube-Docs); keep at least one diagram exercised.
+    assert.ok(diagramCount >= 1, 'expected at least one Mermaid diagram in curriculum docs');
   } finally {
     globalThis.window = prevWindow;
     globalThis.document = prevDocument;
     globalThis.DOMParser = prevDOMParser;
+  }
+});
+
+test('standalone images unwrap into figures; images inside text stay inline', () => {
+  /** @param {string} md */
+  const render = md => renderToStaticMarkup(
+    React.createElement(ReactMarkdown, {
+      components: {
+        p: ({ node, children }) => (isImageOnlyParagraph(node)
+          ? React.createElement('figure', null, children)
+          : React.createElement('p', null, children)),
+      },
+    }, md),
+  );
+  const standalone = render('![Sơ đồ](https://example.test/a.png)');
+  assert.ok(standalone.includes('<figure><img src="https://example.test/a.png" alt="Sơ đồ"/></figure>'));
+  assert.ok(!standalone.includes('<p>'));
+  assert.match(render('Xem ![icon](https://example.test/i.png) tại đây'), /<p>Xem <img[^>]*\/> tại đây<\/p>/);
+  assert.equal(isImageOnlyParagraph({ children: [{ type: 'text', value: '  ' }] }), false);
+  assert.equal(isImageOnlyParagraph(null), false);
+});
+
+test('every PNG figure in curriculum docs is a standalone image line', () => {
+  const pngImage = /!\[[^\]]*\]\([^)]+\.png\)/;
+  const standalone = /^!\[[^\]]*\]\([^)\s]+\)$/;
+  for (const file of collectDocFiles()) {
+    const lines = readFileSync(file, 'utf8').replace(/\r/g, '').split('\n');
+    lines.forEach((line, idx) => {
+      if (!pngImage.test(line)) return;
+      assert.match(line.trim(), standalone, `${file}:${idx + 1} should hold only the image`);
+    });
   }
 });

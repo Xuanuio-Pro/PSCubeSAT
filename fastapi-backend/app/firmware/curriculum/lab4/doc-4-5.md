@@ -1,10 +1,12 @@
-# Doc 4.5: Tải Trọng Camera Viễn Thám OV2640, Nén JPEG Phần Cứng & Giao Thức Lệnh UART
+# Doc 4.5: Camera OV2640 và truyền ảnh qua UART
 
-### 1. Tải trọng Camera OV2640
+![Quy trình chụp ảnh JPEG từ OV2640 lưu MicroSD và truyền LoRa](https://raw.githubusercontent.com/PTITCube/PTITCube-Figs/main/png/lab4_ov2640_capture_pipeline.png)
+
+### 1. Camera OV2640
 - **Đặc tính Tải trọng:** Cảm biến ảnh màu CMOS Omnivision **OV2640** độ phân giải 2 Megapixel (1600 × 1200 pixel), tích hợp bộ mã hóa nén phần cứng JPEG giúp giảm dung lượng tệp ảnh từ hàng Megabytes xuống còn $30 - 60\text{ KB}$, rất phù hợp với băng thông hạn chế của kênh truyền sóng không gian.
 - **Yêu cầu Xung nhịp Ngoài XCLK:** Để mạch xử lý tín hiệu hình ảnh (ISP) bên trong OV2640 hoạt động, nó đòi hỏi vi điều khiển OBC phải phát ra một đường xung nhịp tần số cao ổn định từ 10 MHz đến 20 MHz tại chân `XCLK`.
 
-### 2. Giao thức Bắt tay Điều khiển Chụp ảnh qua UART (Chuẩn Lệnh Chuỗi Text)
+### 2. Gửi lệnh chụp và nhận ảnh qua UART
 Khác với giao thức ký tự đơn sơ khởi (`'p'`), giao thức chuẩn của hệ thống CubeSat sử dụng chuỗi ký tự rõ ràng để tăng tính an toàn và khả năng tự kiểm lỗi:
 1. **Gửi lệnh chụp:** OBC gửi lệnh chuỗi text `"capture\n"` đến ESP32-CAM qua cổng nối tiếp UART2 (tốc độ baud 115200, chân RX 16, TX 17).
 2. **Phản hồi kích thước:** ESP32-CAM chụp ảnh, nén phần cứng JPEG và phản hồi chuỗi `SIZE:<bytes>\n` thông báo kích thước tệp ảnh (ví dụ: `SIZE:38420`).
