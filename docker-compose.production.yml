@@ -10,6 +10,8 @@ x-backend-env: &backend-env
   APP_ENV: production
   REDIS_URL: redis://redis:6379
   ALLOWED_ORIGINS: https://${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
+  # Links in password-reset / verification emails; never a dev localhost copied from .env.
+  FRONTEND_URL: https://${SITE_DOMAIN:?Set SITE_DOMAIN to your public website domain}
 
 services:
   gateway:

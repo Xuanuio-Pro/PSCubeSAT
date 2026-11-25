@@ -21,7 +21,15 @@ class ProductionSettingsTests(unittest.TestCase):
 
     def test_strong_production_configuration_and_development_remain_valid(self):
         validate_production(self.settings())
-        validate_production(Settings(_env_file=None, app_env="development"))
+        validate_production(self.settings(frontend_url="https://cubesat.p-tech.xyz/"))
+        validate_production(
+            Settings(_env_file=None, app_env="development", frontend_url="http://localhost:5175")
+        )
+
+    def test_email_links_cannot_point_to_localhost_in_production(self):
+        for frontend_url in ["http://localhost:5175", "https://other.example.com"]:
+            with self.subTest(frontend_url=frontend_url), self.assertRaises(RuntimeError):
+                validate_production(self.settings(frontend_url=frontend_url))
 
     def test_incomplete_settings_fail_without_exposing_values(self):
         for overrides in [

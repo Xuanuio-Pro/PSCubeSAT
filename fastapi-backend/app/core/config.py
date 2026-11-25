@@ -153,5 +153,9 @@ def validate_production(settings: Settings) -> None:
         for origin in origins
     ):
         raise RuntimeError("ALLOWED_ORIGINS must contain exact HTTPS origins without paths.")
+    # Email links must open the public site, not a developer's localhost copied from .env.
+    frontend_url = settings.frontend_url.strip().rstrip("/")
+    if frontend_url and frontend_url not in {origin.rstrip("/") for origin in origins}:
+        raise RuntimeError("FRONTEND_URL must be one of the HTTPS ALLOWED_ORIGINS.")
     if not settings.mqtt_password or settings.mqtt_password.startswith(("<", "replace_")):
         raise RuntimeError("MQTT_PASSWORD must be configured for the backend service account.")
