@@ -667,6 +667,8 @@ class DefaultClassSampleBanksTests(unittest.IsolatedAsyncioTestCase):
                 item.update(
                     enabled=True, required=True, params={"num_questions": 7, "pass_score": 5}
                 )
+            elif item["lesson_id"] == "overview":
+                item.update(enabled=False, required=False)
         saved = await self.fixture.save(body)
         self.assertEqual(saved.status_code, 200, saved.text)
         pub = await self.fixture.publish(saved.json()["version"], dry_run=False)
@@ -892,7 +894,7 @@ class Migration0021UnitTests(unittest.TestCase):
                 self.assertEqual(c1_lt0, [("approved",)] * 200)
                 self.assertEqual(c2_lt0, [("existing-q",)])
                 self.assertEqual(c2_lt1, [])
-                self.assertEqual(tuple(p1), (10, 8, 15))
+                self.assertEqual(tuple(p1), (20, 16, 20))
                 self.assertEqual(tuple(p2), (5, 3, 12))
 
                 with sync_engine.begin() as conn:
@@ -946,7 +948,7 @@ class Migration0021UnitTests(unittest.TestCase):
                                 )
                             ).one()
                         ),
-                        (10, 8, 15),
+                        (20, 16, 20),
                     )
                     self.assertEqual(
                         tuple(

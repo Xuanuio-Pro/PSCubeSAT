@@ -832,6 +832,7 @@ class Lab1SyllabusAndSyncTests(unittest.IsolatedAsyncioTestCase):
         ).json()
         body = {
             "expected_version": draft["version"],
+            "course_version_id": draft["course_version_id"],
             "labs": [
                 {
                     "lab_id": lab["id"],
@@ -858,12 +859,12 @@ class Lab1SyllabusAndSyncTests(unittest.IsolatedAsyncioTestCase):
                 for item in lab["lessons"]
             ],
         }
-        saved = await self.call(2, "PUT", f"/api/classes/{self.class_a}/curriculum", body)
+        saved = await self.call(2, "PUT", f"/api/classes/{self.class_a}/settings", body)
         self.assertEqual(saved.status_code, 200, saved.text)
         pub = await self.call(
             2,
             "POST",
-            f"/api/classes/{self.class_a}/curriculum/publish",
+            f"/api/classes/{self.class_a}/publish",
             {"expected_version": saved.json()["version"]},
         )
         self.assertEqual(pub.status_code, 200, pub.text)
@@ -872,11 +873,13 @@ class Lab1SyllabusAndSyncTests(unittest.IsolatedAsyncioTestCase):
             first = await sync_classes_to_latest_course(
                 db, enable_all_lessons=False, reset_doc_overrides=True
             )
-            self.assertTrue(first[0]["upgraded"])
+            first_map = {r["class_id"]: r for r in first}
+            self.assertTrue(first_map[self.class_a]["upgraded"])
             second = await sync_classes_to_latest_course(
                 db, enable_all_lessons=False, reset_doc_overrides=True
             )
-            self.assertFalse(second[0]["upgraded"])
+            second_map = {r["class_id"]: r for r in second}
+            self.assertFalse(second_map[self.class_a]["upgraded"])
 
         refreshed = (
             await self.call(2, "GET", f"/api/classes/{self.class_a}/curriculum?draft=true")

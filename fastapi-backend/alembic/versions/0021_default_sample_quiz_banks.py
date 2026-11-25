@@ -129,6 +129,7 @@ def downgrade():
     # Preserve seeded/edited question bank data; only revert untouched default
     # labtest-* policies so pre-0017 constraints hold on rollback.
     bind = op.get_bind()
+    labtest_policy = default_policy("labtest")
     bind.execute(
         sa.text(
             """UPDATE quiz_policies
@@ -138,8 +139,18 @@ def downgrade():
                WHERE lesson_id LIKE 'labtest-%'
                  AND revision = 1
                  AND bank_id IS NULL
-                 AND num_questions = 10
-                 AND pass_score = 8
-                 AND time_limit_minutes = 15"""
-        )
+                 AND (
+                     (num_questions = 10 AND pass_score = 8 AND time_limit_minutes = 15)
+                     OR (
+                         num_questions = :num_questions
+                         AND pass_score = :pass_score
+                         AND time_limit_minutes = :time_limit_minutes
+                     )
+                 )"""
+        ),
+        {
+            "num_questions": labtest_policy["num_questions"],
+            "pass_score": labtest_policy["pass_score"],
+            "time_limit_minutes": labtest_policy["time_limit_minutes"],
+        },
     )

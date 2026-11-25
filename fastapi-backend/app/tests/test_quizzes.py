@@ -353,7 +353,7 @@ class QuizAPITests(unittest.IsolatedAsyncioTestCase):
         await self.learning.complete(0)
         attempt = (await self.start()).json()
         await self.correct(attempt)
-        future = now() + timedelta(minutes=16)
+        future = now() + timedelta(minutes=21)
         with (
             patch("app.services.quizzes.now", return_value=future),
             patch("app.services.question_generation.now", return_value=future),

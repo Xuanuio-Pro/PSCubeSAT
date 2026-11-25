@@ -8,7 +8,7 @@ from uuid import uuid4
 from weakref import WeakKeyDictionary
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select
 
 from app.core.lms_errors import LMSError
 from app.models.curriculum import ClassCourseVersion, CourseVersion, Lab, Lesson
@@ -93,6 +93,12 @@ def _seed_lock(class_id: int) -> asyncio.Lock:
     return lock
 
 
+async def _bulk_insert_question_versions(db, rows: list[dict], *, chunk_size: int = 100) -> None:
+    """Insert QuestionVersion rows in chunks so large banks stay fast in SQLite and PostgreSQL."""
+    for idx in range(0, len(rows), chunk_size):
+        await db.execute(insert(QuestionVersion), rows[idx : idx + chunk_size])
+
+
 async def _seed_lesson_bank_and_policy(
     db,
     *,
@@ -124,18 +130,21 @@ async def _seed_lesson_bank_and_policy(
         )
         db.add(bank)
         await db.flush()
-        for sample in samples:
-            db.add(
-                QuestionVersion(
-                    id=uid(),
-                    bank_id=bank.id,
-                    question_id=uid(),
-                    content=sample,
-                    status="approved",
-                    reviewer=actor_id,
-                    reviewed_at=seeded_at,
-                )
-            )
+        await _bulk_insert_question_versions(
+            db,
+            [
+                {
+                    "id": uid(),
+                    "bank_id": bank.id,
+                    "question_id": uid(),
+                    "content": sample,
+                    "status": "approved",
+                    "reviewer": actor_id,
+                    "reviewed_at": seeded_at,
+                }
+                for sample in samples
+            ],
+        )
     if need_policy:
         defaults = default_policy(
             "labtest" if is_labtest(key) else "quiz",
@@ -227,19 +236,21 @@ async def _clone_bank_to_course_version(
     )
     db.add(new_bank)
     await db.flush()
-    for q in old_questions:
-        db.add(
-            QuestionVersion(
-                id=uid(),
-                bank_id=new_bank.id,
-                question_id=q.question_id,
-                content=deepcopy(q.content),
-                status=q.status,
-                reviewer=q.reviewer,
-                reviewed_at=q.reviewed_at,
-            )
-        )
-    await db.flush()
+    await _bulk_insert_question_versions(
+        db,
+        [
+            {
+                "id": uid(),
+                "bank_id": new_bank.id,
+                "question_id": q.question_id,
+                "content": deepcopy(q.content),
+                "status": q.status,
+                "reviewer": q.reviewer,
+                "reviewed_at": q.reviewed_at,
+            }
+            for q in old_questions
+        ],
+    )
     if old_bank.status == "published":
         new_bank.status = "published"
         new_bank.published_by = old_bank.published_by or actor_id
@@ -417,6 +428,15 @@ async def refresh_default_banks_for_class(
         )
     ).scalar_one_or_none()
     if not course_version_id:
+        course_version_id = (
+            await db.execute(
+                select(CourseVersion.id)
+                .where(CourseVersion.status == "published")
+                .order_by(CourseVersion.version.desc(), CourseVersion.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+    if not course_version_id:
         return {"class_id": class_id, "refreshed_banks": 0, "updated_policies": 0}
 
     labs = list(
@@ -556,31 +576,33 @@ async def refresh_default_banks_for_class(
             db.add(new_bank)
             await db.flush()
 
-            for q in kept:
-                db.add(
-                    QuestionVersion(
-                        id=uid(),
-                        bank_id=new_bank.id,
-                        question_id=q.question_id,
-                        content=deepcopy(q.content),
-                        status=q.status,
-                        reviewer=q.reviewer,
-                        reviewed_at=q.reviewed_at,
-                    )
-                )
-            for sample in to_add:
-                db.add(
-                    QuestionVersion(
-                        id=uid(),
-                        bank_id=new_bank.id,
-                        question_id=uid(),
-                        content=sample,
-                        status="approved",
-                        reviewer=actor,
-                        reviewed_at=seeded_at,
-                    )
-                )
-            await db.flush()
+            await _bulk_insert_question_versions(
+                db,
+                [
+                    {
+                        "id": uid(),
+                        "bank_id": new_bank.id,
+                        "question_id": q.question_id,
+                        "content": deepcopy(q.content),
+                        "status": q.status,
+                        "reviewer": q.reviewer,
+                        "reviewed_at": q.reviewed_at,
+                    }
+                    for q in kept
+                ]
+                + [
+                    {
+                        "id": uid(),
+                        "bank_id": new_bank.id,
+                        "question_id": uid(),
+                        "content": sample,
+                        "status": "approved",
+                        "reviewer": actor,
+                        "reviewed_at": seeded_at,
+                    }
+                    for sample in to_add
+                ],
+            )
             if bank.status == "published" and (to_add or any(q.status == "approved" for q in kept)):
                 await publish_bank_row(db, actor, new_bank, policy)
             refreshed_banks += 1
@@ -842,18 +864,21 @@ async def load_samples(db, access, target, request):
         invalid("Mỗi phiên bản ngân hàng chứa tối đa 500 câu nháp.")
     if to_add:
         seeded_at = datetime.now(timezone.utc)
-        for sample in to_add:
-            db.add(
-                QuestionVersion(
-                    id=uid(),
-                    bank_id=bank.id,
-                    question_id=uid(),
-                    content=sample,
-                    status="approved",
-                    reviewer=access.user.id,
-                    reviewed_at=seeded_at,
-                )
-            )
+        await _bulk_insert_question_versions(
+            db,
+            [
+                {
+                    "id": uid(),
+                    "bank_id": bank.id,
+                    "question_id": uid(),
+                    "content": sample,
+                    "status": "approved",
+                    "reviewer": access.user.id,
+                    "reviewed_at": seeded_at,
+                }
+                for sample in to_add
+            ],
+        )
         bank.revision += 1
         audit(
             db,
