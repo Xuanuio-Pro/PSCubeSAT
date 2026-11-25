@@ -21,6 +21,8 @@ export default function Header() {
   const lab = getLabBySlug(location.pathname.replace('/', ''));
   const isClassLearningRoute = /^\/(?:classes\/\d+\/learn|preview)\/?$/.test(location.pathname);
   const isLearningRoute = Boolean(lab || isClassLearningRoute);
+  // Admin and class-management pages share the lab's floating pill header (not the auth screens).
+  const isLmsRoute = !isLearningRoute && /^\/(?:classes|admin\/(?:dashboard|users))(?:\/|$)/.test(location.pathname);
 
   const accountAvatar = (
     <span className="header-avatar" aria-hidden="true">
@@ -29,7 +31,7 @@ export default function Header() {
   );
 
   return (
-    <header className={`header${isLearningRoute ? ' is-lab-route' : ''}${isLearningRoute ? ' is-fig' : ''}`}>
+    <header className={`header${isLearningRoute ? ' is-lab-route' : ''}${isLearningRoute ? ' is-fig' : ''}${isLmsRoute ? ' is-lms' : ''}`}>
       <Link to="/" className="header-logo" aria-label="PTIT CubeSat LMS — Trang chủ">
         <img src={logoSvg} alt="" />
         <span className="header-wordmark"><strong>CubeSAT</strong><small>PTIT LMS</small></span>

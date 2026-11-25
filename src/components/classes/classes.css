@@ -1296,3 +1296,53 @@
   .lms-shell:not(.is-learning-shell) .lms-panel,
   .lms-shell:not(.is-learning-shell) .lms-class-row { border-radius: 22px; }
 }
+
+/* ----- Floating pill header on admin / class pages (same look as .header.is-fig) ----- */
+.header.is-lms {
+  top: 10px; left: clamp(12px, 3vw, 40px); right: clamp(12px, 3vw, 40px);
+  height: calc(var(--header-height) - 16px); padding: 0 clamp(16px, 2.4vw, 32px);
+  border: 0.3px solid #094174; border-radius: 999px; background: rgba(228, 235, 245, 0.78);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 16px 32px -4px rgba(12, 12, 13, 0.1), 0 4px 4px -4px rgba(12, 12, 13, 0.05);
+  font-family: 'Plus Jakarta Sans', var(--font-sans);
+}
+.header.is-lms .header-search { background: #f3f3fa; border: 0; border-radius: 999px; box-shadow: 0 1px 4px rgba(12, 12, 13, 0.05); }
+.header.is-lms .header-search:focus-within { background: #fff; box-shadow: 0 0 0 3px rgba(9, 65, 116, 0.18); }
+.header.is-lms .header-search input, .header.is-lms .header-search-svg,
+.header.is-lms .header-user-name, .header.is-lms .header-account-chevron-svg,
+.header.is-lms .header-wordmark strong, .header.is-lms .header-wordmark small { color: #094174; }
+.header.is-lms .header-search input::placeholder { color: #094174; opacity: 0.5; }
+.header.is-lms .header-class-link { background: rgba(255, 255, 255, 0.85); border: 0.3px solid #094174; color: #094174; }
+.header.is-lms .header-class-link:hover { background: #094174; color: #fff; }
+
+/* Page background + titles, to match the lab canvas */
+body:has(.lms-shell:not(.is-learning-shell)) {
+  background: linear-gradient(180deg, #eaf3fb 0%, #f4f9fd 340px);
+}
+.lms-shell:not(.is-learning-shell) { padding-top: 40px; }
+.lms-shell:not(.is-learning-shell) h1 { font-weight: 800; letter-spacing: -0.02em; }
+.lms-shell:not(.is-learning-shell) .lms-heading h1 { margin-bottom: 4px; }
+.lms-shell:not(.is-learning-shell) .lms-heading p,
+.lms-shell:not(.is-learning-shell) .lms-secondary { color: var(--fig-navy); opacity: 0.72; }
+.lms-shell:not(.is-learning-shell) .lms-error { border-radius: 20px; }
+.lms-shell:not(.is-learning-shell) .lms-notice { border-radius: 20px; }
+.lms-shell:not(.is-learning-shell) .lms-confirm { background: var(--fig-surface); border: 0; border-radius: 24px; box-shadow: var(--fig-shadow); }
+.lms-shell:not(.is-learning-shell) .lms-pagination button { min-width: 44px; }
+.lms-shell:not(.is-learning-shell) fieldset { border: 0; border-radius: 22px; background: var(--fig-surface); }
+.lms-shell:not(.is-learning-shell) .curriculum-prereq-item { border-radius: 16px; }
+.lms-shell:not(.is-learning-shell) .report-summary dd { color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) button:focus-visible,
+.lms-shell:not(.is-learning-shell) a:focus-visible,
+.lms-shell:not(.is-learning-shell) input:focus-visible,
+.lms-shell:not(.is-learning-shell) select:focus-visible { outline: 3px solid rgba(9, 65, 116, 0.35); outline-offset: 2px; }
+
+@media (max-width: 800px) {
+  .header.is-lms { border-radius: 28px; }
+  .lms-shell:not(.is-learning-shell) .lms-nav { max-width: 100%; }
+  .lms-shell:not(.is-learning-shell) .lms-heading { padding: 20px; }
+  .lms-shell:not(.is-learning-shell) .lms-table-wrap { overflow-x: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lms-shell:not(.is-learning-shell) * { transition: none !important; }
+  .lms-shell:not(.is-learning-shell) button:hover:not(:disabled) { transform: none; }
+}
