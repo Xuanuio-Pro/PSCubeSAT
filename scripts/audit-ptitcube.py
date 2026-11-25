@@ -78,8 +78,6 @@ async def compile_sources(args):
     for repo in jobs:
         name = repo["repository"]
         override = ROOT / f"fastapi-backend/app/firmware/curriculum/{name}.cpp"
-        if not override.exists() and name == "Lab4-04b_Camera_Library":
-            override = ROOT / "fastapi-backend/app/firmware/curriculum/Lab4-04_Camera_Snapshot.cpp"
         source = override if override.exists() and not args.upstream else CACHE / f"upstream/{name}/src/main.cpp"
         code = source.read_text(encoding="utf-8-sig")
         for board in args.boards:

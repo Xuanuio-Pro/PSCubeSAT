@@ -11,6 +11,12 @@ class CreateDeviceRequest(BaseModel):
     device_type: Literal["hardware", "simulator", "ground_station"] = "hardware"
 
 
+class CloudProvisionRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    wifi_ssid: str | None = Field(None, max_length=32, description="WiFi riêng của học viên (tùy chọn)")
+    wifi_password: str | None = Field(None, max_length=64)
+
+
 class CreateDeviceResponse(BaseModel):
     device_uid: str = Field(..., description="UID của thiết bị đã tạo")
     device_name: str = Field(..., description="Tên thiết bị đã tạo")

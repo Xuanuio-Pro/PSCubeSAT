@@ -7,6 +7,7 @@ import { createTelemetryStore, currentReadings, telemetryStatus } from '../src/t
 import { adaptSerialLine } from '../src/telemetry/adapters.js';
 import { visualizationPlan } from '../src/telemetry/visualization-plan.js';
 import { describeShellResult } from '../src/telemetry/shell-results.js';
+import { ACTIVE_WINDOW_MS, SUBSYSTEMS, subsystemStatus } from '../src/telemetry/system-check.js';
 
 const entry = (text, at = 10000) => ({ text, receivedAt: at, type: 'rx', origin: 'serial' });
 
@@ -210,7 +211,7 @@ test('only explicit snapshot prefixes unwrap JSON; old callbacks cannot alter an
 });
 test('each exercise shows only the panels its reference sketch has data for', () => {
   const expected = {
-    'Lab1-01': [], 'Lab1-02': [], 'Lab1-03': [], 'Lab1-04': [], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': [],
+    'Lab1-01': ['lab1Io'], 'Lab1-02': [], 'Lab1-03_PWM_LED': [], 'Lab1-03_Button': ['lab1Io'], 'Lab1-04': ['lab1Io'], 'Lab1-05': [], 'Lab1-06': [], 'Lab1-07': ['lab1Io'],
     'Lab1-08': ['lab1Connection'], 'Lab1-09': ['lab1Connection'], 'Lab1-10': ['lab1Connection'],
     'Lab2-01a': ['voltage'], 'Lab2-01b': ['voltage'], 'Lab2-02': ['voltage'],
     'Lab3-01a': [], 'Lab3-01b': [], 'Lab3-02': ['shell', 'commands'],
@@ -219,16 +220,17 @@ test('each exercise shows only the panels its reference sketch has data for', ()
     'Lab4-02a': ['attitude'], 'Lab4-02b': ['attitude'],
     'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'], 'Lab4-03c': ['gps'],
     'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
-    'Lab4-05': ['environment', 'attitude', 'gps'], 'Lab4-06': ['gps', 'camera'],
+    'Lab4-05': ['environment', 'attitude', 'gps'], 'Lab4-06': ['gps', 'camera', 'commands'],
     'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
     'Lab5-02a': ['radio', 'groundStation'], 'Lab5-02b': ['radio', 'groundStation'], 'Lab5-03': ['radio', 'groundStation'],
-    'Lab7-01': ['attitude', 'gps', 'voltage', 'environment', 'storage', 'system'],
-    'Lab7-02': ['attitude', 'gps', 'voltage', 'camera', 'environment', 'storage', 'network', 'system', 'commands'],
+    'Lab7-01': ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system'],
+    'Lab7-02': ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system'],
     'Lab8-01': ['dashboard'],
   };
   for (const fixture of fixtures) {
     const plan = visualizationPlan(practiceProfile(fixture.id));
-    assert.deepEqual(plan.panels, expected[fixture.id.split('_')[0]], fixture.id);
+    // Lab1-03_Button and Lab1-03_PWM_LED share a prefix: a full ID entry wins.
+    assert.deepEqual(plan.panels, expected[fixture.id] ?? expected[fixture.id.split('_')[0]], fixture.id);
     assert.ok(!plan.panels.includes('telemetry'), `${fixture.id}: raw telemetry table duplicates dedicated panels`);
   }
   assert.deepEqual(visualizationPlan(practiceProfile('Lab7-01_Full_Satellite_Program')).systemRows, ['sensor', 'gps', 'eps', 'storage', 'radio']);
@@ -344,6 +346,65 @@ test('Lab4-04b chunked Serial image becomes one validated JPEG frame; corrupt or
   assert.equal(run(['IMG_BEGIN:10', 'ERROR:IMG_READ', 'IMG_END'])[2].frame, null);
 });
 
+test('Camera Viewer can tell a photo saved only on the SD card from one streamed to the browser', () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, ...Array.from({ length: 11199 }, (_, i) => i % 251), 0xff, 0xd9]); // 11205 bytes
+  const decode = createPracticeDecoder('Lab4-04a_Camera_UART');
+  // Older Lab4-04a drafts stop at this line: the device saved the photo, the browser has nothing to show.
+  const saved = decode(entry('Camera: Saved /photos/uart_img_0.jpg (11205 bytes)')).events.find(event => event.group === 'camera');
+  assert.deepEqual([saved.phase, saved.browser], ['saved', undefined]);
+  const chunks = Array.from({ length: Math.ceil(jpeg.length / 384) }, (_, i) => 'IMG_CHUNK:' + jpeg.subarray(i * 384, i * 384 + 384).toString('base64'));
+  const results = ['IMG_BEGIN:' + jpeg.length, ...chunks, 'IMG_END'].map(line => decode(entry(line)));
+  const progress = results.flatMap(result => result.events).filter(event => event.phase === 'progress');
+  assert.equal(progress[0].received, 0);
+  assert.ok(progress.length >= 3 && progress.length <= 6, `throttled progress (${progress.length})`);
+  assert.ok(progress.every(event => event.transfer === 'browser' && event.total === jpeg.length));
+  const done = results.at(-1).events.find(event => event.group === 'camera');
+  assert.deepEqual([done.phase, done.browser], ['saved', true]);
+  assert.ok(results.at(-1).frame.imageData.startsWith('data:image/jpeg;base64,/9j/'));
+});
+
+test('Lab3-02 (PTITCube library 74065b6) pairs "> cmd" with a bare OK, ERR or command output', () => {
+  const decode = createPracticeDecoder('Lab3-02_Linux_FS_Commands');
+  const lines = ['> pwd', '/', '> mkdir demo', 'OK', '> ls', 'Storage: List: /', 'DIR:  demo', 'FILE: log.txt  (12 bytes)', 'OK', '> cd demo', 'OK',
+    '> rm demo', 'ERR: /demo is a directory (use rmdir)', '> rmdir /nope', 'ERR: Directory not found: /nope', '> foo', "Command not recognized. Type 'help' for commands.", '> df', 'SD Card: Total: 7580 MB | Used: 1 MB | Free: 7579 MB'];
+  const shell = lines.flatMap(line => decode(entry(line)).events).filter(event => event.group === 'shell');
+  assert.deepEqual(shell.map(event => [event.command, event.phase]), [['pwd', 'ok'], ['mkdir demo', 'ok'], ['ls', 'ok'], ['cd demo', 'ok'], ['rm demo', 'error'], ['rmdir /nope', 'error'], ['foo', 'error'], ['df', 'ok']]);
+  assert.deepEqual(shell.map(describeShellResult), ['Thư mục hiện tại: /', 'Đã tạo thư mục demo', 'Đã liệt kê thư mục hiện tại · 2 mục', 'Đã chuyển tới demo',
+    'Đây là thư mục, hãy dùng rmdir', 'Không tìm thấy thư mục', 'Lệnh không được hỗ trợ (gõ help để xem danh sách)', 'SD Card: Total: 7580 MB | Used: 1 MB | Free: 7579 MB']);
+});
+
+test('new short-label sensor lines report NaN and missing fixes as unavailable, never as zero', () => {
+  const env = createPracticeDecoder('Lab4-01b_Environment_Library');
+  const nan = env(entry('Temp: nan C | Press: nan hPa'));
+  assert.equal(nan.frame, null);
+  assert.deepEqual(nan.invalidate, ['temperatureC', 'pressureHpa']);
+  assert.ok(env(entry('BMP280 unavailable: check wiring (SDA 21, SCL 22)')).events.some(event => event.group === 'sensor' && event.phase === 'error'));
+  const all = createPracticeDecoder('Lab4-05_Read_All_Sensors');
+  const noFix = all(entry('TELEM: T: 28.5C | P: 1012.2hPa | Roll: 0.0 | Pitch: -0.0 | GPS: (no fix, 3sats)'));
+  assert.equal(noFix.frame.temperatureC, 28.5);
+  assert.equal(noFix.frame.gpsLat, null);
+  assert.deepEqual(noFix.invalidate, ['gpsLat', 'gpsLon', 'gpsAlt']);
+  const gps = createPracticeDecoder('Lab4-03c_GPS_PTITCube')(entry('GPS: Đang quét tìm vệ tinh... (3 sats, chưa có fix)'));
+  assert.equal(gps.frame, null);
+  assert.deepEqual(gps.invalidate, ['gpsLat', 'gpsLon', 'gpsAlt']);
+});
+
+test('simulated Lab3-03 TELEM and radio replies never become voltage or environment samples', () => {
+  const scheduler = createPracticeDecoder('Lab3-03_Multitasking_Scheduler');
+  const telemetry = scheduler(entry('TELEM: #0001 | V: 3.70V | T: 24.5C | Uptime: 2s'));
+  assert.equal(telemetry.frame, null);
+  assert.deepEqual(telemetry.events.map(event => [event.name, event.illustrative, event.value]), [['TelemGen', true, 24.5]]);
+  const queue = createPracticeDecoder('Lab3-05_Event_Driven_Queue');
+  assert.deepEqual(queue(entry('Event: Temp Alert: 33 C (t=2000ms)')).events.map(event => [event.name, event.illustrative]), [['Dispatcher', true]]);
+  const radio = createPracticeDecoder('Lab5-03_Satellite_Comm_System');
+  const reply = radio(entry('CMD: sensor -> Temp: 28.5C | Press: 1012.2hPa'));
+  assert.equal(reply.frame, null);
+  assert.ok(reply.events.some(event => event.group === 'radio' && event.phase === 'received'));
+  const eps = createPracticeDecoder('Lab2-02_Power_Saving')(entry('EPS: Power Saving Mode (V: 3.65V, SOC: 20.0%)'));
+  assert.equal(eps.frame.voltageV, 3.65);
+  assert.ok(eps.events.some(event => event.group === 'power'));
+});
+
 test('radio totals keep counting after the 120-event window is full', () => {
   let activity = emptyActivity();
   for (let i = 0; i < 300; i++) activity = reduceActivity(activity, { group: 'radio', phase: 'sent', at: 1000 + i, text: `PACKET #${i}` });
@@ -351,4 +412,129 @@ test('radio totals keep counting after the 120-event window is full', () => {
   assert.equal(activity.radio.sent, 300);
   assert.equal(activity.radio.received, 0);
   assert.equal(activity.radio.lastAt.sent, 1299);
+});
+
+test('extra log details travel as activity events, never as invented measurements', () => {
+  const events = (id, lines) => {
+    const decode = createPracticeDecoder(id);
+    return lines.flatMap((line, index) => decode(entry(line, 10000 + index * 100)).events);
+  };
+  // Satellites in use while searching: GGA field 7 and the "(N sats" text lines.
+  const gga = events('Lab4-03a_GPS_UART', ['$GNGGA,023130.998,,,,,0,0,,,M,,M,,*5D', '$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47']);
+  assert.deepEqual(gga.map(event => [event.phase, event.satellites]), [['waiting', 0], ['sample', 8]]);
+  assert.equal(events('Lab4-06_Camera_Multiplexer', ['GPS: Đang quét tìm vệ tinh... (3 sats, chưa có fix)'])[0].satellites, 3);
+  assert.equal(events('Lab4-05_Read_All_Sensors', ['TELEM: T: 29.2C | P: 1026.1hPa | Roll: 3.7 | Pitch: 0.1 | GPS: (no fix, 0sats)']).find(event => event.group === 'gps').satellites, 0);
+  // Firmware compass heading (Lab4-02a/b line and Lab7-01 imu.yaw).
+  assert.deepEqual(events('Lab4-02b_IMU_Library', ['Roll:   4.3, Pitch:  -1.5, Head:   6.8']).map(({ group, roll, pitch, heading }) => [group, roll, pitch, heading]), [['attitude', 4.3, -1.5, 6.8]]);
+  assert.deepEqual(events('Lab4-02b_IMU_Library', ['Roll:    nan, Pitch:    nan, Head:    nan']), []);
+  assert.equal(events('Lab7-01_Full_Satellite_Program', ['[TELEM] {"imu":{"roll":3.4,"pitch":-0.7,"yaw":12.9}}']).find(event => event.group === 'attitude').heading, 12.9);
+  // MAX17048 SOC / rate / Lab2-02 mode; a 0 V line is "not read", so no gauge sample either.
+  assert.deepEqual(events('Lab2-01a_Battery_I2C', ['V: 3.977 V | SOC: 78.8 % | Rate: -9.78 %/h']).map(({ soc, rate, mode }) => [soc, rate, mode]), [[78.8, -9.78, null]]);
+  assert.equal(events('Lab2-02_Power_Saving', ['EPS: Power Saving Mode (V: 3.62V, SOC: 20.0%)']).find(event => event.group === 'eps').mode, 'saving');
+  assert.equal(events('Lab2-01a_Battery_I2C', ['V: 0.000 V | SOC: 0.0 % | Rate: +0.00 %/h']).some(event => event.group === 'eps'), false);
+  // Camera transfer progress, scheduler registrations (Lab3-03 names) and the OBC boot line.
+  assert.deepEqual(events('Lab4-04a_Camera_UART', ['Camera: Da nhan 5640 / 17276 bytes']).map(({ phase, received, total }) => [phase, received, total]), [['progress', 5640, 17276]]);
+  const registered = events('Lab3-03_Multitasking_Scheduler', ['Scheduler: Đã đăng ký task: Telemetry (chu kỳ 2000ms, Core 1, Priority 1)']);
+  assert.deepEqual(registered.map(({ name, phase, periodMs, core, priority }) => [name, phase, periodMs, core, priority]), [['TelemGen', 'registered', 2000, 1, 1]]);
+  const task = reduceActivity(registered.reduce(reduceActivity, emptyActivity()), { group: 'task', name: 'TelemGen', phase: 'sample', at: 12000 }).tasks.TelemGen;
+  assert.deepEqual([task.count, task.periodMs], [1, 2000]);
+  assert.deepEqual(events('Lab5-02b_Receive_Command_Library', ['[BOOT] OBC san sang, dang cho lenh tu tram mat dat qua LoRa']).map(event => `${event.group}:${event.phase}`), ['system:boot']);
+});
+
+test('Lab7 System Check marks SD and LoRa Active from fresh reports and Inactive once they age out', () => {
+  const decode = createPracticeDecoder('Lab7-01_Full_Satellite_Program');
+  const [storage, radio] = ['storage', 'radio'].map(id => SUBSYSTEMS.find(sys => sys.id === id));
+  let activity = emptyActivity();
+  for (const line of ['[SD] Telemetry saved', '[LORA TX] 4 goi telemetry']) activity = decode(entry(line, 10000)).events.reduce(reduceActivity, activity);
+  const at = now => ({ activity, fieldReceivedAt: {}, now, mode: 'serial', link: 'connected' });
+  assert.equal(subsystemStatus(storage, at(12000)).state, 'active');
+  assert.equal(subsystemStatus(radio, at(12000)).state, 'active');
+  assert.equal(subsystemStatus(radio, at(12000)).log[0].text, '[LORA TX] 4 goi telemetry');
+  assert.equal(subsystemStatus(storage, at(10000 + ACTIVE_WINDOW_MS + 1)).state, 'inactive');
+  assert.equal(subsystemStatus(storage, { ...at(12000), link: 'offline' }).state, 'inactive');
+  activity = decode(entry('[SD] Write failed / card not ready', 11000)).events.reduce(reduceActivity, activity);
+  assert.equal(subsystemStatus(storage, at(12000)).state, 'error');
+  // Command b relays the SD log; a photo saved by command f is an SD write too.
+  for (const line of ['Saving battery data to SD card...', '[1/5] Bat: 3.92V, 80.0%', 'Photo captured and saved to SD: /photos/cam_0.jpg']) {
+    activity = decode(entry(line, 11500)).events.reduce(reduceActivity, activity);
+  }
+  assert.equal(subsystemStatus(storage, at(12000)).state, 'active');
+  assert.equal(subsystemStatus(storage, at(12000)).log.length, 5);
+});
+
+test('ground-station decoder counts every line as a LoRa reception and reads the downlink chunks', () => {
+  const lab71 = createPracticeDecoder('Lab7-01_Full_Satellite_Program', { groundStation: true });
+  const imu = lab71(entry('{"imu":{"roll":1.5,"pitch":-2,"head":90}}'));
+  assert.deepEqual(imu.events.map(event => [event.group, event.phase]), [['radio', 'received'], ['attitude', 'sample']]);
+  assert.equal(lab71(entry('{"eps":{"v":3.91,"pct":80.0}}')).frame.voltageV, 3.91);
+  assert.ok(lab71(entry('ACK: a')).events.some(event => event.group === 'radio' && event.phase === 'received'));
+  assert.ok(!lab71(entry('[LORA TX] 4 goi telemetry')).events.some(event => event.phase === 'sent'));
+  const lab72 = createPracticeDecoder('Lab7-02_RTOS_Satellite_System', { groundStation: true });
+  assert.equal(lab72(entry('{"acc_x":0,"acc_y":0,"acc_z":9.80665}')).frame.accZ, 1);
+  // The lab window's OBC decoder keeps reading unlabelled JSON as-is.
+  assert.equal(createPracticeDecoder('Lab7-02_RTOS_Satellite_System')(entry('{"acc_z":1}')).frame.accZ, 1);
+});
+
+test('Lab8 chart keeps one unit per chart and never drops its last series', async () => {
+  const { chartKeys, formatMetric, METRICS } = await import('../src/telemetry/metrics.js');
+  assert.deepEqual(chartKeys(['accX'], 'accY'), ['accX', 'accY']);
+  assert.deepEqual(chartKeys(['accX', 'accY'], 'temperatureC'), ['temperatureC']);
+  assert.deepEqual(chartKeys(['accX', 'accY'], 'accX'), ['accY']);
+  assert.deepEqual(chartKeys(['voltageV'], 'voltageV'), ['voltageV']);
+  assert.equal(formatMetric(3.7123, 'voltageV'), '3.71 V');
+  assert.equal(formatMetric(null, 'temperatureC'), '—');
+  // Every metric is a real telemetry field, so a widget can never point at data the decoder does not produce.
+  const { measurementKeys } = await import('../src/telemetry/adapters.js');
+  for (const { key } of METRICS) assert.ok(measurementKeys.includes(key), key);
+});
+
+test('Lab8 dashboard layout round-trips per account and drops removed widgets or invalid settings', async () => {
+  const { defaultLayout, layoutKey, nextWidgetId, parseLayout, serializeLayout } = await import('../src/components/dashboard/dashboard-layout.js');
+  const layout = defaultLayout();
+  assert.deepEqual(parseLayout(serializeLayout(layout)), layout);
+  assert.notEqual(layoutKey(1), layoutKey(2));
+  assert.equal(nextWidgetId(layout), 6);
+  for (const raw of [null, '', 'not json', '{"version":2,"widgets":[]}', '{"widgets":[]}']) assert.equal(parseLayout(raw), null, String(raw));
+  const saved = JSON.stringify({ version: 1, widgets: [
+    { i: '1', type: 'network', x: 0, y: 0, w: 6, h: 5, config: {} }, // removed from the palette
+    { i: '2', type: 'chart', x: 20, y: 0, w: 1, h: 1, config: { keys: ['humidityPct', 'accX', 'temperatureC', 'accY'] } },
+    { i: '2', type: 'map', x: 0, y: 0, w: 6, h: 6, config: {} }, // duplicate id
+    { i: '3', type: 'gauge', x: 0, y: 0, w: 3, h: 4, config: { key: 'humidityPct', min: 5, max: 1 } },
+    { i: '4', type: 'button', x: 0, y: 0, w: 3, h: 3, config: { label: 'Ping', command: 42 } },
+  ] });
+  const [chart, gauge, button] = parseLayout(saved);
+  // Humidity is no longer offered; a mixed-unit chart keeps its first unit; size respects the minimum.
+  assert.deepEqual(chart.config.keys, ['accX', 'accY']);
+  assert.deepEqual([chart.w, chart.h, chart.x], [4, 5, 8]);
+  assert.deepEqual(gauge.config, { key: 'voltageV', min: 3, max: 4.2 });
+  assert.deepEqual(button.config, { label: 'Ping', command: 'capture' });
+  assert.equal(parseLayout(saved).length, 3);
+});
+
+test('hidden photo uplink: [CLOUD] lines become camera upload events and never sketch data', () => {
+  const decode = createPracticeDecoder('Lab4-04a_Camera_UART');
+  const sent = decode(entry('[CLOUD] PHOTO SENT /photos/uart_img_0.jpg 11205'));
+  assert.deepEqual(sent.events.map(event => [event.group, event.phase, event.size]), [['camera', 'uploaded', 11205]]);
+  const failed = decode(entry('[CLOUD] PHOTO FAIL /photos/uart_img_1.jpg mqtt-state=-2'));
+  assert.deepEqual(failed.events.map(event => [event.phase, event.reason]), [['upload-error', 'mqtt-state=-2']]);
+  // "WIFI connecting ..." mentions no SD/camera keywords but must not reach the generic matchers either.
+  for (const line of ['[CLOUD] READY photos=3', '[CLOUD] CFG? v1 uid=none ssid=', '[CLOUD] WIFI connecting Lab WiFi', '[CLOUD] CFG ERR invalid']) {
+    const result = decode(entry(line));
+    assert.deepEqual([result.frame, result.events], [null, []], line);
+  }
+});
+
+test('cloud handshake answers: keep own config, re-provision a stale one, clear another account\'s board', async () => {
+  const { cloudAnswer } = await import('../src/contexts/cloud-api.js');
+  const mine = { deviceUid: 'cube_aaaa1111', wifiSsid: 'PTIT-Lab' };
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 ssid=PTIT-Lab', mine), 'keep');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 ssid=Old WiFi', mine), 'provision');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=none ssid=', mine), 'provision');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_bbbb2222 ssid=PTIT-Lab', mine), 'provision');
+  // No WiFi known (no classroom WiFi on the server, none typed yet).
+  const noWifi = { deviceUid: 'cube_aaaa1111', wifiSsid: '' };
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 ssid=Home', noWifi), 'keep');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_bbbb2222 ssid=Home', noWifi), 'clear');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=none ssid=', noWifi), 'need-wifi');
+  assert.equal(cloudAnswer('[CLOUD] PHOTO SENT /photos/a.jpg 10', mine), null);
 });

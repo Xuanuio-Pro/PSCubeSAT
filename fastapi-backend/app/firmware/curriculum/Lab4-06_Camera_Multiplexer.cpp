@@ -1,90 +1,87 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab4-06_Camera_Multiplexer/blob/e62e4bf749f17df0ef79947e0755bd8d1c603c06/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab4-05_Camera_Multiplexer/blob/7e99ead021ffe89deef94c71ec4d535c06bda922/src/main.cpp
 /**
- * @file Lab4-06_Camera_Multiplexer
- * @brief Ví dụ minh họa cách sử dụng Multiplexer cho ESP32-CAM và GPS.
- * 
- * Mô tả:
- * - Vệ tinh CubeSat PTITCube sử dụng chung đường UART2 cho cả 
- *   mạch GPS và ESP32-CAM.
- * - ESP32-CAM giao tiếp qua UART2 (GPIO 14 TX / GPIO 15 RX).
- * - Bằng cách điều khiển các chân MUX (gpsSelectPin=12, camSelectPin=14),
- *   ESP32 có thể chọn giao tiếp với GPS hoặc Camera tùy từng thời điểm.
- * 
- * Kết nối phần cứng:
- *   OBC UART2 (GPIO16/17) <--MUX--> GPS UART (9600 baud)
- *                          <--MUX--> ESP32-CAM UART2 GPIO14/15 (115200 baud)
+ * VÍ DỤ 4-05: CHUYỂN MẠCH CAMERA & GPS QUA MULTIPLEXER 74HC4066
  */
-
 #include <Arduino.h>
-
 #include <PTITCube.h>
 #include <SD.h>
+#include <base64.h>
 
 PTIT_CDH cdh;
-
-// Khởi tạo các phân hệ
+PTIT_EPS eps;
 PTIT_Camera camera;
 PTIT_GPS gps;
+int photoCount = 0;
+
+// Gửi ảnh vừa lưu về trình duyệt qua Serial (IMG_BEGIN / IMG_CHUNK base64 / IMG_END), giống Lab4-04b.
+static bool sendImageOverSerial(const String& path) {
+    File file = SD.open(path.c_str(), FILE_READ);
+    if (!file) { cdh.println("ERROR:IMG_OPEN"); return false; }
+    const size_t size = file.size();
+    if (size == 0 || size > 262144) {
+        file.close();
+        cdh.printf("ERROR:IMG_SIZE:%u\n", (unsigned)size);
+        return false;
+    }
+    cdh.printf("IMG_BEGIN:%u\n", (unsigned)size);
+    uint8_t chunk[384];
+    size_t sent = 0;
+    while (sent < size) {
+        const size_t count = file.read(chunk, sizeof(chunk));
+        if (count == 0) break;
+        cdh.print("IMG_CHUNK:");
+        cdh.println(base64::encode(chunk, count));
+        sent += count;
+        delay(2);
+    }
+    file.close();
+    if (sent != size) { cdh.println("ERROR:IMG_READ"); return false; }
+    cdh.println("IMG_END");
+    return true;
+}
 
 void setup() {
-    cdh.begin(115200);
-    delay(2000);
-    
-    cdh.println("\n--- TEST CHUYỂN MẠCH CAMERA & GPS ---");
-    cdh.println("ESP32-CAM giao tiep qua UART2 (GPIO14-TX, GPIO15-RX)");
-    cdh.println("OBC ket noi qua UART2 (GPIO16-RX, GPIO17-TX) + MUX");
+    cdh.begin();
 
-    // Khởi tạo Camera (chân select GPS = 12, Camera = 14)
-    if (!camera.init(12, 14)) {
-        cdh.println("[Canh bao] Camera init co loi (Co the chua gan the nho).");
-    }
+    // Kích hoạt hạ áp cấp nguồn camera, GPS và ngoại vi qua thư viện EPS
+    eps.setBuckState(true);
 
-    // Khởi tạo GPS (cùng chân MUX)
-    gps.init(12, 14);
+    camera.init();
+    gps.init();
+    gps.selectGPS();
 }
 
 void loop() {
-    cdh.println("\n>>> Che do: UU TIEN CAMERA");
-    camera.selectCamera(); // Bật kênh giao tiếp cho Camera, tắt GPS
-    
-    // Đợi một chút để mạch chuyển đổi ổn định
-    delay(100); 
+    if (cdh.available()) {
+        char cmd = cdh.read();
+        if (cmd == 'p' || cmd == 'P') {
+            camera.selectCamera();
+            delay(200);
 
-    { // Retry SD mount through captureToFile even after initialization failed.
-        cdh.println("Chụp ảnh bằng Camera...");
-        static uint32_t nextImage = 0;
-        String path;
-        do { path = "/photos/multiplexer_" + String(nextImage++) + ".jpg"; } while (SD.exists(path.c_str()));
-        bool saved = camera.captureToFile(path.c_str());
-        cdh.println(saved ? "[RESULT] JPEG saved and validated" : "[RESULT] Capture failed; see camera error above");
-    }
-    
-    delay(5000);
+            // Không ghi đè ảnh cũ trên thẻ nhớ.
+            String path;
+            do { path = "/photos/mux_" + String(photoCount++) + ".jpg"; } while (SD.exists(path.c_str()));
+            if (camera.captureToFile(path.c_str())) {
+                sendImageOverSerial(path);
+            } else {
+                cdh.println("Camera: Chup that bai.");
+            }
 
-    cdh.println("\n>>> Che do: UU TIEN GPS");
-    gps.selectGPS(); // Bật kênh giao tiếp cho GPS, tắt Camera
-    
-    // Đợi một chút để GPS có thể gửi dữ liệu
-    delay(1000);
-
-    // Đọc dữ liệu từ GPS trong 5 giây
-    cdh.println("Dang doc du lieu GPS...");
-    unsigned long startTime = millis();
-    while (millis() - startTime < 5000) {
-        gps.update();
-        if (gps.hasFix()) {
-            cdh.print("Lat: "); cdh.print(gps.getLatitude(), 6);
-            cdh.print(" - Lng: "); cdh.println(gps.getLongitude(), 6);
-            break; // Đã có vị trí, thoát vòng lặp
+            gps.selectGPS();
+            delay(100);
         }
-        delay(10);
-    }
-    
-    if (!gps.hasFix()) {
-        cdh.println("GPS chua chot duoc vi tri (No Fix).");
     }
 
-    // Đợi một lát trước vòng lặp tiếp theo
-    delay(2000);
+    gps.update();
+    static unsigned long lastGps = 0;
+    if (millis() - lastGps >= 2000) {
+        lastGps = millis();
+        if (gps.hasFix()) {
+            cdh.printf("GPS: Lat: %.6f, Lng: %.6f\n", gps.getLatitude(), gps.getLongitude());
+        } else {
+            // Cho thấy kênh GPS qua MUX vẫn hoạt động khi chưa có fix (cùng định dạng Lab4-03c).
+            cdh.printf("GPS: Đang quét tìm vệ tinh... (%d sats, chưa có fix)\n", gps.getSatellites());
+        }
+    }
 }

@@ -1,81 +1,40 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab4-03c_GPS_PTITCube/blob/560fdf8738a9ef7a63340bc40b9c4a61d8a1cbdd/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab4-03c_GPS_PTITCube/blob/cb9876b100c8e0a14e02d9933ca2fa153e4bd7af/src/main.cpp
 /**
  * LAB 4 - VÍ DỤ 03c: GIẢI MÃ NMEA THÀNH DỮ LIỆU ĐỊNH VỊ BẰNG THƯ VIỆN PTITCUBE
- * 
- * Mục tiêu:
- * - Sau khi đã quan sát các câu tin NMEA thô ở ví dụ 03a và 03b, ví dụ này sử dụng
- *   thư viện PTITCube (lớp đối tượng PTIT_GPS) để tự động bóc tách và chuyển đổi
- *   luồng byte NMEA phức tạp thành các thông số định vị thực tế mà người dùng hiểu được:
- *   + Tọa độ địa lý: Vĩ độ (Latitude) & Kinh độ (Longitude) dạng số thực (Decimal Degrees).
- *   + Cao độ so với mực nước biển (Altitude) tính bằng mét (m).
- *   + Vận tốc di chuyển (Speed) tính bằng km/h và hướng di chuyển (Course) tính bằng độ (°).
- *   + Số lượng vệ tinh đang bám khóa (Satellites in view/fix).
- *   + Chỉ số phẩm chất hình học sai số mặt bằng (HDOP - Horizontal Dilution of Precision).
- *   + Thời gian chuẩn quốc tế UTC (Ngày, Tháng, Năm, Giờ, Phút, Giây).
- * - Tự động quản lý IC chuyển mạch MUX 74HC4066 giữa GPS và Camera.
  */
-
 #include <Arduino.h>
-
 #include <PTITCube.h>
 
 PTIT_CDH cdh;
-
-// Khai báo đối tượng GPS từ thư viện PTITCube
-PTIT_GPS myGPS;
+PTIT_EPS eps;
+PTIT_GPS gps;
 
 void setup() {
-    cdh.begin(115200);
-    while (!cdh) { delay(10); }
+    cdh.begin();
 
-        cdh.println("  PTITCUBE - LAB 4-03c: GIẢI MÃ ĐỊNH VỊ BẰNG PTITCUBE ");
-        cdh.println("[INFO] Khởi tạo module GPS qua thư viện PTITCube...");
-    
-    // myGPS.init(gpsSelectPin, camSelectPin):
-    // Tự động cấu hình UART2 (9600 baud, RX=16, TX=17) và điều khiển MUX 74HC4066
-    // (chốt Pin 14 LOW tắt Cam, Pin 12 HIGH mở GPS)
-    myGPS.init(12, 14);
+    // Kích hoạt hạ áp cấp nguồn GPS và ngoại vi qua thư viện EPS
+    eps.setBuckState(true);
 
-    cdh.println("[INFO] Đang lắng nghe luồng NMEA và tự động giải mã...");
-    cdh.println("[INFO] Cho tin hieu GPS (toi thieu 4 ve tinh de co 3D fix)...");
+    gps.init();
 }
 
 void loop() {
-    // Luôn luôn gọi update() trong vòng lặp loop để nạp từng byte từ UART vào bộ giải mã
-    myGPS.update();
+    gps.update();
 
-    // Định kỳ mỗi 3 giây xuất dữ liệu định vị hoàn chỉnh đã chuyển đổi ra cdh Monitor
     static unsigned long lastPrint = 0;
-    if (millis() - lastPrint >= 3000) {
+    if (millis() - lastPrint >= 2000) {
         lastPrint = millis();
 
-        int sats = myGPS.getSatellites();
-        float lat = myGPS.getLat();
-        float lng = myGPS.getLng();
-        // hasFix(): TinyGPS++ có vị trí hợp lệ và mới (< 5 s); tọa độ 0,0 không dùng làm dấu hiệu mất fix
-        bool hasFix = myGPS.hasFix();
-
-                cdh.printf("[HỆ THỐNG] Uptime: %lu s | Trạng thái GPS: %s\n",
-                      millis() / 1000,
-                      hasFix ? "ĐÃ CHỐT TỌA ĐỘ (3D FIX)" : "ĐANG TÌM VỆ TINH (NO FIX)");
-
-        if (!hasFix) {
-            cdh.printf("  - Số vệ tinh phát hiện: %d vệ tinh (cần tối thiểu 4 vệ tinh)\n", sats);
-            cdh.println("  - Đang quét tín hiệu vệ tinh ngoài không gian... Vui lòng chờ...");
+        int sats = gps.getSatellites();
+        // Chỉ in tọa độ khi đã chốt vị trí (fix hợp lệ, mới hơn 5 s). Thấy vệ tinh chưa có nghĩa
+        // là có tọa độ: khi chưa fix, getLat()/getLng() trả 0,0 và bản đồ sẽ vẽ sai vị trí.
+        if (gps.hasFix()) {
+            cdh.printf("GPS: %d sats | Lat: %.6f, Lng: %.6f | Alt: %.1fm | Spd: %.1fkm/h | HDOP: %.1f\n",
+                       sats, gps.getLat(), gps.getLng(),
+                       gps.getAltitude(), gps.getSpeed(), gps.getHDOP());
         } else {
-            cdh.println(">>> THÔNG TIN ĐỊNH VỊ ĐÃ CHUYỂN ĐỔI (HUMAN-READABLE) <<<");
-            cdh.printf("  - Tọa độ (Vĩ độ, Kinh độ) : %.6f, %.6f\n", lat, lng); // Độ thập phân có dấu
-            cdh.printf("  - Vĩ độ (Latitude)       : %.6f° %s\n", abs(lat), lat >= 0 ? "Bắc (N)" : "Nam (S)");
-            cdh.printf("  - Kinh độ (Longitude)    : %.6f° %s\n", abs(lng), lng >= 0 ? "Đông (E)" : "Tây (W)");
-            cdh.printf("  - Cao độ (Altitude)      : %.2f m (so với mực nước biển)\n", myGPS.getAltitude());
-            cdh.printf("  - Tốc độ di chuyển       : %.2f km/h\n", myGPS.getSpeed());
-            cdh.printf("  - Hướng di chuyển        : %.2f°\n", myGPS.getCourse());
-            cdh.printf("  - Số vệ tinh bám khóa    : %d vệ tinh\n", sats);
-            cdh.printf("  - Sai số mặt bằng (HDOP) : %.2f (%s)\n",
-                          myGPS.getHDOP(),
-                          myGPS.getHDOP() <= 1.5 ? "Lý tưởng" : (myGPS.getHDOP() <= 2.5 ? "Tốt" : "Trung bình"));
-            cdh.printf("  - Thời gian chuẩn UTC    : %s\n", myGPS.getTimeString().c_str());
+            cdh.printf("GPS: Đang quét tìm vệ tinh... (%d sats, chưa có fix)\n", sats);
         }
-            }
+    }
 }

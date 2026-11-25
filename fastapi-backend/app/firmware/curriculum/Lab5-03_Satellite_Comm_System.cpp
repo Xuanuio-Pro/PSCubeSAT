@@ -1,25 +1,14 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/a156004a4ce2a541fc5f31e1fd2413bb7b6b047a/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab5-03_Ground_Station_Demo/blob/2f546e280043584be961075b253771561b173b95/src/main.cpp
 /**
- * VÍ DỤ TỔNG HỢP: HỆ THỐNG GIAO TIẾP VỆ TINH FULL DUPLEX (COMMAND & TELEMETRY)
- * 
- * Lưu ý: Trạm mặt đất (Ground Station) sử dụng mạch USB-TTL nối trực tiếp với module LoRa,
- * do đó đoạn code này được nạp vào Vệ Tinh (OBC ESP32).
- * 
- * Nhiệm vụ của Vệ tinh:
- * 1. Lắng nghe liên tục lệnh (Command) từ Trạm mặt đất qua LoRa.
- * 2. Thực thi lệnh tương ứng (Đo pin, đọc cảm biến, chụp ảnh...).
- * 3. Đóng gói dữ liệu và phản hồi lại Trạm mặt đất qua LoRa.
+ * VÍ DỤ TỔNG HỢP (LAB 5-03): HỆ THỐNG GIAO TIẾP VỆ TINH HAI CHIỀU (COMMAND & TELEMETRY)
  */
-
 #include <Arduino.h>
-
 #include <ArduinoJson.h>
 #include <PTITCube.h>
 
 PTIT_CDH cdh;
 
-// Khởi tạo các phân hệ
 PTIT_COM lora;
 PTIT_EPS eps;
 PTIT_Sensor sensor;
@@ -28,102 +17,91 @@ PTIT_GPS gps;
 #define LED_PIN 2
 
 void setup() {
-    cdh.begin(115200);
-    while (!cdh) { delay(10); }
+    cdh.begin();
 
-        cdh.println("  VỆ TINH (SATELLITE) ĐANG KHỞI ĐỘNG...");
-        
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
 
-    // Khởi tạo các module
-    cdh.println("[INIT] Đang khởi tạo LoRa...");
     lora.init();
-    // E32 mặc định (init) ở chế độ Fixed-point: 3 byte đầu bản tin bị hiểu là địa chỉ đích nên phản hồi không tới trạm mặt đất.
-    // Chuyển sang Transparent để phản hồi gửi về cùng kênh/địa chỉ với trạm mặt đất.
-    lora.setTransmissionMode(0);
-    
-    cdh.println("[INIT] Đang khởi tạo Cảm biến và Nguồn...");
+    lora.setChannel(23);           // Kênh 23 (433 MHz)
+    lora.setTransmissionMode(0);   // Transparent Mode
+
     eps.init();
-    sensor.init(); 
+    sensor.init();
     gps.init();
 
-        cdh.println("VỆ TINH SẴN SÀNG NHẬN LỆNH TỪ TRẠM MẶT ĐẤT");
+    cdh.println("[BOOT] OBC san sang, dang cho lenh tu tram mat dat qua LoRa (ping, battery, sensor, imu, gps, led on/off, telemetry)");
 }
 
 void loop() {
-    // Luôn cập nhật cảm biến và GPS để có dữ liệu mới nhất
     sensor.update();
     gps.update();
 
-    // Lắng nghe lệnh từ mặt đất qua sóng LoRa
     String incomingCmd = lora.update();
     
     if (incomingCmd.length() > 0) {
         incomingCmd.trim();
-        incomingCmd.toLowerCase(); // Chuẩn hóa chữ thường
+        incomingCmd.toLowerCase();
         
-        cdh.println("\n[RX] Nhận được lệnh từ mặt đất: " + incomingCmd);
+        delay(20);
 
-        // --- XỬ LÝ CÁC LỆNH (COMMANDS) ---
-        
-        if (incomingCmd == "ping") {
-            lora.sendMessage("pong - Vệ tinh đang hoạt động tốt!");
+        String reply = "";
+
+        if (incomingCmd.indexOf("ping") != -1) {
+            reply = "pong - CubeSat OK";
         } 
-        else if (incomingCmd == "battery" || incomingCmd == "bat") {
-            float v = eps.getBatteryVoltage();
+        else if (incomingCmd.indexOf("battery") != -1 || incomingCmd.indexOf("bat") != -1) {
             char buffer[64];
-            snprintf(buffer, sizeof(buffer), "Điện áp Pin vệ tinh: %.2f V", v);
-            lora.sendMessage(String(buffer));
+            snprintf(buffer, sizeof(buffer), "Bat: %.2fV (%.1f%%)", eps.getBatteryVoltage(), eps.getBatteryPercent());
+            reply = String(buffer);
         }
-        else if (incomingCmd == "sensor" || incomingCmd == "env") {
-            float t = sensor.getTemperature();
-            float p = sensor.getPressure();
+        else if (incomingCmd.indexOf("sensor") != -1 || incomingCmd.indexOf("env") != -1) {
             char buffer[64];
-            snprintf(buffer, sizeof(buffer), "Nhiệt độ: %.2f C | Áp suất: %.1f hPa", t, p);
-            lora.sendMessage(String(buffer));
+            snprintf(buffer, sizeof(buffer), "Temp: %.1fC | Press: %.1fhPa", sensor.getTemperature(), sensor.getPressure());
+            reply = String(buffer);
         }
-        else if (incomingCmd == "imu") {
+        else if (incomingCmd.indexOf("imu") != -1) {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Gia tốc (X:%.1f Y:%.1f Z:%.1f) | Gyro (X:%.1f Y:%.1f Z:%.1f)", 
-                     sensor.getAccX(), sensor.getAccY(), sensor.getAccZ(),
-                     sensor.getGyroX(), sensor.getGyroY(), sensor.getGyroZ());
-            lora.sendMessage(String(buffer));
+            snprintf(buffer, sizeof(buffer), "Roll: %.1f | Pitch: %.1f | Head: %.1f", 
+                     sensor.getRoll(), sensor.getPitch(), sensor.getHeading());
+            reply = String(buffer);
         }
-        else if (incomingCmd == "gps") {
-            char buffer[64];
-            snprintf(buffer, sizeof(buffer), "GPS: Lat %f, Lng %f", gps.getLat(), gps.getLng());
-            if (gps.hasFix()) lora.sendMessage(String(buffer));
-            else lora.sendMessage("GPS: no valid fix");
+        else if (incomingCmd.indexOf("gps") != -1) {
+            // Chưa chốt vị trí thì getLat()/getLng() trả 0,0: không gửi tọa độ giả xuống mặt đất.
+            if (gps.hasFix()) {
+                char buffer[64];
+                snprintf(buffer, sizeof(buffer), "GPS: Lat %.6f, Lng %.6f", gps.getLat(), gps.getLng());
+                reply = String(buffer);
+            } else {
+                reply = "GPS: no valid fix";
+            }
         }
-        else if (incomingCmd == "led on") {
+        else if (incomingCmd.indexOf("led on") != -1) {
             digitalWrite(LED_PIN, HIGH);
-            lora.sendMessage("Đã bật LED trên OBC.");
+            reply = "LED ON";
         }
-        else if (incomingCmd == "led off") {
+        else if (incomingCmd.indexOf("led off") != -1) {
             digitalWrite(LED_PIN, LOW);
-            lora.sendMessage("Đã tắt LED trên OBC.");
+            reply = "LED OFF";
         }
-        else if (incomingCmd == "telemetry") {
-            // Gửi một gói JSON chứa toàn bộ trạng thái
+        else if (incomingCmd.indexOf("telemetry") != -1) {
             JsonDocument doc;
-            doc["battery_v"] = eps.getBatteryVoltage();
-            doc["temp"] = sensor.getTemperature();
-            doc["pressure"] = sensor.getPressure();
+            doc["v"] = eps.getBatteryVoltage();
+            doc["t"] = sensor.getTemperature();
+            doc["p"] = sensor.getPressure();
             doc["valid"] = gps.hasFix();
             if (gps.hasFix()) { doc["lat"] = gps.getLat(); doc["lng"] = gps.getLng(); }
             else { doc["lat"] = nullptr; doc["lng"] = nullptr; }
             
             String jsonOutput;
             serializeJson(doc, jsonOutput);
-            lora.sendMessage(jsonOutput);
+            reply = jsonOutput;
         }
         else {
-            lora.sendMessage("Lỗi: Lệnh [" + incomingCmd + "] không hợp lệ! Các lệnh hỗ trợ: ping, battery, sensor, imu, gps, led on/off, telemetry.");
+            reply = "ERR: Unknown cmd [" + incomingCmd + "]";
         }
-    }
 
-    delay(1);
-    // Tuỳ chọn: Có thể cấu hình vệ tinh tự động bắn Telemetry mỗi 5 giây mà không cần lệnh
-    // Bằng cách sử dụng millis() ở đây.
+        cdh.println("CMD: " + incomingCmd + " -> " + reply);
+        lora.sendMessage(reply);
+    }
 }

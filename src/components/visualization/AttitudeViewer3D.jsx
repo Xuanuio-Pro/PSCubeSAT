@@ -107,13 +107,14 @@ function AxisHelper() {
   );
 }
 
-/** @param {{height?: number|string}} props */
+/** @param {{height?: number|string}} props `'100%'` fills a flex parent (dashboard widget). */
 export default function AttitudeViewer3D({ height = 350 }) {
   const { attitude, attitudeReceivedAt, now, status, latest, activity, mode, link, exerciseId } = useTelemetry();
   const display = value => value == null ? '—' : value.toFixed(1);
-  // Lab4-02a only prints raw accelerometer counts: tilt comes from the direction, which does not depend on the sensor range.
-  const raw = /^Lab4-02a/.test(exerciseId);
+  // Older Lab4-02a drafts print raw accelerometer counts ("raw_accel:"): tilt then comes from the direction only.
+  // The current sketch prints m/s² like Lab4-02b, so raw mode applies only once such a raw line was actually seen.
   const rawSample = activity.subsystems['raw-imu'];
+  const raw = /^Lab4-02a/.test(exerciseId) && Boolean(rawSample);
   const rawFresh = Boolean(raw && mode === 'serial' && link === 'connected' && rawSample && now - rawSample.at <= 5000);
   const [rx, ry, rz] = rawFresh ? rawSample.values : [];
   const rotation = raw
@@ -125,9 +126,15 @@ export default function AttitudeViewer3D({ height = 350 }) {
   const magBody = raw ? null : finiteVector(latest?.magX, latest?.magY, latest?.magZ);
   const [ax, ay, az] = accelBody ?? [];
   const [mx, my, mz] = magBody ?? [];
-  const yaw = raw ? 0 : rotation.yaw ?? 0;
+  // Firmware heading (magnetometer, "Head:" / Lab7 imu.yaw) is absolute; without it only the relative gyro yaw exists.
+  const euler = activity.subsystems.attitude;
+  const heading = !raw && euler && mode === 'serial' && link === 'connected' && now - euler.at <= 5000 ? euler.heading : null;
+  const yaw = raw ? 0 : heading ?? rotation.yaw ?? 0;
+  // At rest |a| must be ~1 g; far from it the conversion factor does not match the sensor range (or it is moving).
+  const magnitude = !raw && accelBody ? Math.hypot(...accelBody) : null;
+  const offScale = magnitude !== null && imuFresh && Math.abs(magnitude - 1) > 0.15;
   // World frame: +Y is up. The accelerometer at rest reads the reaction to gravity (+1 g "up"), so the body is tilted until
-  // its measured "up" matches world up; gravity itself is then drawn pointing down. Heading comes only from relative gyro yaw.
+  // its measured "up" matches world up; gravity itself is then drawn pointing down. Heading: firmware compass if logged, else relative gyro yaw.
   const { quaternion, gravity, mag } = useMemo(() => {
     const q = new THREE.Quaternion();
     if (ax !== undefined) q.setFromUnitVectors(sensorToScene(ax, ay, az).normalize(), new THREE.Vector3(0, 1, 0));
@@ -146,11 +153,13 @@ export default function AttitudeViewer3D({ height = 350 }) {
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
           <span style={{ color: 'var(--accent-red)' }}>P: {display(rotation.pitch)}°</span>
           <span style={{ color: 'var(--accent-green)' }}>R: {display(rotation.roll)}°</span>
-          <span style={{ color: 'var(--accent-blue)' }}>Y tương đối: {display(rotation.yaw)}°</span>
+          {heading !== null
+            ? <span style={{ color: 'var(--accent-blue)' }}>Hướng la bàn: {display(heading)}°</span>
+            : <span style={{ color: 'var(--accent-blue)' }}>Y tương đối: {display(rotation.yaw)}°</span>}
         </div>
       </div>
-      <div style={{ height, background: '#16213a' }}>
-        <Canvas camera={{ position: [3, 2, 3], fov: 50 }}>
+      <div style={{ ...(height === '100%' ? { flex: 1, minHeight: 160 } : { height }), position: 'relative', background: '#16213a' }}>
+        <Canvas camera={{ position: [3, 2, 3], fov: 50 }} style={{ position: 'absolute', inset: 0 }}>
           <ambientLight intensity={0.9} />
           <hemisphereLight args={['#dbeafe', '#334155', 0.8]} />
           <directionalLight position={[5, 5, 5]} intensity={1.2} />
@@ -183,6 +192,7 @@ export default function AttitudeViewer3D({ height = 350 }) {
       </div>
       <div className="vector-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '8px 12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
         <span style={{ color: ACCEL_COLOR }}>Trọng lực g (hướng xuống): {accelBody ? raw ? `đo [${accelBody.join(', ')}] số đếm thô (chỉ hướng)` : `đo ${accelBody.map(value => value.toFixed(2)).join(', ')} g · |a| = ${Math.hypot(...accelBody).toFixed(2)} g` : '—'}</span>
+        {offScale && <span role="status" style={{ color: 'var(--accent-red)' }}>|a| = {magnitude.toFixed(2)} g khi đứng yên phải ≈ 1 g: kiểm tra dải đo (ACCEL_CONFIG) và hệ số quy đổi, hoặc giữ bo đứng yên.</span>}
         {!raw && <span style={{ color: MAG_COLOR }}>Từ trường: {magBody ? `${magBody.map(value => value.toFixed(1)).join(', ')} µT · |B| = ${Math.hypot(...magBody).toFixed(1)} µT (chỉ hướng)` : '—'}</span>}
       </div>
     </div>

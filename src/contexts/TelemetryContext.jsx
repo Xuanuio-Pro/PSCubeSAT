@@ -11,7 +11,8 @@ import { startTelemetrySocket, telemetrySocketUrl } from '../telemetry/socket';
 
 /** @typedef {{device_uid: string, device_name: string, device_type: string}} DeviceInfo */
 
-export function TelemetryProvider({ children }) {
+/** @param {{ children: any, groundStation?: boolean }} props `groundStation`: this window's port is the ground station's USB-TTL. */
+export function TelemetryProvider({ children, groundStation = false }) {
   const route = useLocation();
   const requestedLesson = new URLSearchParams(route.search).get('lesson') || '';
   const exerciseId = /^Lab[1-8]-/.test(requestedLesson) ? requestedLesson : '';
@@ -72,7 +73,7 @@ export function TelemetryProvider({ children }) {
     store.select('serial', serialBinding);
     store.setLink(serialConnected.current ? 'connected' : 'offline');
     let generation = store.getSnapshot().generation;
-    const decode = createPracticeDecoder(exerciseId);
+    const decode = createPracticeDecoder(exerciseId, { groundStation });
     return subscribe(entry => {
       if (!serialConnected.current) return;
       if (store.getSnapshot().generation !== generation) return;
@@ -90,7 +91,7 @@ export function TelemetryProvider({ children }) {
       store.invalidate(invalidate, generation);
       if (frame) store.ingest(frame, generation);
     });
-  }, [subscribe, sessionId, state.mode, serialBinding, store, user?.id, exerciseId]);
+  }, [subscribe, sessionId, state.mode, serialBinding, store, user?.id, exerciseId, groundStation]);
 
   useEffect(() => {
     if (state.mode === 'serial') store.setLink(isConnecting ? 'connecting' : isConnected ? 'connected' : 'offline');

@@ -27,6 +27,15 @@ class DeviceImageStoreTests(unittest.TestCase):
             self.assertEqual(device_images.list_images("cube_01", root), [])
 
 
+    def test_sizes_let_the_browser_skip_a_copy_received_over_serial(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            jpeg = bytes([0xFF, 0xD8]) + b"x" * 100 + bytes([0xFF, 0xD9])
+            image_id = device_images.save_image("cube_1", jpeg, root)
+            self.assertEqual(device_images.image_sizes("cube_1", root), {image_id: len(jpeg)})
+            self.assertEqual(device_images.image_sizes("missing", root), {})
+
+
 class ConsumerImageTests(unittest.IsolatedAsyncioTestCase):
     async def _deliver(self, payload, device):
         message = MagicMock(topic="sensors/cube_01/image", payload=payload)

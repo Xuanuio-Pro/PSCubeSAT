@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     mqtt_ca_file: str = ""
     mqtt_admin_username: str = ""
     mqtt_admin_password: str = Field(default="", repr=False)
+    # Hidden photo uplink (Docs/DECISIONS.md 2026-11-25): what the web app writes into a board's NVS.
+    # "per_device": each board gets its own dev_<uid> credential (EMQX + PostgreSQL authn).
+    # "shared": brokers without per-device accounts (HiveMQ demo) use DEVICE_MQTT_USERNAME/PASSWORD.
+    device_mqtt_auth: str = "per_device"
+    device_mqtt_username: str = ""
+    device_mqtt_password: str = Field(default="", repr=False)
+    # Classroom WiFi for the boards; a student may supply their own network instead.
+    device_wifi_ssid: str = ""
+    device_wifi_password: str = Field(default="", repr=False)
 
     # Redis
     redis_url: str = "redis://localhost:6379"

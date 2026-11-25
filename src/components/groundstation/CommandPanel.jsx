@@ -1,27 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTelemetry } from '../../contexts/telemetry-api';
 import { useSerial } from '../../contexts/serial-api';
-
-const PRESET_COMMANDS = [
-  { cmd: 'ping', label: '🏓 Ping', desc: 'Kiểm tra đường truyền' },
-  { cmd: 'status', label: '📊 Status', desc: 'Trạng thái hệ thống' },
-  { cmd: 'uptime', label: '⏱️ Uptime', desc: 'Thời gian hoạt động' },
-  { cmd: 'get_sensor', label: '🔬 Sensor', desc: 'Đọc cảm biến' },
-  { cmd: 'get_gps', label: '🌍 GPS', desc: 'Đọc tọa độ' },
-  { cmd: 'get_eps', label: '🔋 EPS', desc: 'Đọc pin' },
-  { cmd: 'pause', label: '⏸️ Pause', desc: 'Tạm dừng Telemetry' },
-  { cmd: 'resume', label: '▶️ Resume', desc: 'Tiếp tục Telemetry' },
-  { cmd: 'ls', label: '📁 LS', desc: 'Liệt kê file' },
-  { cmd: 'pwd', label: '📂 PWD', desc: 'Thư mục hiện tại' },
-  { cmd: 'mkdir demo', label: '➕ mkdir demo', desc: 'Tạo thư mục demo' },
-  { cmd: 'cd demo', label: '➡️ cd demo', desc: 'Vào thư mục demo' },
-  { cmd: 'cd ..', label: '⬆️ cd ..', desc: 'Lên thư mục cha' },
-  { cmd: 'touch note.txt', label: '📝 touch note.txt', desc: 'Tạo file note.txt' },
-  { cmd: 'rm note.txt', label: '🗑️ rm note.txt', desc: 'Xóa file note.txt' },
-  { cmd: 'rm demo', label: '🗑️ rm demo', desc: 'Xóa thư mục demo' },
-  { cmd: 'reboot', label: '🔄 Reboot', desc: 'Khởi động lại' },
-  { cmd: 'help', label: '❓ Help', desc: 'Danh sách lệnh' },
-];
+import { PRESET_COMMANDS } from './command-presets';
 
 /** @param {{commands?: string[]}} props */
 export default function CommandPanel({ commands = [] }) {

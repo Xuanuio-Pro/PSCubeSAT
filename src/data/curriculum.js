@@ -169,7 +169,7 @@ export const CURRICULUM = {
         "label": "Thực hành 04",
         "title": "Đọc trạng thái nút nhấn",
         "exerciseCode": "Lab1-03_Button",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-03_Button"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-04_Button"
       },
       {
         "id": "Lab1-04_LED_Button",
@@ -177,7 +177,7 @@ export const CURRICULUM = {
         "label": "Thực hành 05",
         "title": "Dùng nút nhấn bật/tắt đèn LED",
         "exerciseCode": "Lab1-04_LED_Button",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-04_LED_Button"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-05_LED_Button"
       },
       {
         "id": "quiz-1-6",
@@ -203,7 +203,7 @@ export const CURRICULUM = {
         "label": "Thực hành 06",
         "title": "Hiển thị chữ số trên LED 7 đoạn",
         "exerciseCode": "Lab1-05_7_Segment_LED",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-05_7_Segment_LED"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-06_7_Segment_LED"
       },
       {
         "id": "quiz-1-8",
@@ -229,7 +229,7 @@ export const CURRICULUM = {
         "label": "Thực hành 07",
         "title": "Gửi và nhận dữ liệu từ máy tính",
         "exerciseCode": "Lab1-06_Serial_Communication",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-06_Serial_Communication"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-07_Serial_Communication"
       },
       {
         "id": "Lab1-07_Serial_Control_LED",
@@ -237,7 +237,7 @@ export const CURRICULUM = {
         "label": "Thực hành 08",
         "title": "Điều khiển LED bằng lệnh gửi từ máy tính",
         "exerciseCode": "Lab1-07_Serial_Control_LED",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-07_Serial_Control_LED"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-08_Serial_Control_LED"
       },
       {
         "id": "quiz-1-10",
@@ -282,7 +282,7 @@ export const CURRICULUM = {
         "label": "Thực hành 09",
         "title": "Kết nối vào mạng WiFi có sẵn",
         "exerciseCode": "Lab1-08_WiFi_Connection",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-08_WiFi_Connection"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-09_WiFi_Connection"
       },
       {
         "id": "Lab1-09_WiFi_AP_Mode",
@@ -290,7 +290,7 @@ export const CURRICULUM = {
         "label": "Thực hành 10",
         "title": "Phát WiFi từ vệ tinh",
         "exerciseCode": "Lab1-09_WiFi_AP_Mode",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-09_WiFi_AP_Mode"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-10_WiFi_AP_Mode"
       },
       {
         "id": "Lab1-10_Web_Server_LED",
@@ -298,7 +298,7 @@ export const CURRICULUM = {
         "label": "Thực hành 11",
         "title": "Dựng máy chủ điều khiển LED qua trình duyệt",
         "exerciseCode": "Lab1-10_Web_Server_LED",
-        "repositoryUrl": "https://github.com/PTITCube/Lab1-10_Web_Server_LED"
+        "repositoryUrl": "https://github.com/PTITCube/Lab1-11_Web_Server_LED"
       },
       {
         "id": "quiz-1-13",
@@ -391,7 +391,7 @@ export const CURRICULUM = {
         "id": "Lab2-02_Power_Saving",
         "type": "practice",
         "label": "Thực hành 02",
-        "title": "Điều khiển dòng vào mạch hạ áp cấp nguồn cảm biến theo chu kỳ (GPIO 4)",
+        "title": "Tự động bật chế độ tiết kiệm năng lượng theo điện áp và dung lượng pin",
         "exerciseCode": "Lab2-02_Power_Saving",
         "repositoryUrl": "https://github.com/PTITCube/Lab2-02_Power_Saving"
       },
@@ -559,7 +559,7 @@ export const CURRICULUM = {
         "label": "Thực hành 04",
         "title": "Task Watchdog Timer: mô phỏng treo và tự động reset phục hồi",
         "exerciseCode": "Lab3-04_Watchdog_And_Event",
-        "repositoryUrl": "https://github.com/PTITCube/Lab3-04_Watchdog_And_Event"
+        "repositoryUrl": "https://github.com/PTITCube/Lab3-04_Watchdog_Timer"
       },
       {
         "id": "Lab3-05_Event_Driven_Queue",
@@ -633,7 +633,7 @@ export const CURRICULUM = {
         "id": "Lab4-01b_Environment_Library",
         "type": "practice",
         "label": "Thực hành 01b",
-        "title": "Tối ưu hóa đọc dữ liệu cảm biến môi trường",
+        "title": "Đọc nhiệt độ và áp suất BMP280 qua thư viện PTITCube",
         "exerciseCode": "Lab4-01b_Environment_Library",
         "repositoryUrl": "https://github.com/PTITCube/Lab4-01b_Environment_Library"
       },
@@ -668,7 +668,7 @@ export const CURRICULUM = {
         "id": "Lab4-02a_IMU_I2C",
         "type": "practice",
         "label": "Thực hành 02a",
-        "title": "Đọc burst 14 byte gia tốc và vận tốc góc thô từ MPU6500",
+        "title": "Đọc MPU6500 (burst 14 byte) và la bàn QMC5883P bằng I2C thuần",
         "exerciseCode": "Lab4-02a_IMU_I2C",
         "repositoryUrl": "https://github.com/PTITCube/Lab4-02a_IMU_I2C"
       },
@@ -813,7 +813,7 @@ export const CURRICULUM = {
         "label": "Thực hành 05",
         "title": "Tổng hợp đọc tất cả cảm biến",
         "exerciseCode": "Lab4-05_Read_All_Sensors",
-        "repositoryUrl": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors"
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-06_Read_All_Sensors"
       },
       {
         "id": "quiz-practice-4-all-sensors",
@@ -846,9 +846,9 @@ export const CURRICULUM = {
         "id": "Lab4-06_Camera_Multiplexer",
         "type": "practice",
         "label": "Thực hành 06",
-        "title": "Chuyển mạch luân phiên phần cứng",
+        "title": "Chuyển kênh UART2 giữa Camera và GPS qua MUX 74HC4066",
         "exerciseCode": "Lab4-06_Camera_Multiplexer",
-        "repositoryUrl": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer"
+        "repositoryUrl": "https://github.com/PTITCube/Lab4-05_Camera_Multiplexer"
       },
       {
         "id": "quiz-practice-4-mux",
@@ -919,7 +919,7 @@ export const CURRICULUM = {
         "id": "Lab5-01a_Send_Telemetry_UART",
         "type": "practice",
         "label": "Thực hành 01a",
-        "title": "Cấu hình thanh ghi LoRa và phát dữ liệu qua UART",
+        "title": "Đặt LoRa E32 ở chế độ thường (M0/M1) và phát bản tin qua UART",
         "exerciseCode": "Lab5-01a_Send_Telemetry_UART",
         "repositoryUrl": "https://github.com/PTITCube/Lab5-01a_Send_Telemetry_UART"
       },
@@ -927,7 +927,7 @@ export const CURRICULUM = {
         "id": "Lab5-01b_Send_Telemetry_Library",
         "type": "practice",
         "label": "Thực hành 01b",
-        "title": "Đóng gói packet Telemetry hoàn chỉnh",
+        "title": "Phát bản tin telemetry định kỳ qua thư viện PTIT_COM",
         "exerciseCode": "Lab5-01b_Send_Telemetry_Library",
         "repositoryUrl": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library"
       },
@@ -943,7 +943,7 @@ export const CURRICULUM = {
         "id": "Lab5-02b_Receive_Command_Library",
         "type": "practice",
         "label": "Thực hành 02b",
-        "title": "Giải mã lệnh (Command) từ Trái Đất",
+        "title": "Nhận lệnh từ trạm mặt đất qua thư viện PTIT_COM",
         "exerciseCode": "Lab5-02b_Receive_Command_Library",
         "repositoryUrl": "https://github.com/PTITCube/Lab5-02b_Receive_Command_Library"
       },
@@ -980,7 +980,7 @@ export const CURRICULUM = {
         "label": "Thực hành 03",
         "title": "Xây dựng hệ thống liên lạc vệ tinh và trạm mặt đất",
         "exerciseCode": "Lab5-03_Satellite_Comm_System",
-        "repositoryUrl": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System"
+        "repositoryUrl": "https://github.com/PTITCube/Lab5-03_Ground_Station_Demo"
       },
       {
         "id": "quiz-practice-5-ground",

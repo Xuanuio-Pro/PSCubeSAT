@@ -45,7 +45,7 @@ class CurriculumTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.get("/api/curriculum/exercises")
         self.assertEqual(response.status_code, 200)
         actual = response.json()["exercises"]
-        # Exercises removed from the lesson list stay compilable so old drafts and links keep working.
+        # The catalog may hold more exercises than the lesson list; every lesson exercise must be in it.
         self.assertLessEqual({item["id"] for item in expected}, {item["id"] for item in actual})
         for item in actual:
             content = (
@@ -64,8 +64,9 @@ class CurriculumTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("attachment;", response.headers["content-disposition"])
         self.assertIn("Lab3-04_Watchdog_And_Event.ino", response.headers["content-disposition"])
-        self.assertIn("esp_task_wdt_init(WDT_TIMEOUT_SEC, true)", response.text)
-        self.assertIn("esp_task_wdt_reset()", response.text)
+        # PTITCube library 74065b6 wraps the task watchdog in PTIT_CDH (cdh.wdtInit / cdh.wdtFeed).
+        self.assertIn("cdh.wdtInit(WDT_TIMEOUT_SEC)", response.text)
+        self.assertIn("cdh.wdtFeed()", response.text)
         metadata = next(
             item
             for item in curriculum.catalog()["exercises"]

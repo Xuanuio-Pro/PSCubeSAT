@@ -28,7 +28,12 @@ def prepare():
         manifest["dependencies"].pop("esp32-camera", None)  # v1.1.0 key
         manifest_path.write_text(json.dumps(manifest, indent=2))
         # Versioned local fixes to the pinned upstream library; no user source rewrite.
-        shutil.copytree(ROOT / "overrides", Path(package.path) / "src", dirs_exist_ok=True)
+        shutil.copytree(
+            ROOT / "overrides",
+            Path(package.path) / "src",
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("*.md"),  # documentation is not library source
+        )
         subprocess.run(["pio", "run", "-j", "2", "-d", str(project), "-e", board], check=True)
         shutil.copyfile(ROOT / "camera_driver_smoke.cpp", project / "src/main.cpp")
         subprocess.run(["pio", "run", "-j", "2", "-d", str(project), "-e", board], check=True)

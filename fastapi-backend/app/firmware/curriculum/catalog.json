@@ -1,806 +1,676 @@
 {
-  "library_commit": "57cf1c32c166a28a8bf6bdde215270288b750d67",
-  "checked_at": "2026-11-17",
+  "library_commit": "74065b64f670b14b7987c901c854ffe0e6fe69c5",
+  "checked_at": "2026-11-25",
   "exercises": [
     {
       "id": "Lab1-01_Blink_LED",
       "file": "Lab1-01_Blink_LED.cpp",
-      "upstream_commit": "ef70a8599e6b77e39132e4514d61ccd7ee15ff29",
-      "upstream_url": "https://github.com/PTITCube/Lab1-01_Blink_LED/blob/ef70a8599e6b77e39132e4514d61ccd7ee15ff29/src/main.cpp",
+      "upstream_commit": "9b75c19a8b126f0df53a98776739a65f286b9a96",
+      "upstream_url": "https://github.com/PTITCube/Lab1-01_Blink_LED/blob/9b75c19a8b126f0df53a98776739a65f286b9a96/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "GPIO2 output with explicit LED ON/OFF log. Log is a command report, not electrical readback."
+        "Upstream 2026-11-24 unchanged in substance; keeps the explicit LED ON/OFF log. Log is a command report, not electrical readback."
       ],
-      "source_sha256": "97de0dd4f5782af9e81dc4a27b16ce182b747e52a66d4c3de3a68d056f344b02",
+      "source_sha256": "963a2d2326a9d0f35cabbc975f9b9141c293fe96a5ac91ed32c9a060363df7cc",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "97de0dd4f5782af9e81dc4a27b16ce182b747e52a66d4c3de3a68d056f344b02",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "963a2d2326a9d0f35cabbc975f9b9141c293fe96a5ac91ed32c9a060363df7cc",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-02_Control_Multiple_LEDs",
       "file": "Lab1-02_Control_Multiple_LEDs.cpp",
-      "upstream_commit": "88c3940782f99e57e3151b413ec7f6baee0d43c0",
-      "upstream_url": "https://github.com/PTITCube/Lab1-02_Control_Multiple_LEDs/blob/88c3940782f99e57e3151b413ec7f6baee0d43c0/src/main.cpp",
+      "upstream_commit": "54640be92975f924b61736b61a3ae81ffd7cddc7",
+      "upstream_url": "https://github.com/PTITCube/Lab1-02_Control_Multiple_LEDs/blob/54640be92975f924b61736b61a3ae81ffd7cddc7/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Imported from upstream Lab1-02_Control_Multiple_LEDs without added Serial instrumentation; visualization shows only what the sketch prints."
+        "Upstream 2026-11-24 (comments and Serial logs removed upstream). The LEDs are the evidence; no visualization data."
       ],
-      "source_sha256": "bcc7a14c2d240c04ff7587de3179066f5f14945405985cfc65a1f9df3028df0b",
+      "source_sha256": "296e846d7f9ba431b1d89e311de423d6b27c0ac8f5d0f3045a34c725567e76db",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "bcc7a14c2d240c04ff7587de3179066f5f14945405985cfc65a1f9df3028df0b",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "296e846d7f9ba431b1d89e311de423d6b27c0ac8f5d0f3045a34c725567e76db",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-03_PWM_LED",
       "file": "Lab1-03_PWM_LED.cpp",
-      "upstream_commit": "ccf36bf63c7cf6638409eb900fca7c7024a7324b",
-      "upstream_url": "https://github.com/PTITCube/Lab1-03_PWM_LED/blob/ccf36bf63c7cf6638409eb900fca7c7024a7324b/src/main.cpp",
+      "upstream_commit": "f6944917fa03d0e4f20edd66f87357f5665b3a83",
+      "upstream_url": "https://github.com/PTITCube/Lab1-03_PWM_LED/blob/f6944917fa03d0e4f20edd66f87357f5665b3a83/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "New upstream exercise (LEDC PWM breathing LED on GPIO 2). No Serial instrumentation added; the LED itself is the evidence."
+        "Upstream 2026-11-24 (LEDC breathing LED on GPIO 2, Serial logs removed upstream). The LED itself is the evidence."
       ],
-      "source_sha256": "a459b885d88527f469b50c66a7fe7ec0d235867ec9efa6388e75ee9611562263",
+      "source_sha256": "e8315de0edb778b8984b1cf73b2cf6d36c89c5bcec14f97e6d4b3523c19370de",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "a459b885d88527f469b50c66a7fe7ec0d235867ec9efa6388e75ee9611562263",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "e8315de0edb778b8984b1cf73b2cf6d36c89c5bcec14f97e6d4b3523c19370de",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-03_Button",
       "file": "Lab1-03_Button.cpp",
-      "upstream_commit": "068216b917ca67b8de8e75a1f2e0b14e58098006",
-      "upstream_url": "https://github.com/PTITCube/Lab1-03_Button/blob/068216b917ca67b8de8e75a1f2e0b14e58098006/src/main.cpp",
+      "upstream_commit": "10294ed026d7224809ffbe9c479eb2d95697753a",
+      "upstream_url": "https://github.com/PTITCube/Lab1-04_Button/blob/10294ed026d7224809ffbe9c479eb2d95697753a/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Imported from upstream Lab1-03_Button without added Serial instrumentation; visualization shows only what the sketch prints."
+        "Upstream repo renamed Lab1-04_Button (2026-11-24); exercise ID kept. Prints BUTTON: Pressed/Released."
       ],
-      "source_sha256": "b9157e1d96df35c135f35c96ffff2ff1a8e2f9e8d66e6a74d0990f222e2eaba0",
+      "source_sha256": "b9ed38a252ea39277f3937bd7d79c030e021079bcd8b25a87e336b0a8b25e897",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "b9157e1d96df35c135f35c96ffff2ff1a8e2f9e8d66e6a74d0990f222e2eaba0",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "b9ed38a252ea39277f3937bd7d79c030e021079bcd8b25a87e336b0a8b25e897",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-04_LED_Button",
       "file": "Lab1-04_LED_Button.cpp",
-      "upstream_commit": "9e468ea820a1ecb705c5eea451fe26fe368aab5c",
-      "upstream_url": "https://github.com/PTITCube/Lab1-04_LED_Button/blob/9e468ea820a1ecb705c5eea451fe26fe368aab5c/src/main.cpp",
+      "upstream_commit": "6c97a8be30ba35e2aa4fda3a7ac7579d011b4d73",
+      "upstream_url": "https://github.com/PTITCube/Lab1-05_LED_Button/blob/6c97a8be30ba35e2aa4fda3a7ac7579d011b4d73/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Imported from upstream Lab1-04_LED_Button without added Serial instrumentation; visualization shows only what the sketch prints."
+        "Upstream repo renamed Lab1-05_LED_Button (2026-11-24); exercise ID kept. Prints LED: ON/OFF on each press."
       ],
-      "source_sha256": "4b7a969c119eaeabaf4fea628ec5ae8e0590e4319fc1abee9a6610014a7241b8",
+      "source_sha256": "237c0edf0a8ba2e043dc18dc508d08f00a9a219acb2444b6aa886fc1ff673f56",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "4b7a969c119eaeabaf4fea628ec5ae8e0590e4319fc1abee9a6610014a7241b8",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "237c0edf0a8ba2e043dc18dc508d08f00a9a219acb2444b6aa886fc1ff673f56",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-05_7_Segment_LED",
       "file": "Lab1-05_7_Segment_LED.cpp",
-      "upstream_commit": "d641e8393152dc4ebc6f56d20d7a2ff4e9602e24",
-      "upstream_url": "https://github.com/PTITCube/Lab1-05_7_Segment_LED/blob/d641e8393152dc4ebc6f56d20d7a2ff4e9602e24/src/main.cpp",
+      "upstream_commit": "1b4bf0731b36f5a9964eb2b7599ede0146f91fbc",
+      "upstream_url": "https://github.com/PTITCube/Lab1-06_7_Segment_LED/blob/1b4bf0731b36f5a9964eb2b7599ede0146f91fbc/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Imported from upstream Lab1-05_7_Segment_LED without added Serial instrumentation; visualization shows only what the sketch prints."
+        "Upstream repo renamed Lab1-06_7_Segment_LED (2026-11-24); exercise ID kept. No Serial output upstream."
       ],
-      "source_sha256": "d2407d62053fde684349ea8636f814f749446d71c87f30aaa727168d3c6b4099",
+      "source_sha256": "0716bdf201a62b600b25e134a7204808eadbb0d9dc07214d16bcb2cc57bba35f",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "d2407d62053fde684349ea8636f814f749446d71c87f30aaa727168d3c6b4099",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "0716bdf201a62b600b25e134a7204808eadbb0d9dc07214d16bcb2cc57bba35f",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-06_Serial_Communication",
       "file": "Lab1-06_Serial_Communication.cpp",
-      "upstream_commit": "8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b",
-      "upstream_url": "https://github.com/PTITCube/Lab1-06_Serial_Communication/blob/8330f447a32fcdcf8fd31db2c65aa7dbc5aee62b/src/main.cpp",
+      "upstream_commit": "606fc84d7ab444960cf05bc8aec0f74c3ba0897e",
+      "upstream_url": "https://github.com/PTITCube/Lab1-07_Serial_Communication/blob/606fc84d7ab444960cf05bc8aec0f74c3ba0897e/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "One-second greeting plus bounded, nonblocking bidirectional serial echo. Echo is not a sensor measurement."
+        "Upstream repo renamed Lab1-07_Serial_Communication. Keeps the local bounded, nonblocking echo (upstream only prints the greeting)."
       ],
-      "source_sha256": "9bc03f284297c8aac0c03cdea0109d1a869a59e41ea76b71f616ff5915d3566a",
+      "source_sha256": "64cea55a1fca3223c09b14eea3daa1b13c47ad2e197070dd98b3bcd271b3a321",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "9bc03f284297c8aac0c03cdea0109d1a869a59e41ea76b71f616ff5915d3566a",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "64cea55a1fca3223c09b14eea3daa1b13c47ad2e197070dd98b3bcd271b3a321",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-07_Serial_Control_LED",
       "file": "Lab1-07_Serial_Control_LED.cpp",
-      "upstream_commit": "05c3d08b35cbeec36817613b87976c3931d343b5",
-      "upstream_url": "https://github.com/PTITCube/Lab1-07_Serial_Control_LED/blob/05c3d08b35cbeec36817613b87976c3931d343b5/src/main.cpp",
+      "upstream_commit": "a52847f1926ce69284c5a9dbd6dd8360201fcfa6",
+      "upstream_url": "https://github.com/PTITCube/Lab1-08_Serial_Control_LED/blob/a52847f1926ce69284c5a9dbd6dd8360201fcfa6/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Original exercise behavior retained; see upstream source and hardware pin requirements."
+        "Upstream repo renamed Lab1-08_Serial_Control_LED; behavior unchanged."
       ],
-      "source_sha256": "0f4e52f12561e2be0fd47e1cf9775c4b8bd51c8fe010a7987264d428933fe0f9",
+      "source_sha256": "41c2354c346ddcd7ae52564089b7ac31b044f565b9514435009246682c8b7392",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "0f4e52f12561e2be0fd47e1cf9775c4b8bd51c8fe010a7987264d428933fe0f9",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "41c2354c346ddcd7ae52564089b7ac31b044f565b9514435009246682c8b7392",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-08_WiFi_Connection",
       "file": "Lab1-08_WiFi_Connection.cpp",
-      "upstream_commit": "02729eeed59d75f95d77fcb51f87656311f5c40a",
-      "upstream_url": "https://github.com/PTITCube/Lab1-08_WiFi_Connection/blob/02729eeed59d75f95d77fcb51f87656311f5c40a/src/main.cpp",
+      "upstream_commit": "b805069dd86b2e6f6d75148a3b7476c6c226ce44",
+      "upstream_url": "https://github.com/PTITCube/Lab1-09_WiFi_Connection/blob/b805069dd86b2e6f6d75148a3b7476c6c226ce44/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Set YOUR_WIFI_SSID/PASSWORD. Bounded 15s initial wait; retry and reconnect logs."
+        "Upstream repo renamed Lab1-09_WiFi_Connection. Keeps the bounded 15 s wait and reconnect logs (upstream waits forever)."
       ],
-      "source_sha256": "a9f460d4fe5780e8355f0cf8fb19a4ba023536ac8033d8e4f93fbb25f0b32583",
+      "source_sha256": "c34d8103c0e6561317945c1ed1858ae71b403366eccf66e1b895a4b774888257",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "a9f460d4fe5780e8355f0cf8fb19a4ba023536ac8033d8e4f93fbb25f0b32583",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "c34d8103c0e6561317945c1ed1858ae71b403366eccf66e1b895a4b774888257",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-09_WiFi_AP_Mode",
       "file": "Lab1-09_WiFi_AP_Mode.cpp",
-      "upstream_commit": "7622a1c4a05969988884ab19845c8536a3d8f7ed",
-      "upstream_url": "https://github.com/PTITCube/Lab1-09_WiFi_AP_Mode/blob/7622a1c4a05969988884ab19845c8536a3d8f7ed/src/main.cpp",
+      "upstream_commit": "7b2d25057cd7a754a33cb1257031b076f7769eef",
+      "upstream_url": "https://github.com/PTITCube/Lab1-10_WiFi_AP_Mode/blob/7b2d25057cd7a754a33cb1257031b076f7769eef/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Check softAP return value before reporting the AP IP."
+        "Upstream repo renamed Lab1-10_WiFi_AP_Mode. Checks the softAP return value before reporting the AP IP."
       ],
-      "source_sha256": "c06bfd64e0ca93f2144c9a67683da10c5cf7905f33d9eab1c83b8c080f4d3864",
+      "source_sha256": "8dc45b456a23f93555bee36b2fb40806b71d5c8ec18b8ebe738e7bfb3e29586c",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "c06bfd64e0ca93f2144c9a67683da10c5cf7905f33d9eab1c83b8c080f4d3864",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "8dc45b456a23f93555bee36b2fb40806b71d5c8ec18b8ebe738e7bfb3e29586c",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab1-10_Web_Server_LED",
       "file": "Lab1-10_Web_Server_LED.cpp",
-      "upstream_commit": "6788696718d8e3281e9cf917e503a34bed3a9e70",
-      "upstream_url": "https://github.com/PTITCube/Lab1-10_Web_Server_LED/blob/6788696718d8e3281e9cf917e503a34bed3a9e70/src/main.cpp",
+      "upstream_commit": "f5460b657122c977a530af26e00043362f34badf",
+      "upstream_url": "https://github.com/PTITCube/Lab1-11_Web_Server_LED/blob/f5460b657122c977a530af26e00043362f34badf/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Bounded WiFi wait, reconnect, delayed HTTP server start, LED ON/OFF response logs."
+        "Upstream repo renamed Lab1-11_Web_Server_LED. Bounded WiFi wait, reconnect, delayed HTTP server start."
       ],
-      "source_sha256": "e85cfed1af53f900b5138672433e71ef337468dc190ebd904de8b1046f04f484",
+      "source_sha256": "18de111b79bd907d7adc37e34740e376f29a6546c4ad85d3bedea9ef70de12c1",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "e85cfed1af53f900b5138672433e71ef337468dc190ebd904de8b1046f04f484",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab2-01_Detect_Battery_Voltage",
-      "file": "Lab2-01_Detect_Battery_Voltage.cpp",
-      "upstream_commit": "c7f92b12185ebccd9af2ff5d60508dd48d61688e",
-      "upstream_url": "https://github.com/PTITCube/Lab2-01_Detect_Battery_Voltage/blob/c7f92b12185ebccd9af2ff5d60508dd48d61688e/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab2-01_Detect_Battery_Voltage without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "362e3a6e7c73aeaf6e8a146492446d7d7d2ccfd1e82f90e0b27334dd12fdadae",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "362e3a6e7c73aeaf6e8a146492446d7d7d2ccfd1e82f90e0b27334dd12fdadae",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "18de111b79bd907d7adc37e34740e376f29a6546c4ad85d3bedea9ef70de12c1",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab2-01a_Battery_I2C",
       "file": "Lab2-01a_Battery_I2C.cpp",
-      "upstream_commit": "3c3ef5118fab4fe3990ff16775a56fdb41de6ecc",
-      "upstream_url": "https://github.com/PTITCube/Lab2-01a_Battery_I2C/blob/3c3ef5118fab4fe3990ff16775a56fdb41de6ecc/src/main.cpp",
+      "upstream_commit": "d3bd230a5bf4462f1fcbb5870ba005413e7443c8",
+      "upstream_url": "https://github.com/PTITCube/Lab2-01a_Battery_I2C/blob/d3bd230a5bf4462f1fcbb5870ba005413e7443c8/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11: MAX17048 fuel gauge over raw Wire (0x36: VCELL 0x02, SOC 0x04, CRATE 0x16). Hardware team confirmed MAX17048 is the only battery monitor (Docs/DECISIONS.md 2026-11-17)."
+        "Upstream 2026-11-24: buck enabled via PTIT_EPS, MAX17048 over raw Wire. Prints V | SOC | Rate."
       ],
-      "source_sha256": "b89255f85de0b24979d7a8345ec17251554868873b6204ed57496f9561db58f6",
+      "source_sha256": "2e961a490a61c8c3f351a5bcd6980dc697140d9fc6706d95b97aa0e8d3be9962",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "b89255f85de0b24979d7a8345ec17251554868873b6204ed57496f9561db58f6",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "2e961a490a61c8c3f351a5bcd6980dc697140d9fc6706d95b97aa0e8d3be9962",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab2-01b_Battery_Library",
       "file": "Lab2-01b_Battery_Library.cpp",
-      "upstream_commit": "2e7dc8a158037c77b9b41d5211d05eed51c6777e",
-      "upstream_url": "https://github.com/PTITCube/Lab2-01b_Battery_Library/blob/2e7dc8a158037c77b9b41d5211d05eed51c6777e/src/main.cpp",
+      "upstream_commit": "a2d010e4ca554c9bb53cd39af37b152f2b9fab3f",
+      "upstream_url": "https://github.com/PTITCube/Lab2-01b_Battery_Library/blob/a2d010e4ca554c9bb53cd39af37b152f2b9fab3f/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "PTIT_EPS v1.1.0 reads the MAX17048 fuel gauge (voltage, SOC, charge rate). Requires the MAX17048 hardware."
+        "Upstream 2026-11-24: PTIT_EPS reads the MAX17048 (voltage, SOC, charge rate). Prints V | SOC | Rate."
       ],
-      "source_sha256": "5925f614d02a5a775334adaa5ffabba122a0129244f790b25974c7a0e3439707",
+      "source_sha256": "5f8a91e020191d01524bde898e614e93624ed1e0067cf82a866a61d383141ef2",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "5925f614d02a5a775334adaa5ffabba122a0129244f790b25974c7a0e3439707",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "5f8a91e020191d01524bde898e614e93624ed1e0067cf82a866a61d383141ef2",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab2-02_Power_Saving",
       "file": "Lab2-02_Power_Saving.cpp",
-      "upstream_commit": "fdeeea28f882ec2bf35305b4db547dd1aed34502",
-      "upstream_url": "https://github.com/PTITCube/Lab2-02_Power_Saving/blob/fdeeea28f882ec2bf35305b4db547dd1aed34502/src/main.cpp",
+      "upstream_commit": "7ae7cd506b3df8392ab4117ccaad02f147b0d8ad",
+      "upstream_url": "https://github.com/PTITCube/Lab2-02_Power_Saving/blob/7ae7cd506b3df8392ab4117ccaad02f147b0d8ad/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11: buck power gating on GPIO 4 (LOW = load powered, HIGH = cut), 100 ms settle, MAX17048 reading per cycle. Replaces the earlier deep-sleep sketch."
+        "Upstream 2026-11-24: power saving driven by battery thresholds (3.70 V or 25 %): buck off in low power, on otherwise. Replaces the fixed duty cycle."
       ],
-      "source_sha256": "3afafb2c666ce8f4d20b6e9c2b152a55a101b1e63f62c26babf54d1ab1e9524f",
+      "source_sha256": "8efb1644c64399b35dd11f9d57317d49ebf0e92f9f7f124be90a590bc9522673",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "3afafb2c666ce8f4d20b6e9c2b152a55a101b1e63f62c26babf54d1ab1e9524f",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab3-01_Save_To_MicroSD",
-      "file": "Lab3-01_Save_To_MicroSD.cpp",
-      "upstream_commit": "11d24de76647ec9066e2be3ca6ed0c142c8adca7",
-      "upstream_url": "https://github.com/PTITCube/Lab3-01_Save_To_MicroSD/blob/11d24de76647ec9066e2be3ca6ed0c142c8adca7/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab3-01_Save_To_MicroSD without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "29923143f021a7c4d39db3ef3ae9c27ddc38c3eebd37259b7d4d5d362084bd89",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "29923143f021a7c4d39db3ef3ae9c27ddc38c3eebd37259b7d4d5d362084bd89",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "8efb1644c64399b35dd11f9d57317d49ebf0e92f9f7f124be90a590bc9522673",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-01a_MicroSD_SPI",
       "file": "Lab3-01a_MicroSD_SPI.cpp",
-      "upstream_commit": "f915167003c54bab762118d7e168f7aec25d599c",
-      "upstream_url": "https://github.com/PTITCube/Lab3-01a_MicroSD_SPI/blob/f915167003c54bab762118d7e168f7aec25d599c/src/main.cpp",
+      "upstream_commit": "9c5adfb00478d99c3cd7b391805dd96e0b256a5d",
+      "upstream_url": "https://github.com/PTITCube/Lab3-01a_MicroSD_SPI/blob/9c5adfb00478d99c3cd7b391805dd96e0b256a5d/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "PTIT OBC CS13/SCK18/MISO19/MOSI23. Reports [SD] Saved only when the full line was written."
+        "Upstream 2026-11-24 (buck on, flush). Keeps the write-count check: reports SD: Saved only when the full line was written."
       ],
-      "source_sha256": "15efd4b383e71489bc15c7e1626f11f118a3a1c7ec5346be805d3d5deaf9dc18",
+      "source_sha256": "5aa4bf2af7b647ae8ade991debd65ac7b967f6004e4fae9956cfa937f2db178f",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "15efd4b383e71489bc15c7e1626f11f118a3a1c7ec5346be805d3d5deaf9dc18",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "5aa4bf2af7b647ae8ade991debd65ac7b967f6004e4fae9956cfa937f2db178f",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-01b_MicroSD_Library",
       "file": "Lab3-01b_MicroSD_Library.cpp",
-      "upstream_commit": "985ba8bbeab459aaf8dee0e0f793db3d64c53cd6",
-      "upstream_url": "https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/985ba8bbeab459aaf8dee0e0f793db3d64c53cd6/src/main.cpp",
+      "upstream_commit": "4155f6ad0276306c34b0c89b89ccffc5e6ac1049",
+      "upstream_url": "https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/4155f6ad0276306c34b0c89b89ccffc5e6ac1049/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Check appendFile result; distinguish generated log entry from successful SD write."
+        "Upstream 2026-11-24. Writes with appendFile to /datalog.txt (the logData file) so the result can be reported; logData returns nothing."
       ],
-      "source_sha256": "d9b2223c48944fa6a7a62492db5f801f8ab97d9b781e254ceebb656f1dae6a94",
+      "source_sha256": "595de782e576682a5c18befe32c9492208c9ab602b84cd7db0c09df701b3df9b",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "d9b2223c48944fa6a7a62492db5f801f8ab97d9b781e254ceebb656f1dae6a94",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "595de782e576682a5c18befe32c9492208c9ab602b84cd7db0c09df701b3df9b",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-02_Linux_FS_Commands",
       "file": "Lab3-02_Linux_FS_Commands.cpp",
-      "upstream_commit": "eb9fa7faa73f8b001e53254f40c4307f2f52169e",
-      "upstream_url": "https://github.com/PTITCube/Lab3-02_Linux_FS_Commands/blob/eb9fa7faa73f8b001e53254f40c4307f2f52169e/src/main.cpp",
+      "upstream_commit": "fb0fd9c193f5097ac534da557923663e25babf21",
+      "upstream_url": "https://github.com/PTITCube/Lab3-02_Linux_FS_Commands/blob/fb0fd9c193f5097ac534da557923663e25babf21/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Nonblocking command input, maximum 128 bytes, discard oversized lines.",
-        "Reject cd/ls targeting a regular file or missing directory rather than falsely reporting OK."
+        "Upstream 2026-11-24 shell (library checks directories, adds cat/echo/df/help; success returns an empty string). Sketch prints OK for an empty reply and keeps the 128-byte bounded input."
       ],
-      "source_sha256": "c5e54611dcf0cecbbaf370338a656e4443e6e3d3d7a8aed361035a5b5b868fef",
+      "source_sha256": "e40f61643f6ca277b3ac9084c14f78b50733635eb6d446295e9481e4d5e0bd12",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "c5e54611dcf0cecbbaf370338a656e4443e6e3d3d7a8aed361035a5b5b868fef",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "e40f61643f6ca277b3ac9084c14f78b50733635eb6d446295e9481e4d5e0bd12",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-03_Multitasking_Scheduler",
       "file": "Lab3-03_Multitasking_Scheduler.cpp",
-      "upstream_commit": "0e0b0a1e21aff76efb419c64091d574d280f0f3b",
-      "upstream_url": "https://github.com/PTITCube/Lab3-03_Multitasking_Scheduler/blob/0e0b0a1e21aff76efb419c64091d574d280f0f3b/src/main.cpp",
+      "upstream_commit": "f955449cf41996800f7c128091f0176918fe01b0",
+      "upstream_url": "https://github.com/PTITCube/Lab3-03_Multitasking_Scheduler/blob/f955449cf41996800f7c128091f0176918fe01b0/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Heartbeat LED, simulated housekeeping packet (random values) and a Core 0 diagnostic task. The diagnostic delay runs outside the Serial mutex so telemetry prints are not dropped."
+        "Upstream 2026-11-24 verbatim: heartbeat LED, simulated TELEM packet (random values) and a DIAG task on Core 0. TELEM values are illustrative."
       ],
-      "source_sha256": "56c0fce58fbe8b0e615308fcbe0b4734e379d9f6ab62e408747339978d71369b",
+      "source_sha256": "2902d28365e862eff878274d528038bf97fb27510476c9378a1b16a0cf8c6c14",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "56c0fce58fbe8b0e615308fcbe0b4734e379d9f6ab62e408747339978d71369b",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "2902d28365e862eff878274d528038bf97fb27510476c9378a1b16a0cf8c6c14",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-04_Watchdog_And_Event",
       "file": "Lab3-04_Watchdog_And_Event.cpp",
-      "upstream_commit": "932741750f6b079521ba0dbefff0b530a3e628ec",
-      "upstream_url": "https://github.com/PTITCube/Lab3-04_Watchdog_And_Event/blob/932741750f6b079521ba0dbefff0b530a3e628ec/src/main.cpp",
+      "upstream_commit": "33b70a439788244e84543784414fae617764c10c",
+      "upstream_url": "https://github.com/PTITCube/Lab3-04_Watchdog_Timer/blob/33b70a439788244e84543784414fae617764c10c/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11: pure Task Watchdog lab (3 s TWDT, fault injection via GPIO 4 or h/f over Serial, reset-reason report). Identical to upstream Lab3-04_Watchdog_Timer."
+        "Upstream repo is now Lab3-04_Watchdog_Timer; exercise ID kept. Verbatim: cdh.wdt* API, 3 s TWDT, fault via GPIO 4 or f/fault/freeze over Serial, reset-reason report.",
+        "GPIO 4 counts as a fault only on a HIGH->LOW press: on the satellite stack GPIO 4 is the EPS buck pin held LOW, which made the level check reboot the board every ~6 s (hardware run 2026-11-25). Prints a BOOT hint to use f there."
       ],
-      "source_sha256": "484550f1cbd21402fa0789726f614c1e5ffbe691381e4fbdd136596dcc6b2f39",
+      "source_sha256": "0db85322460346eb4dac55d7a5ab9dcc552fde75040aa73b716dbf8fd3f73124",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "484550f1cbd21402fa0789726f614c1e5ffbe691381e4fbdd136596dcc6b2f39",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "0db85322460346eb4dac55d7a5ab9dcc552fde75040aa73b716dbf8fd3f73124",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab3-05_Event_Driven_Queue",
       "file": "Lab3-05_Event_Driven_Queue.cpp",
-      "upstream_commit": "e1d3ffdf2811df17635747a8dc54ae25721e5ad8",
-      "upstream_url": "https://github.com/PTITCube/Lab3-05_Event_Driven_Queue/blob/e1d3ffdf2811df17635747a8dc54ae25721e5ad8/src/main.cpp",
+      "upstream_commit": "97039845e1f3b1baabb5957a5185388380932a73",
+      "upstream_url": "https://github.com/PTITCube/Lab3-05_Event_Driven_Queue/blob/97039845e1f3b1baabb5957a5185388380932a73/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "New upstream exercise: FreeRTOS queue fed by a GPIO 4 ISR, a simulated temperature alert and Serial commands. Temperatures are simulated."
+        "Upstream 2026-11-24 (PTIT_Queue). Restores the 250 ms ISR debounce and the 3072-byte dispatcher stack. Temperatures are simulated."
       ],
-      "source_sha256": "d01365a4f9e6fc42f90f33b38f9df3d99d49951f0cf133ce6096cf3b276dc000",
+      "source_sha256": "8f51197a9816d32499eaac3cd0ef222a1807244f872076cc8aa448d73c14a984",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "d01365a4f9e6fc42f90f33b38f9df3d99d49951f0cf133ce6096cf3b276dc000",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-01_Detect_Environment",
-      "file": "Lab4-01_Detect_Environment.cpp",
-      "upstream_commit": "a85ab2534b7905e7a722b13f045f47bdd328a1c8",
-      "upstream_url": "https://github.com/PTITCube/Lab4-01_Detect_Environment/blob/a85ab2534b7905e7a722b13f045f47bdd328a1c8/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Library pressure is already hPa; upstream divided by 100 a second time, corrected here."
-      ],
-      "source_sha256": "510dce0254c7f08a0823ea870fd7465d1b1e05727fc6f6a1c889129c84f1e8ae",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "510dce0254c7f08a0823ea870fd7465d1b1e05727fc6f6a1c889129c84f1e8ae",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "8f51197a9816d32499eaac3cd0ef222a1807244f872076cc8aa448d73c14a984",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-01a_Environment_I2C",
       "file": "Lab4-01a_Environment_I2C.cpp",
-      "upstream_commit": "bd55c980f98909b79741a3c335b63a7371610f7f",
-      "upstream_url": "https://github.com/PTITCube/Lab4-01a_Environment_I2C/blob/bd55c980f98909b79741a3c335b63a7371610f7f/src/main.cpp",
+      "upstream_commit": "ff8c816c6383378e2283e2fd3c35a66718128562",
+      "upstream_url": "https://github.com/PTITCube/Lab4-01a_Environment_I2C/blob/ff8c816c6383378e2283e2fd3c35a66718128562/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Probe BMP280 0x76 and 0x77. Pressure from Adafruit is Pa and converted once to hPa.",
-        "Upstream Lab4-01a_Environment_I2C changed after this review (commit 14b89fd815af) and targets a newer PTITCube-Library; this reviewed version is kept because the compiler pins the older library."
+        "Upstream 2026-11-24 (buck on, Adafruit BMP280). Without a detected BMP280 it prints 'BMP280 unavailable' instead of uninitialized readings."
       ],
-      "source_sha256": "f6cd59e8ced3cb85a678431c5dc56ef23ab6218ccae2d4e0ba39c1384b7f9867",
+      "source_sha256": "dc9669fb755956916fb365e03f8b144ef66160c1e29e945b5901e92ed00d6b0f",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "f6cd59e8ced3cb85a678431c5dc56ef23ab6218ccae2d4e0ba39c1384b7f9867",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "dc9669fb755956916fb365e03f8b144ef66160c1e29e945b5901e92ed00d6b0f",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-01b_Environment_Library",
       "file": "Lab4-01b_Environment_Library.cpp",
-      "upstream_commit": "5ff7a04a45106240dbf9d4bc9fd389abbfb8c0f6",
-      "upstream_url": "https://github.com/PTITCube/Lab4-01b_Environment_Library/blob/5ff7a04a45106240dbf9d4bc9fd389abbfb8c0f6/src/main.cpp",
+      "upstream_commit": "851b019bc6f5bb02c4a80835638e00ef3b71a696",
+      "upstream_url": "https://github.com/PTITCube/Lab4-01b_Environment_Library/blob/851b019bc6f5bb02c4a80835638e00ef3b71a696/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Library pressure is already hPa; do not divide a second time.",
-        "Upstream Lab4-01b_Environment_Library changed after this review (commit 521f1a3e51cc) and targets a newer PTITCube-Library; this reviewed version is kept because the compiler pins the older library."
+        "Upstream 2026-11-24 verbatim. PTIT_Sensor returns NaN when the BMP280 is absent (compiler override), printed as nan."
       ],
-      "source_sha256": "4d398bc1ba9c3fbafd2c6d458a0373d44b0231534a5c01fa5e7518b177ada243",
+      "source_sha256": "7ce6a78feb46d533f66c285731f4f941df57eb34ac47ac8b7b623d0000f06cab",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "4d398bc1ba9c3fbafd2c6d458a0373d44b0231534a5c01fa5e7518b177ada243",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-02_Detect_IMU_Attitude",
-      "file": "Lab4-02_Detect_IMU_Attitude.cpp",
-      "upstream_commit": "302b4b747b705125024aeac38259080706664e81",
-      "upstream_url": "https://github.com/PTITCube/Lab4-02_Detect_IMU_Attitude/blob/302b4b747b705125024aeac38259080706664e81/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Library magnetometer values are Gauss; converted x100 to the printed microtesla (upstream printed Gauss as uT)."
-      ],
-      "source_sha256": "ca6915e5e06db43d1b7e81815ba678aecfba8e7bb58d61ac997e0a2c59923b92",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "ca6915e5e06db43d1b7e81815ba678aecfba8e7bb58d61ac997e0a2c59923b92",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "7ce6a78feb46d533f66c285731f4f941df57eb34ac47ac8b7b623d0000f06cab",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-02a_IMU_I2C",
       "file": "Lab4-02a_IMU_I2C.cpp",
-      "upstream_commit": "3b474f2a6ea494ddef04b5b1980aa2d360ac8302",
-      "upstream_url": "https://github.com/PTITCube/Lab4-02a_IMU_I2C/blob/3b474f2a6ea494ddef04b5b1980aa2d360ac8302/src/main.cpp",
+      "upstream_commit": "6ebe3da55d999842f507d99f68b24359014e625f",
+      "upstream_url": "https://github.com/PTITCube/Lab4-02a_IMU_I2C/blob/6ebe3da55d999842f507d99f68b24359014e625f/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Burst read of 14 bytes from 0x3B, converted assuming the reset ranges +/-2 g and +/-250 deg/s, plus QMC5883P over I2C. Each 16-bit value is read with explicit high/low byte reads: (Wire.read() << 8) | Wire.read() has unspecified evaluation order and could swap bytes."
+        "Upstream 2026-11-24. Keeps explicit high/low byte reads ((Wire.read() << 8) | Wire.read() is unsequenced) and reports a failed I2C read instead of printing zeros. Assumes reset ranges +/-2 g, +/-250 deg/s.",
+        "Writes ACCEL_CONFIG/GYRO_CONFIG = 0 (+-2 g, +-250 dps) to match the 16384/131 factors: the MPU6500 keeps the library +-8 g / +-500 dps setting across an ESP32 reset (read 2.55 m/s2 at rest, hardware run 2026-11-25)."
       ],
-      "source_sha256": "d2a472b882e489f1917806888e2bacf96dd4d04800fc9db3a959ebdeb15f1f71",
+      "source_sha256": "1e0e1a8167ded086b963397b622cd4daa7e2c4416c78b0ab8c335718556e451c",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "d2a472b882e489f1917806888e2bacf96dd4d04800fc9db3a959ebdeb15f1f71",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "1e0e1a8167ded086b963397b622cd4daa7e2c4416c78b0ab8c335718556e451c",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-02b_IMU_Library",
       "file": "Lab4-02b_IMU_Library.cpp",
-      "upstream_commit": "a77fd33fe9c8a2a085ebc51fe9b8796730265d53",
-      "upstream_url": "https://github.com/PTITCube/Lab4-02b_IMU_Library/blob/a77fd33fe9c8a2a085ebc51fe9b8796730265d53/src/main.cpp",
+      "upstream_commit": "c19722e3031b96b7c515518ce71c54f4c03367bd",
+      "upstream_url": "https://github.com/PTITCube/Lab4-02b_IMU_Library/blob/c19722e3031b96b7c515518ce71c54f4c03367bd/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Library magnetometer values are Gauss; converted x100 to the printed microtesla (upstream printed Gauss as uT)."
+        "Upstream 2026-11-24 verbatim. Library 74065b6 returns microtesla and provides roll/pitch/heading; the old x100 Gauss conversion is no longer needed."
       ],
-      "source_sha256": "75ce8066e6128d1fbb09075ee30afbdf2b80e29e9d65a07e1cfa6e43e569ac3e",
+      "source_sha256": "633229cdb81492047e88837b3b3cd76bee84cd7dcac9f1bf24bc340ff1741278",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "75ce8066e6128d1fbb09075ee30afbdf2b80e29e9d65a07e1cfa6e43e569ac3e",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-03_Detect_GPS_Rawdata",
-      "file": "Lab4-03_Detect_GPS_Rawdata.cpp",
-      "upstream_commit": "69c53d2a0cb3575afb2d2d2b66d228902b3607ff",
-      "upstream_url": "https://github.com/PTITCube/Lab4-03_Detect_GPS_Rawdata/blob/69c53d2a0cb3575afb2d2d2b66d228902b3607ff/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab4-03_Detect_GPS_Rawdata without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "1610baf4564c0e64d9fa4f949b1f45b2e75724b0ab795ae3264df90245ec1013",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "1610baf4564c0e64d9fa4f949b1f45b2e75724b0ab795ae3264df90245ec1013",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "633229cdb81492047e88837b3b3cd76bee84cd7dcac9f1bf24bc340ff1741278",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-03a_GPS_UART",
       "file": "Lab4-03a_GPS_UART.cpp",
-      "upstream_commit": "233fe53980255406268c2834bf33fe2a4772120a",
-      "upstream_url": "https://github.com/PTITCube/Lab4-03a_GPS_UART/blob/233fe53980255406268c2834bf33fe2a4772120a/src/main.cpp",
+      "upstream_commit": "82a83e06cd4a9645c8f93f076ff189f05bdd7688",
+      "upstream_url": "https://github.com/PTITCube/Lab4-03a_GPS_UART/blob/82a83e06cd4a9645c8f93f076ff189f05bdd7688/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Select GPS using OBC MUX12/14; UART2 RX16/TX17 at 9600. No Fix indoors is not a hardware failure."
+        "Upstream 2026-11-24 verbatim: sentence buffer printing one NMEA line every 2 s. Sentences cut by the pause fail the browser checksum check and are not plotted."
       ],
-      "source_sha256": "0df67f5313e93276285a71157cc2207d1c9dfe905dd21eee99278d6bed6a101c",
+      "source_sha256": "bafc24c6d19b64b9be1246d2c39dc5c40d74b81b0ab8f3f0f2cb267e0cd3e6c4",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "0df67f5313e93276285a71157cc2207d1c9dfe905dd21eee99278d6bed6a101c",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "bafc24c6d19b64b9be1246d2c39dc5c40d74b81b0ab8f3f0f2cb267e0cd3e6c4",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-03b_GPS_Library",
       "file": "Lab4-03b_GPS_Library.cpp",
-      "upstream_commit": "add20d42ee3fbcc5eab88db225454f13b06465a9",
-      "upstream_url": "https://github.com/PTITCube/Lab4-03b_GPS_Library/blob/add20d42ee3fbcc5eab88db225454f13b06465a9/src/main.cpp",
+      "upstream_commit": "b2c25cbb5e6130a4bebb7ac21a6bd06cc66bd12f",
+      "upstream_url": "https://github.com/PTITCube/Lab4-03b_GPS_Library/blob/b2c25cbb5e6130a4bebb7ac21a6bd06cc66bd12f/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11: line buffer for raw NMEA with XOR checksum check, printed as [NMEA RAW] [OK|FAIL]."
+        "Upstream 2026-11-24 verbatim: PTIT_GPS readSentence/verifyChecksum/getNMEAType, printed as NMEA RAW: OK|FAIL (TYPE)."
       ],
-      "source_sha256": "99cab39efd9b229d1d7c6e6c0b8dba3a5ba38c44fc4253ad51a4efac16fdc92d",
+      "source_sha256": "e052b888f64100a74abb0b96674fbfc7e1dac3ae6fb6f5e2e0c08b46a7b20145",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "99cab39efd9b229d1d7c6e6c0b8dba3a5ba38c44fc4253ad51a4efac16fdc92d",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "e052b888f64100a74abb0b96674fbfc7e1dac3ae6fb6f5e2e0c08b46a7b20145",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-03c_GPS_PTITCube",
       "file": "Lab4-03c_GPS_PTITCube.cpp",
-      "upstream_commit": "560fdf8738a9ef7a63340bc40b9c4a61d8a1cbdd",
-      "upstream_url": "https://github.com/PTITCube/Lab4-03c_GPS_PTITCube/blob/560fdf8738a9ef7a63340bc40b9c4a61d8a1cbdd/src/main.cpp",
+      "upstream_commit": "cb9876b100c8e0a14e02d9933ca2fa153e4bd7af",
+      "upstream_url": "https://github.com/PTITCube/Lab4-03c_GPS_PTITCube/blob/cb9876b100c8e0a14e02d9933ca2fa153e4bd7af/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "New upstream exercise: decoded GPS fields via PTIT_GPS. Uses hasFix() (valid and < 5 s old) instead of satellites >= 4 and non-zero coordinates; also prints one combined coordinate line."
+        "Upstream 2026-11-24, but coordinates are printed only with hasFix() (valid and < 5 s old). Upstream used satellites > 0 and printed 0,0 without a fix."
       ],
-      "source_sha256": "2db7cdb6aa39eb28368b42a84128c879268c0d4421f55bcc1c85c5a5d2715cbe",
+      "source_sha256": "9098e9352afb68a89c6658bb49f762de36d2873f9eb011739f9f99883be6ccc3",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "2db7cdb6aa39eb28368b42a84128c879268c0d4421f55bcc1c85c5a5d2715cbe",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab4-04_Camera_Snapshot",
-      "file": "Lab4-04_Camera_Snapshot.cpp",
-      "upstream_commit": "7ce21ac459b7eb6d96bdb7603b67803ba6b12053",
-      "upstream_url": "https://github.com/PTITCube/Lab4-04_Camera_Snapshot/blob/7ce21ac459b7eb6d96bdb7603b67803ba6b12053/src/main.cpp",
-      "board": "esp32",
-      "notes": [],
-      "source_sha256": "f85872a437be63c49cf657515abb02c03ed5aa2f5dc16d7a4c2e7660bff7d2da",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "f85872a437be63c49cf657515abb02c03ed5aa2f5dc16d7a4c2e7660bff7d2da",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "9098e9352afb68a89c6658bb49f762de36d2873f9eb011739f9f99883be6ccc3",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-04a_Camera_UART",
       "file": "Lab4-04a_Camera_UART.cpp",
-      "upstream_commit": "e5b4b99d474998c36b6a149c4ffb0b7f0f65d266",
-      "upstream_url": "https://github.com/PTITCube/Lab4-04a_Camera_UART/blob/e5b4b99d474998c36b6a149c4ffb0b7f0f65d266/src/main.cpp",
+      "upstream_commit": "aa8c3f80a8749f4cbcf43c150639ee5422079578",
+      "upstream_url": "https://github.com/PTITCube/Lab4-04a_Camera_UART/blob/aa8c3f80a8749f4cbcf43c150639ee5422079578/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11: raw UART handshake p -> SIZE -> OK -> JPEG -> DONE, streamed to MicroSD. Added size bounds, write-count and JPEG SOI/EOI checks, non-overwriting names and a Serial preview (IMG_BEGIN/CHUNK/END)."
+        "Upstream 2026-11-24 (PTIT_Storage, capture command). Keeps SIZE bounds, ERROR handling, unique filenames, write-count and JPEG SOI/EOI checks, DONE on every path and the Serial preview (IMG_BEGIN/CHUNK/END)."
       ],
-      "source_sha256": "8e140f780fcba295036e6657ac8d96def930843e77a12175f8570483e58af4a2",
+      "source_sha256": "dc920823c42fe80688661d3fb94332516b6ed4d61f78aa47ead22bc7fe6089e7",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "8e140f780fcba295036e6657ac8d96def930843e77a12175f8570483e58af4a2",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "dc920823c42fe80688661d3fb94332516b6ed4d61f78aa47ead22bc7fe6089e7",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-04b_Camera_Library",
       "file": "Lab4-04b_Camera_Library.cpp",
-      "upstream_commit": "8c88576eb56544ca54f19a33e576f00441b3db57",
-      "upstream_url": "https://github.com/PTITCube/Lab4-04b_Camera_Library/blob/8c88576eb56544ca54f19a33e576f00441b3db57/src/main.cpp",
+      "upstream_commit": "95ecd5975c7d3e7d2854f550aff90c6833e27210",
+      "upstream_url": "https://github.com/PTITCube/Lab4-04b_Camera_Library/blob/95ecd5975c7d3e7d2854f550aff90c6833e27210/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Use p/P. OBC MUX12/14. Unique filenames preserve prior photos. After saving, the sketch streams the saved JPEG to the browser over Serial (IMG_BEGIN/IMG_CHUNK/IMG_END)."
+        "Upstream 2026-11-24 (p/capture/photo). Unique filenames preserve prior photos; the saved JPEG is streamed to the browser (IMG_BEGIN/IMG_CHUNK/IMG_END)."
       ],
-      "source_sha256": "2678a043366773e69d2c59345a5d66dfa6256f549d7bdee03afe75efa93a5865",
+      "source_sha256": "89d5c0db589209908345c4281da444ace96bf7ed229009fa29bcf61152275372",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "2678a043366773e69d2c59345a5d66dfa6256f549d7bdee03afe75efa93a5865",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "89d5c0db589209908345c4281da444ace96bf7ed229009fa29bcf61152275372",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-05_Read_All_Sensors",
       "file": "Lab4-05_Read_All_Sensors.cpp",
-      "upstream_commit": "4a18b32a35ab56da6042ed86ddda7435beb69f8a",
-      "upstream_url": "https://github.com/PTITCube/Lab4-05_Read_All_Sensors/blob/4a18b32a35ab56da6042ed86ddda7435beb69f8a/src/main.cpp",
+      "upstream_commit": "126ba36a88f6c945563f8bbd3469f7278414771c",
+      "upstream_url": "https://github.com/PTITCube/Lab4-06_Read_All_Sensors/blob/126ba36a88f6c945563f8bbd3469f7278414771c/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11 adds GPS; coordinates are printed only with a fresh fix (hasFix), never 0,0."
+        "Upstream repo is now Lab4-06_Read_All_Sensors; exercise ID kept. One TELEM line; GPS only with hasFix() (upstream printed 0,0). Adds an Accel line so the 3D attitude view has raw acceleration."
       ],
-      "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
+      "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "fe1c0758f587061072ace3d1814f1b0a96fb71819431ff332e573496cd2abef3",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab4-06_Camera_Multiplexer",
       "file": "Lab4-06_Camera_Multiplexer.cpp",
-      "upstream_commit": "e62e4bf749f17df0ef79947e0755bd8d1c603c06",
-      "upstream_url": "https://github.com/PTITCube/Lab4-06_Camera_Multiplexer/blob/e62e4bf749f17df0ef79947e0755bd8d1c603c06/src/main.cpp",
+      "upstream_commit": "7e99ead021ffe89deef94c71ec4d535c06bda922",
+      "upstream_url": "https://github.com/PTITCube/Lab4-05_Camera_Multiplexer/blob/7e99ead021ffe89deef94c71ec4d535c06bda922/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Share UART2; explicitly select GPS/camera and matching baud. Capture result checked, not inferred from readiness.",
-        "Unique filenames preserve existing captures; retry SD initialization on the next capture.",
-        "Upstream Lab4-06_Camera_Multiplexer changed after this review (commit 54fda00f2671) and targets a newer PTITCube-Library; this reviewed version is kept because the compiler pins the older library."
+        "Upstream repo is now Lab4-05_Camera_Multiplexer; exercise ID kept. Capture on p (was automatic), GPS printed with a fix; unique filenames preserve captures.",
+        "Prints a no-fix GPS line every 2 s (Lab4-03c format) and streams each saved photo back over Serial (IMG_BEGIN/IMG_CHUNK/IMG_END, as Lab4-04b) so the GPS and camera panels are not empty."
       ],
-      "source_sha256": "f66301d19937dce43d208d45f93c75fd19b39f6a9e3651e9dcc66ac1447adb06",
+      "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "f66301d19937dce43d208d45f93c75fd19b39f6a9e3651e9dcc66ac1447adb06",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab5-01_Send_Telemetry",
-      "file": "Lab5-01_Send_Telemetry.cpp",
-      "upstream_commit": "4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06",
-      "upstream_url": "https://github.com/PTITCube/Lab5-01_Send_Telemetry/blob/4a5c168f6a445783f3fe3d7de7bc87dca9fc7f06/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab5-01_Send_Telemetry without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "21b5d07c420e826a55ef800246bfd6268d9d2156f44e8813fd8b2b5e01a2a02b",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab5-01a_Send_Telemetry_UART",
       "file": "Lab5-01a_Send_Telemetry_UART.cpp",
-      "upstream_commit": "8656aa9766a8d7f229b3da1f366b3a49a65dcf74",
-      "upstream_url": "https://github.com/PTITCube/Lab5-01a_Send_Telemetry_UART/blob/8656aa9766a8d7f229b3da1f366b3a49a65dcf74/src/main.cpp",
+      "upstream_commit": "87739806acc3385ab8dc441ff477b9739a104292",
+      "upstream_url": "https://github.com/PTITCube/Lab5-01a_Send_Telemetry_UART/blob/87739806acc3385ab8dc441ff477b9739a104292/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Pins follow PTIT_COM: UART1 RX26/TX25, M0=32, M1=33, AUX27 (upstream M1=GPIO35 is input-only). Transmits only when AUX is HIGH."
+        "Upstream 2026-11-24 (library pin macros: M1=33). Keeps the AUX-busy check: TX is logged only when the module accepted the packet."
       ],
-      "source_sha256": "a3ef1eaf6c1ce0ddde2e0151d8b8f3345971893339c999b9eb5a0855c3065e17",
+      "source_sha256": "38b535449ffc2c70c63c562081c401af9f2958a6a819c387c74c499bf8098755",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "a3ef1eaf6c1ce0ddde2e0151d8b8f3345971893339c999b9eb5a0855c3065e17",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "38b535449ffc2c70c63c562081c401af9f2958a6a819c387c74c499bf8098755",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab5-01b_Send_Telemetry_Library",
       "file": "Lab5-01b_Send_Telemetry_Library.cpp",
-      "upstream_commit": "9d128b113a14ebfdbb16a7bd5364fa9df2c320dc",
-      "upstream_url": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library/blob/9d128b113a14ebfdbb16a7bd5364fa9df2c320dc/src/main.cpp",
+      "upstream_commit": "a67e1dafbdb4466391cc694870135bb55743a26a",
+      "upstream_url": "https://github.com/PTITCube/Lab5-01b_Send_Telemetry_Library/blob/a67e1dafbdb4466391cc694870135bb55743a26a/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Original exercise behavior retained; see upstream source and hardware pin requirements."
+        "Upstream 2026-11-24: PTIT_COM init configures channel 23 / transparent mode; prints TX: <payload>. Sending is a request, not an ACK."
       ],
-      "source_sha256": "b190c63579eb1bfeab7f09dfa47d370302a5605e22e16bbd3beee21350aa2ac5",
+      "source_sha256": "54271073ec4a472165de47e3e8d5730baac120819deedbade5d5a5a87aab647c",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "b190c63579eb1bfeab7f09dfa47d370302a5605e22e16bbd3beee21350aa2ac5",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
-        "result": "passed"
-      }
-    },
-    {
-      "id": "Lab5-02_Receive_Command",
-      "file": "Lab5-02_Receive_Command.cpp",
-      "upstream_commit": "a997c5660595ad14ceca863600b032f8211bc273",
-      "upstream_url": "https://github.com/PTITCube/Lab5-02_Receive_Command/blob/a997c5660595ad14ceca863600b032f8211bc273/src/main.cpp",
-      "board": "esp32",
-      "notes": [
-        "Imported from upstream Lab5-02_Receive_Command without added Serial instrumentation; visualization shows only what the sketch prints."
-      ],
-      "source_sha256": "dc8784ea834e2791f7930b9b01ee316ad0b1854c9e7b4e7a8668da92f2e52b4a",
-      "verified_build": {
-        "board": "esp32",
-        "source_sha256": "dc8784ea834e2791f7930b9b01ee316ad0b1854c9e7b4e7a8668da92f2e52b4a",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "54271073ec4a472165de47e3e8d5730baac120819deedbade5d5a5a87aab647c",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab5-02a_Receive_Command_UART",
       "file": "Lab5-02a_Receive_Command_UART.cpp",
-      "upstream_commit": "12b36c92b2a01978841254e225274c7462113ecb",
-      "upstream_url": "https://github.com/PTITCube/Lab5-02a_Receive_Command_UART/blob/12b36c92b2a01978841254e225274c7462113ecb/src/main.cpp",
+      "upstream_commit": "f911a747dccdbf5e4d8fb0b23a52abb66c2c2f2a",
+      "upstream_url": "https://github.com/PTITCube/Lab5-02a_Receive_Command_UART/blob/f911a747dccdbf5e4d8fb0b23a52abb66c2c2f2a/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Pins follow PTIT_COM: UART1 RX26/TX25, M0=32, M1=33, AUX27 (upstream M1=GPIO35 is input-only)."
+        "Upstream 2026-11-24 (library pin macros) with a 100 ms Serial1 timeout so a packet without newline cannot block for 1 s.",
+        "Prints a [BOOT] line at the end of setup() so the student sees the OBC started before any LoRa command arrives (2026-11-25)."
       ],
-      "source_sha256": "19f9a9bc5e1240115c0d32a88f37b0b027c781d817e8e04a30e30a75815a5ca6",
+      "source_sha256": "d28f93a6e38f1d014a47f32d4c13bb69beaa715bef59566f04e1cac5a0119aa1",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "19f9a9bc5e1240115c0d32a88f37b0b027c781d817e8e04a30e30a75815a5ca6",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "d28f93a6e38f1d014a47f32d4c13bb69beaa715bef59566f04e1cac5a0119aa1",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab5-02b_Receive_Command_Library",
       "file": "Lab5-02b_Receive_Command_Library.cpp",
-      "upstream_commit": "d2c4de4e361cb5ccc7a81cfa999b93dc77570fd3",
-      "upstream_url": "https://github.com/PTITCube/Lab5-02b_Receive_Command_Library/blob/d2c4de4e361cb5ccc7a81cfa999b93dc77570fd3/src/main.cpp",
+      "upstream_commit": "c2698bb27c0740f85a6626d5d7b939a7af971707",
+      "upstream_url": "https://github.com/PTITCube/Lab5-02b_Receive_Command_Library/blob/c2698bb27c0740f85a6626d5d7b939a7af971707/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Original exercise behavior retained; see upstream source and hardware pin requirements."
+        "Upstream 2026-11-24: prints RX: <command> from PTIT_COM::update().",
+        "Prints a [BOOT] line at the end of setup() so the student sees the OBC started before any LoRa command arrives (2026-11-25)."
       ],
-      "source_sha256": "8596f6b5d425395c96be0057c9cbc967c9a4d400f2bb77ffff2cf453caada7d4",
+      "source_sha256": "29cfdedefa16ceb4ca26bb46c90eb18829362343f041d9b2f4252bdf119e0697",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "8596f6b5d425395c96be0057c9cbc967c9a4d400f2bb77ffff2cf453caada7d4",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "29cfdedefa16ceb4ca26bb46c90eb18829362343f041d9b2f4252bdf119e0697",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab5-03_Satellite_Comm_System",
       "file": "Lab5-03_Satellite_Comm_System.cpp",
-      "upstream_commit": "a156004a4ce2a541fc5f31e1fd2413bb7b6b047a",
-      "upstream_url": "https://github.com/PTITCube/Lab5-03_Satellite_Comm_System/blob/a156004a4ce2a541fc5f31e1fd2413bb7b6b047a/src/main.cpp",
+      "upstream_commit": "2f546e280043584be961075b253771561b173b95",
+      "upstream_url": "https://github.com/PTITCube/Lab5-03_Ground_Station_Demo/blob/2f546e280043584be961075b253771561b173b95/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Commands arrive via LoRa, not OBC USB. GPS without a fresh fix returns no-fix/null rather than 0,0."
+        "Upstream repo is now Lab5-03_Ground_Station_Demo; exercise ID kept. Commands arrive via LoRa. gps and telemetry reply no-fix/null instead of 0,0.",
+        "Prints a [BOOT] line at the end of setup() so the student sees the OBC started before any LoRa command arrives (2026-11-25)."
       ],
-      "source_sha256": "c7f5f9de3050b0cc8924774a7f6545fb5dcef0769498b27d58ca074f242c7ece",
+      "source_sha256": "af7f2cc6a0ea2b2d16cbacafb431f05238a1b2c7aaf197836335968d98b2e226",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "c7f5f9de3050b0cc8924774a7f6545fb5dcef0769498b27d58ca074f242c7ece",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "af7f2cc6a0ea2b2d16cbacafb431f05238a1b2c7aaf197836335968d98b2e226",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab7-01_Full_Satellite_Program",
       "file": "Lab7-01_Full_Satellite_Program.cpp",
-      "upstream_commit": "0d79fcdae3403d859726e298e57b3cb0c3fcb1ca",
-      "upstream_url": "https://github.com/PTITCube/Lab7-01_Full_Satellite_Program/blob/0d79fcdae3403d859726e298e57b3cb0c3fcb1ca/src/main.cpp",
+      "upstream_commit": "d9a2c279469bfe0b0523ae70c240f720ef88ad43",
+      "upstream_url": "https://github.com/PTITCube/Lab7-01_Full_Satellite_Program/blob/d9a2c279469bfe0b0523ae70c240f720ef88ad43/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Upstream 2026-11 sequential super-loop with [TELEM] JSON (eps v/pct/rate, env, imu roll/pitch/yaw). Adds raw SI acceleration/rate fields and a checked SD append; LoRa send is a request, not an ACK."
+        "Upstream 2026-11-24: super-loop with [TELEM] JSON, power-saving thresholds and single-letter LoRa commands a-f/p/r. SD success reported from appendFile; photo names never overwrite.",
+        "Sends gps {valid:false} without a fix and logs [LORA TX] n per downlink (a send request, not a ground-station ACK) for System Check."
       ],
-      "source_sha256": "4f714bceb35f17c66283533586d1b265b6105f954f4a2303f8c1697599327db1",
+      "source_sha256": "49021b2a622a933fe605c60ab2daac585c34cfc32fc8dda2297dffe168c84c85",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "4f714bceb35f17c66283533586d1b265b6105f954f4a2303f8c1697599327db1",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "49021b2a622a933fe605c60ab2daac585c34cfc32fc8dda2297dffe168c84c85",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab7-02_RTOS_Satellite_System",
       "file": "Lab7-02_RTOS_Satellite_System.cpp",
-      "upstream_commit": "a48ff30199ecdaa701bf32ee382e9ee5d0feea11",
-      "upstream_url": "https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System/blob/a48ff30199ecdaa701bf32ee382e9ee5d0feea11/src/main.cpp",
+      "upstream_commit": "0fea4c98ab44debab754fe25c166daf1463ddfbd",
+      "upstream_url": "https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System/blob/0fea4c98ab44debab754fe25c166daf1463ddfbd/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "USB and LoRa file commands use checked directories under the SPI lock. Unique capture filenames. MQTT uses runtime device credentials/client ID and sensors/<uid>/telemetry with normalized units; configure CA or explicit prototype bypass. No radio/broker ACK is inferred."
+        "Upstream 2026-11-24 FreeRTOS rewrite (commands a-f/p/r over LoRa, no MQTT). Adds std::atomic shared flags, LoRa lock for power alerts, UART2 lock for GPS snapshots, JSON null for NaN and unique photo names.",
+        "Logs [LORA TX] n per telemetry downlink (a send request, not a ground-station ACK) for System Check."
       ],
-      "source_sha256": "791b9191417b8a780309603cfafd44f6afcc725d82259baaf33f4c847cd0ffe4",
+      "source_sha256": "e7d1d43eab08a59a59e6e97893fd0e4068d98547a185bd9acdf7313dd2ab6ee5",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "791b9191417b8a780309603cfafd44f6afcc725d82259baaf33f4c847cd0ffe4",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "e7d1d43eab08a59a59e6e97893fd0e4068d98547a185bd9acdf7313dd2ab6ee5",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     },
     {
       "id": "Lab8-01_Custom_Mission",
       "file": "Lab8-01_Custom_Mission.cpp",
-      "upstream_commit": "411e9dae135fb06a5026283a90a9025ae2d0071a",
-      "upstream_url": "https://github.com/PTITCube/Lab8-01_Custom_Mission/blob/411e9dae135fb06a5026283a90a9025ae2d0071a/src/main.cpp",
+      "upstream_commit": "f7c125d4071a0ed925b5d8665954e5303b9c46af",
+      "upstream_url": "https://github.com/PTITCube/Lab8-01_Custom_Mission/blob/f7c125d4071a0ed925b5d8665954e5303b9c46af/src/main.cpp",
       "board": "esp32",
       "notes": [
-        "Intentional empty mission skeleton. Add actual tasks/telemetry; no measurements are invented."
+        "Upstream 2026-11-24 capstone skeleton (EPS, Sensor, GPS, Storage, COM initialized). Add the mission; no measurements are invented.",
+        "Prints a [BOOT] line once the subsystems are initialized; the skeleton otherwise prints nothing (2026-11-25)."
       ],
-      "source_sha256": "13e46319df5c9bef89f0fb072be2361294cd1f17126ae9e02ccc1fd18170a214",
+      "source_sha256": "a71d5d44a5dc9eec7bf11f78a6aabc81d252e51c28994b7f4b773228715d5c0e",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "13e46319df5c9bef89f0fb072be2361294cd1f17126ae9e02ccc1fd18170a214",
-        "compiler_image": "sha256:cbda6d96b1aad025f677e98e37e7c96827d0426d8110742888402f8a68c62008",
+        "source_sha256": "a71d5d44a5dc9eec7bf11f78a6aabc81d252e51c28994b7f4b773228715d5c0e",
+        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
         "result": "passed"
       }
     }

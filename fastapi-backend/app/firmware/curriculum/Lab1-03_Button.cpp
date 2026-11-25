@@ -1,13 +1,7 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab1-03_Button/blob/068216b917ca67b8de8e75a1f2e0b14e58098006/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab1-04_Button/blob/10294ed026d7224809ffbe9c479eb2d95697753a/src/main.cpp
 /**
  * VÍ DỤ 1-04: ĐỌC TÍN HIỆU TỪ NÚT NHẤN (BUTTON INPUT)
- * 
- * Mô tả:
- * - Sử dụng chế độ INPUT_PULLUP (điện trở kéo lên nội bộ của ESP32).
- * - Nút nhấn được nối giữa chân GPIO 4 và chân GND.
- * - Khi nhấn nút: chân GPIO đọc mức LOW (0).
- * - Khi thả nút: chân GPIO đọc mức HIGH (1).
  */
 #include <Arduino.h>
 
@@ -16,23 +10,15 @@ int lastState = HIGH;
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) { delay(10); }
-
-    Serial.println("\n[EXAMPLE] Bắt đầu bài test Nút nhấn (Button)...");
     pinMode(BUTTON_PIN, INPUT_PULLUP);
-    }
+}
 
 void loop() {
     int currentState = digitalRead(BUTTON_PIN);
 
-    // Phát hiện sự thay đổi trạng thái của nút nhấn
     if (currentState != lastState) {
-        if (currentState == LOW) {
-            Serial.println("[BUTTON] >>> Nút nhấn ĐÃ ĐƯỢC NHẤN (PRESSED)!");
-        } else {
-            Serial.println("[BUTTON] --- Nút nhấn ĐÃ ĐƯỢC THẢ (RELEASED).");
-        }
+        Serial.println(currentState == LOW ? "BUTTON: Pressed" : "BUTTON: Released");
         lastState = currentState;
-        delay(50); // Chống dội phím (Debounce)
+        delay(50); // Debounce
     }
 }

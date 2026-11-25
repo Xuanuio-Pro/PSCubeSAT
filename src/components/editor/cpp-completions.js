@@ -18,8 +18,14 @@ const ARDUINO_FUNCTIONS = fns([
   ['attachInterrupt', 'void attachInterrupt(uint8_t pin, void (*isr)(), int mode)'], ['detachInterrupt', 'void detachInterrupt(uint8_t pin)'],
   ['digitalPinToInterrupt', 'int digitalPinToInterrupt(uint8_t pin)'], ['tone', 'void tone(uint8_t pin, unsigned int frequency, unsigned long duration = 0)'],
   ['noTone', 'void noTone(uint8_t pin)'], ['shiftOut', 'void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)'],
-  ['ledcAttach', 'bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t resolution)'], ['ledcWrite', 'bool ledcWrite(uint8_t pin, uint32_t duty)'],
+  // Arduino-ESP32 2.x LEDC API (platform espressif32@6.10.0), as used by Lab1-03_PWM_LED.
+  ['ledcSetup', 'uint32_t ledcSetup(uint8_t channel, uint32_t freq, uint8_t resolution_bits)'], ['ledcAttachPin', 'void ledcAttachPin(uint8_t pin, uint8_t channel)'],
+  ['ledcWrite', 'void ledcWrite(uint8_t channel, uint32_t duty)'],
   ['isnan', 'bool isnan(x)'], ['isfinite', 'bool isfinite(x)'],
+  // PTITCube global helpers (CDH/WDT.h, CDH/CDH.h).
+  ['wdtInit', 'bool wdtInit(uint32_t timeoutSec = 3, bool panic = true)'], ['wdtAdd', 'void wdtAdd()'], ['wdtFeed', 'void wdtFeed()'],
+  ['wasWatchdogReset', 'bool wasWatchdogReset()'], ['taskDelayMs', 'void taskDelayMs(uint32_t ms)'],
+  ['createTask', 'bool createTask(TaskFunction_t taskFn, const char* name, uint32_t stackSize = 2048, UBaseType_t priority = 1, BaseType_t core = 1, void* param = NULL)'],
 ]);
 
 // Global objects provided by the Arduino core / libraries (they are variables).
@@ -33,34 +39,50 @@ const STREAM = fns([
   ['setTimeout', 'void setTimeout(unsigned long ms)'], ['parseInt', 'long parseInt()'], ['parseFloat', 'float parseFloat()'],
 ]);
 
-// Public API of PTITCube-Library v1.1.0 (src/*/*.h), same names the compiler image installs.
+const SCHEDULER = fns([['addTask', 'void addTask(const char* name, TaskFunction fn, uint32_t intervalMs, uint8_t core = 1, uint8_t priority = 2, uint16_t stackSize = 4096)'],
+  ['enableWatchdog', 'void enableWatchdog(uint32_t timeoutSeconds = 30)'], ['start', 'void start()'],
+  ['lock', 'static bool lock(uint8_t bus, uint32_t timeoutMs = 100)'], ['unlock', 'static void unlock(uint8_t bus)']]);
+
+// Public API of PTITCube-Library 74065b6 (src/*/*.h), same names the compiler image installs.
 export const MEMBERS = {
   HardwareSerial: [...STREAM, ...fns([['updateBaudRate', 'void updateBaudRate(unsigned long baud)']])],
-  PTIT_CDH: [...STREAM, ...fns([['init', 'void init()'], ['update', 'void update()'], ['publishData', 'void publishData(const char* topic, const char* payload)']])],
+  PTIT_CDH: [...STREAM, ...SCHEDULER, ...fns([['init', 'void init()'], ['update', 'void update()'], ['publishData', 'void publishData(const char* topic, const char* payload)'],
+    ['extractCommand', 'String extractCommand(const String& cmd)'], ['wdtInit', 'bool wdtInit(uint32_t timeoutSec = 3, bool panic = true)'], ['wdtAdd', 'void wdtAdd()'],
+    ['wdtFeed', 'void wdtFeed()'], ['wdtReset', 'void wdtReset()'], ['wasWatchdogReset', 'bool wasWatchdogReset()'], ['logData', 'void logData(const char* data)'],
+    ['handleStorageCommand', 'String handleStorageCommand(const String& cmd)'], ['delayMs', 'void delayMs(uint32_t ms)'],
+    ['createTask', 'bool createTask(TaskFunction_t taskFn, const char* name, uint32_t stackSize = 2048, UBaseType_t priority = 1, BaseType_t core = 1, void* param = NULL)']])],
   PTIT_EPS: fns([['init', 'bool init()'], ['update', 'void update()'], ['getBatteryVoltage', 'float getBatteryVoltage()'], ['getBatteryPercent', 'float getBatteryPercent()'],
-    ['getBatteryPercentage', 'float getBatteryPercentage()'], ['getChargeRate', 'float getChargeRate()'], ['isConnected', 'bool isConnected()']]),
+    ['getBatteryPercentage', 'float getBatteryPercentage()'], ['getChargeRate', 'float getChargeRate()'], ['isConnected', 'bool isConnected()'],
+    ['setBuckState', 'static void setBuckState(bool enable)'], ['getBuckState', 'static bool getBuckState()'], ['enableBuck', 'static void enableBuck()'], ['disableBuck', 'static void disableBuck()']]),
   PTIT_COM: fns([['init', 'void init()'], ['update', 'String update()'], ['sendPing', 'void sendPing()'], ['sendMessage', 'void sendMessage(String msg)'],
     ['setChannel', 'bool setChannel(uint8_t channel)'], ['setAddress', 'bool setAddress(uint8_t addh, uint8_t addl)'], ['setTransmissionMode', 'bool setTransmissionMode(uint8_t mode)']]),
   PTIT_Sensor: fns([['init', 'void init(bool initBMP = true, bool initMPU = true, bool initQMC = true)'], ['update', 'void update()'],
     ['getTemperature', 'float getTemperature()'], ['getPressure', 'float getPressure()'],
     ['getAccX', 'float getAccX()'], ['getAccY', 'float getAccY()'], ['getAccZ', 'float getAccZ()'],
     ['getGyroX', 'float getGyroX()'], ['getGyroY', 'float getGyroY()'], ['getGyroZ', 'float getGyroZ()'],
-    ['getMagX', 'float getMagX()'], ['getMagY', 'float getMagY()'], ['getMagZ', 'float getMagZ()']]),
+    ['getMagX', 'float getMagX() // µT'], ['getMagY', 'float getMagY() // µT'], ['getMagZ', 'float getMagZ() // µT'],
+    ['getAltitude', 'float getAltitude()'], ['getRoll', 'float getRoll()'], ['getPitch', 'float getPitch()'], ['getHeading', 'float getHeading()']]),
   PTIT_GPS: fns([['init', 'void init(uint8_t gpsSelectPin = 12, uint8_t camSelectPin = 14)'], ['update', 'void update()'], ['hasFix', 'bool hasFix()'],
     ['selectGPS', 'void selectGPS()'], ['selectCamera', 'void selectCamera()'], ['getLatitude', 'float getLatitude()'], ['getLongitude', 'float getLongitude()'],
     ['getLat', 'float getLat()'], ['getLng', 'float getLng()'], ['getAltitude', 'float getAltitude()'], ['getSatellites', 'int getSatellites()'],
-    ['getSpeed', 'float getSpeed()'], ['getCourse', 'float getCourse()'], ['getHDOP', 'float getHDOP()'], ['getTimeString', 'String getTimeString()']]),
-  PTIT_Camera: fns([['init', 'bool init(uint8_t gpsSelectPin = 255, uint8_t camSelectPin = 255)'], ['selectCamera', 'void selectCamera()'], ['selectGPS', 'void selectGPS()'],
+    ['getSpeed', 'float getSpeed()'], ['getCourse', 'float getCourse()'], ['getHDOP', 'float getHDOP()'], ['getTimeString', 'String getTimeString()'],
+    ['readSentence', 'String readSentence()'], ['verifyChecksum', 'static bool verifyChecksum(const char* sentence)'],
+    ['getNMEAType', 'static const char* getNMEAType(const char* sentence)']]),
+  PTIT_Camera: fns([['init', 'bool init(uint8_t gpsSelectPin = 12, uint8_t camSelectPin = 14)'], ['selectCamera', 'void selectCamera()'], ['selectGPS', 'void selectGPS()'],
     ['captureToFile', 'bool captureToFile(const char* path)'], ['capture', 'bool capture()'], ['isReady', 'bool isReady()']]),
+  PTIT_MUX: fns([['init', 'static void init(uint8_t gpsSelectPin = 12, uint8_t camSelectPin = 14)'], ['selectGPS', 'static void selectGPS()'],
+    ['selectCamera', 'static void selectCamera()'], ['isGPSSelected', 'static bool isGPSSelected()'], ['isCameraSelected', 'static bool isCameraSelected()']]),
+  PTIT_WDT: fns([['init', 'static bool init(uint32_t timeoutSec = 3, bool panic = true)'], ['add', 'static void add()'], ['feed', 'static void feed()'],
+    ['reset', 'static void reset()'], ['wasReset', 'static bool wasReset()']]),
+  PTIT_Queue: fns([['init', 'bool init(size_t length = 10)'], ['send', 'bool send(const T& item, uint32_t waitMs = 0)'], ['sendFromISR', 'bool sendFromISR(const T& item)'],
+    ['receive', 'bool receive(T* item, uint32_t waitMs = portMAX_DELAY)'], ['isEmpty', 'bool isEmpty()'], ['available', 'UBaseType_t available()']]),
   PTIT_Storage: fns([['init', 'void init()'], ['isReady', 'bool isReady()'], ['logData', 'void logData(const char* data)'],
     ['writeFile', 'bool writeFile(const char* path, const char* content)'], ['appendFile', 'bool appendFile(const char* path, const char* content)'],
     ['readFile', 'String readFile(const char* path)'], ['exists', 'bool exists(const char* path)'], ['removeFile', 'bool removeFile(const char* path)'],
     ['renameFile', 'bool renameFile(const char* from, const char* to)'], ['fileSize', 'long fileSize(const char* path)'],
     ['createDir', 'bool createDir(const char* path)'], ['removeDir', 'bool removeDir(const char* path)'], ['listDir', 'void listDir(const char* dirname, uint8_t levels = 0)'],
     ['totalBytes', 'uint64_t totalBytes()'], ['usedBytes', 'uint64_t usedBytes()'], ['handleCommand', 'String handleCommand(const String& cmd)']]),
-  PTIT_Scheduler: fns([['addTask', 'void addTask(const char* name, TaskFunction fn, uint32_t intervalMs, uint8_t core = 1, uint8_t priority = 2, uint16_t stackSize = 4096)'],
-    ['enableWatchdog', 'void enableWatchdog(uint32_t timeoutSeconds = 30)'], ['start', 'void start()'], ['print', 'static void print(const String& msg)'],
-    ['println', 'static void println(const String& msg)'], ['lock', 'static bool lock(uint8_t bus, uint32_t timeoutMs = 100)'], ['unlock', 'static void unlock(uint8_t bus)']]),
+  PTIT_Scheduler: [...SCHEDULER, ...fns([['print', 'static void print(const String& msg)'], ['println', 'static void println(const String& msg)']])],
   String: fns([['length', 'unsigned int length()'], ['substring', 'String substring(unsigned int from, unsigned int to)'], ['indexOf', 'int indexOf(char/String value)'],
     ['lastIndexOf', 'int lastIndexOf(char/String value)'], ['startsWith', 'bool startsWith(const String& prefix)'], ['endsWith', 'bool endsWith(const String& suffix)'],
     ['trim', 'void trim()'], ['toInt', 'long toInt()'], ['toFloat', 'float toFloat()'], ['toLowerCase', 'void toLowerCase()'], ['toUpperCase', 'void toUpperCase()'],
@@ -117,7 +139,8 @@ export function completionsAt(code, linePrefix) {
   if (member) {
     const object = member[1];
     const declared = symbols.find(symbol => symbol.name === object && symbol.kind === 'variable');
-    const typeName = (declared?.type ?? GLOBAL_OBJECTS[object] ?? '').replace(/^(?:const|static)+/, '');
+    // Template arguments do not change the member list: PTIT_Queue<SystemEvent> -> PTIT_Queue.
+    const typeName = (declared?.type ?? GLOBAL_OBJECTS[object] ?? '').replace(/^(?:const|static)+/, '').replace(/<.*>$/, '');
     return (MEMBERS[typeName] ?? []).map(item => ({ ...item, kind: 'method' }));
   }
   // A number literal like "3." or text after "::" gets nothing rather than unrelated names.

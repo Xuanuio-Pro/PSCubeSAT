@@ -4,6 +4,7 @@ import { useAuth } from './contexts/auth-api';
 import { loginDestination } from './contexts/auth-session';
 import { SerialProvider } from './contexts/SerialContext';
 import { TelemetryProvider } from './contexts/TelemetryContext';
+import { CloudProvider } from './contexts/CloudContext';
 import TelemetryControls from './components/groundstation/TelemetryControls';
 import Header from './components/layout/Header';
 import LoadingScreen from './components/common/LoadingScreen';
@@ -56,7 +57,7 @@ function ProtectedServices() {
   const location = useLocation();
   if (loading) return <LoadingScreen />;
   if (!user && location.pathname !== '/lab0') return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />;
-  return <SerialProvider key={user?.id || 'guest'}><TelemetryProvider><ServiceLayout /></TelemetryProvider></SerialProvider>;
+  return <SerialProvider key={user?.id || 'guest'}><TelemetryProvider><CloudProvider><ServiceLayout /></CloudProvider></TelemetryProvider></SerialProvider>;
 }
 
 // Standalone window for Lab 5: owns its own Serial port (ground-station USB-TTL), separate from the lab's OBC port.
@@ -65,7 +66,8 @@ function GroundStationShell() {
   const location = useLocation();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <SerialProvider key={user.id}><main id="main-content" className="main-content"><Outlet /></main></SerialProvider>;
+  // Its own telemetry store, decoded from what the ground station's LoRa module receives (Lab 7 widgets).
+  return <SerialProvider key={user.id}><TelemetryProvider groundStation><main id="main-content" className="main-content"><Outlet /></main></TelemetryProvider></SerialProvider>;
 }
 
 function PublicLayout() {
@@ -74,8 +76,8 @@ function PublicLayout() {
   const isPreview = normalizedPath === '/preview';
   return <SerialProvider>
     <div className="app-container">
-      {!isPreview && <Header />}
-      <main id="main-content" className="main-content">
+      <Header />
+      <main id="main-content" className={`main-content${isPreview ? ' is-lab-route' : ''}`}>
         <Outlet />
       </main>
     </div>

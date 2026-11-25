@@ -1,9 +1,14 @@
 import ReactECharts from './Chart';
 import { useTelemetry } from '../../contexts/telemetry-api';
 
-export default function VoltageChart({ maxPoints = 60 }) {
-  const { latest, history, status } = useTelemetry();
+/** @param {{ maxPoints?: number, height?: number|string }} props `'100%'` fills a flex parent (dashboard widget). */
+export default function VoltageChart({ maxPoints = 60, height = 300 }) {
+  const { latest, history, status, activity, now } = useTelemetry();
   const fresh = status === 'live' && latest?.voltageV != null;
+  // SOC, charge rate and the Lab2-02 mode come from the same MAX17048 log line (activity event, not a telemetry field).
+  const gauge = activity.subsystems.eps;
+  const gaugeFresh = fresh && gauge?.phase === 'sample' && now - gauge.at <= 5000;
+  const MODES = { normal: 'Normal Mode · Buck bật', saving: 'Power Saving · Buck tắt' };
   const data = history.filter(frame => frame.voltageV !== null).slice(-maxPoints)
     .map(frame => ({ time: new Date(frame.received_at * 1000).toLocaleTimeString(), value: frame.voltageV }));
 
@@ -79,7 +84,12 @@ export default function VoltageChart({ maxPoints = 60 }) {
     <div className="card" style={{ opacity: fresh ? 1 : 0.65 }}>
       <div className="card-header"><h3>Điện áp pin</h3><strong>{fresh ? `${latest.voltageV.toFixed(2)} V` : '— · chờ mẫu điện áp mới'}</strong></div>
       {!fresh && data.length > 0 && <p className="practice-source" style={{ padding: '0 16px' }}>Chờ mẫu điện áp mới</p>}
-      <ReactECharts option={option} style={{ height: '300px' }} notMerge={true} />
+      {gaugeFresh && (gauge.soc != null || gauge.rate != null || gauge.mode) && <div className="radio-tiles" style={{ padding: '0 16px' }}>
+        {gauge.soc != null && <article className="practice-task"><strong>Dung lượng (SOC)</strong><b>{gauge.soc.toFixed(1)} %</b></article>}
+        {gauge.rate != null && <article className="practice-task"><strong>Tốc độ sạc/xả</strong><b>{gauge.rate > 0 ? '+' : ''}{gauge.rate.toFixed(2)} %/h</b><span>{gauge.rate < 0 ? 'Đang xả' : gauge.rate > 0 ? 'Đang sạc' : 'Ổn định'}</span></article>}
+        {gauge.mode && <article className="practice-task"><strong>Chế độ nguồn</strong><b className="practice-led-state">{MODES[gauge.mode]}</b></article>}
+      </div>}
+      <ReactECharts option={option} style={height === '100%' ? { flex: 1, minHeight: 140 } : { height }} notMerge={true} />
     </div>
   );
 }

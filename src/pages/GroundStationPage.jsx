@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSerial } from '../contexts/serial-api';
 import SerialMonitor from '../components/serial/SerialMonitor';
+import { PracticePanels } from '../components/visualization/PracticeVisualization';
+import { useTelemetry } from '../contexts/telemetry-api';
+import { practiceProfile } from '../telemetry/practice';
+import { visualizationPlan } from '../telemetry/visualization-plan';
 
 // Command set understood by the Lab5-03 satellite firmware. Lab5-02 only prints whatever text it receives.
 const SATELLITE_COMMANDS = [
@@ -31,6 +35,11 @@ export default function GroundStationPage() {
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState([]);
   const [stats, setStats] = useState(emptyStats);
+  const { exerciseId } = useTelemetry();
+  const profile = practiceProfile(exerciseId);
+  const plan = visualizationPlan(profile);
+  // Lab 7: the same widgets as the lab window, fed only by what this ground station received over LoRa.
+  const mirrored = profile.lab === 7 ? plan.panels.filter(name => name !== 'groundStation') : [];
 
   useEffect(() => { document.title = 'Trạm mặt đất · PTIT CubeSat'; }, []);
   useEffect(() => { setStats(emptyStats); setHistory([]); }, [sessionId]);
@@ -113,6 +122,12 @@ export default function GroundStationPage() {
         </ol>}
       </div>
     </section>
+
+    {mirrored.length > 0 && <section className="lab-visual-stack" data-lab={profile.lab} aria-label="Trực quan dữ liệu thu qua LoRa">
+      <p className="practice-note">Các bảng dưới đây chỉ dùng dữ liệu mà trạm mặt đất <strong>thu được qua LoRa</strong> (không lấy từ cổng USB của vệ tinh).
+        Gói downlink rút gọn nên có thể thiếu một số trường so với cửa sổ bài thực hành.</p>
+      <PracticePanels profile={profile} plan={plan} panels={mirrored} />
+    </section>}
 
     <section aria-label="Dữ liệu thu từ vệ tinh">
       <p className="practice-note">Dòng hiển thị là dữ liệu thật mà module LoRa của trạm mặt đất nhận được. Không có dòng nào nghĩa là chưa thu được gì.</p>

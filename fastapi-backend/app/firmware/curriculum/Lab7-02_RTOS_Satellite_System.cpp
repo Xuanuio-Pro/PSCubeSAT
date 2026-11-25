@@ -1,418 +1,365 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System/blob/a48ff30199ecdaa701bf32ee382e9ee5d0feea11/src/main.cpp
-// Unlock only after successful lock. Full runtime integration still requires validation.
+// Upstream: https://github.com/PTITCube/Lab7-02_RTOS_Satellite_System/blob/0fea4c98ab44debab754fe25c166daf1463ddfbd/src/main.cpp
 /**
- * CUBESAT FIRMWARE - MAIN FILE
- * Đây là file chạy tổng thể kết hợp toàn bộ các phân hệ của vệ tinh:
- * - EPS (Quản lý pin)
- * - Cảm biến (Gia tốc, La bàn, Nhiệt độ, Áp suất)
- * - GPS (Định vị)
- * - Thẻ nhớ MicroSD (Lưu trữ log nội bộ)
- * - Viễn thông LoRa E32 (Gửi/Nhận tin nhắn vô tuyến)
- * - CDH (Xử lý trung tâm, WiFi & MQTT Telemetry)
- *
- * FreeRTOS được quản lý tự động bởi PTIT_Scheduler.
- * Người dùng chỉ cần viết logic nghiệp vụ trong các hàm thông thường.
+ * LAB 7-02: HỆ THỐNG PHẦN MỀM BAY ĐA NHIỆM FREERTOS (PTITCUBE CUBESAT ARCHITECTURE)
+ * Tích hợp: C&DH, EPS, Sensor, GPS, Camera, Storage, COM (FreeRTOS Multitasking).
  */
-
 #include <Arduino.h>
-#include "PTITCube.h"
 #include <ArduinoJson.h>
+#include <PTITCube.h>
 #include <SD.h>
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <PubSubClient.h>
 #include <atomic>
+#include <math.h>
 
-// Declared before the MQTT helpers below, which log through cdh.
 PTIT_CDH cdh;
-
-// Replace this block with the device configuration returned by registration/rotation.
-// These are runtime constants: library .cpp files do not inherit sketch #defines.
-const char* MQTT_HOST = "";
-const int MQTT_PORT = 8883;
-const bool MQTT_TLS = true;
-const char* MQTT_USERNAME = "";
-const char* MQTT_PASSWORD = "";
-const char* MQTT_CLIENT_ID = "";
-const char* DEVICE_UID = "";
-const char* TOPIC_PUB = ""; // Empty derives sensors/<DEVICE_UID>/telemetry.
-const char* TOPIC_CMD = ""; // Reserved; commands in this lesson use USB/LoRa.
-// Set a trusted PEM root CA for deployment. Prototype verification bypass is explicit.
-const char* MQTT_CA_PEM = nullptr;
-const bool MQTT_ALLOW_INSECURE = false;
-
-WiFiClient mqttPlainTransport;
-WiFiClientSecure mqttTlsTransport;
-PubSubClient classroomMqtt;
-bool mqttConfigured = false;
-
-void configureTelemetryMqtt() {
-    if (!strlen(MQTT_HOST) || !strlen(DEVICE_UID) || !strlen(MQTT_USERNAME) || !strlen(MQTT_PASSWORD) || !strlen(MQTT_CLIENT_ID)) {
-        cdh.println("[MQTT] Not configured: supply device credential/config block; continuing USB/SD/LoRa.");
-        return;
-    }
-    if (MQTT_TLS) {
-        if (MQTT_CA_PEM && strlen(MQTT_CA_PEM)) mqttTlsTransport.setCACert(MQTT_CA_PEM);
-        else if (MQTT_ALLOW_INSECURE) mqttTlsTransport.setInsecure();
-        else { cdh.println("[MQTT] TLS CA is not configured; MQTT remains offline."); return; }
-        mqttTlsTransport.setHandshakeTimeout(5);
-        classroomMqtt.setClient(mqttTlsTransport);
-    } else classroomMqtt.setClient(mqttPlainTransport);
-    classroomMqtt.setServer(MQTT_HOST, MQTT_PORT);
-    classroomMqtt.setSocketTimeout(3);
-    mqttConfigured = classroomMqtt.setBufferSize(2048);
-}
-#ifndef PTIT_ENABLE_GPS
-#define PTIT_ENABLE_GPS 1
-#endif
-#ifndef PTIT_ENABLE_LORA
-#define PTIT_ENABLE_LORA 1
-#endif
-
-struct BusGuard {
-    uint8_t bus; bool held;
-    BusGuard(uint8_t b, uint32_t timeout = 100) : bus(b), held(PTIT_Scheduler::lock(b, timeout)) {}
-    ~BusGuard() { if (held) PTIT_Scheduler::unlock(bus); }
-    explicit operator bool() const { return held; }
-    BusGuard(const BusGuard&) = delete;
-    BusGuard& operator=(const BusGuard&) = delete;
-};
-
-// ============================================================================
-// 1. KHAI BÁO CÁC ĐỐI TƯỢNG PHÂN HỆ VỆ TINH
-// ============================================================================
+PTIT_EPS eps;
 PTIT_Sensor sensor;
 PTIT_GPS gps;
-PTIT_COM lora;
-PTIT_EPS eps;
-PTIT_Storage storage;
 PTIT_Camera camera;
-
+PTIT_Storage storage;
+PTIT_COM com;
 PTIT_Scheduler scheduler;
 
-// Trạng thái hệ thống
+// Ngưỡng bảo vệ nguồn & Chế độ tiết kiệm năng lượng
+const float VOLTAGE_THRES = 3.5;  // V
+const float PERCENT_THRES = 20.0; // %
+// Các cờ được đọc/ghi từ task chạy trên cả hai core: dùng std::atomic để tránh data race.
+std::atomic<bool> isPowerSaving{false};
 std::atomic<bool> isTelemetryPaused{false};
+std::atomic<unsigned long> lastCmdTime{0};
 
-// ============================================================================
-// 2. ĐỊNH NGHĨA CÁC HÀM TASK (logic nghiệp vụ thuần túy)
-//    Mỗi hàm sẽ được Scheduler gọi lặp lại theo chu kỳ đã đăng ký.
-// ============================================================================
-
-// CDH: Duy trì kết nối WiFi & MQTT
-void cdhLoop() {
-    BusGuard guard(PTIT_BUS_MQTT);
-    if (!guard || !mqttConfigured || WiFi.status() != WL_CONNECTED) return;
-    static uint32_t lastAttempt = 0;
-    if (!classroomMqtt.connected() && millis() - lastAttempt >= 10000) {
-        lastAttempt = millis();
-        const bool connected = classroomMqtt.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
-        PTIT_Scheduler::println(connected ? "[MQTT] Connected" : "[MQTT] Connect failed: " + String(classroomMqtt.state()));
-    }
-    classroomMqtt.loop();
+// Số đo không hợp lệ (cảm biến vắng/đọc lỗi trả NaN) phải thành JSON null, không phải "nan".
+String num(float value, unsigned int digits) {
+    return isfinite(value) ? String(value, digits) : String("null");
 }
 
-// Sensor: Đọc cảm biến qua I2C (BMP280, MPU6500, QMC5883L)
-void sensorLoop() {
-    if (isTelemetryPaused) return;
-    if (PTIT_Scheduler::lock(PTIT_BUS_I2C)) {
+// Gửi một bản tin LoRa có khóa bus, tránh chen giữa gói của task COM.
+void sendLoRa(const String& msg, uint32_t timeoutMs = 200) {
+    if (scheduler.lock(PTIT_BUS_LORA, timeoutMs)) {
+        com.sendMessage(msg);
+        scheduler.unlock(PTIT_BUS_LORA);
+    }
+}
+
+// Task 1: Cảm biến I2C (Core 1 - Vô hiệu hóa khi ở Power Saving)
+void sensorTask() {
+    if (isTelemetryPaused || isPowerSaving) return;
+    if (scheduler.lock(PTIT_BUS_I2C)) {
         sensor.update();
-        PTIT_Scheduler::unlock(PTIT_BUS_I2C);
+        scheduler.unlock(PTIT_BUS_I2C);
     }
 }
 
-// GPS: Feed dữ liệu NMEA từ UART2
-void gpsLoop() {
-    if (!PTIT_ENABLE_GPS) return;
+// Task 2: Định vị GPS UART2 (Core 1 - Luôn duy trì qua MUX)
+void gpsTask() {
     if (isTelemetryPaused) return;
-    if (PTIT_Scheduler::lock(PTIT_BUS_UART2, 100)) {
+    if (scheduler.lock(PTIT_BUS_UART2, 50)) {
         camera.selectGPS();
         gps.update();
-        PTIT_Scheduler::unlock(PTIT_BUS_UART2);
+        scheduler.unlock(PTIT_BUS_UART2);
     }
 }
 
-// COM: Nhận và xử lý lệnh từ trạm mặt đất qua LoRa
-// Xử lý các lệnh hệ thống (trả về chuỗi rỗng nếu không phải lệnh hệ thống)
-// Check directory type before the legacy library's cd/ls command reports OK.
-String checkedStorageCommand(PTIT_Storage& disk, const String& input) {
-    if (!disk.isReady()) return "ERR: SD not ready";
-    String command = input; command.trim();
-    const int separator = command.indexOf(' ');
-    String verb = separator < 0 ? command : command.substring(0, separator);
-    verb.toLowerCase();
-    String argument = separator < 0 ? "" : command.substring(separator + 1);
-    argument.trim();
-    if ((verb == "cd" || verb == "ls") && !(verb == "cd" && argument == "..")) {
-        String path = argument.length() ? argument : (verb == "cd" ? "/" : disk.handleCommand("pwd"));
-        if (path == ".") path = disk.handleCommand("pwd");
-        if (!path.startsWith("/")) {
-            const String cwd = disk.handleCommand("pwd");
-            path = cwd + (cwd.endsWith("/") ? "" : "/") + path;
-        }
-        File directory = SD.open(path.c_str());
-        if (!directory || !directory.isDirectory()) return "ERR: Not a directory: " + path;
+// Chụp ảnh bằng ESP32-CAM và lưu vào thẻ SD
+bool capturePhotoToSD() {
+    if (isPowerSaving) {
+        scheduler.println("ERR: Camera disabled in power saving mode!");
+        return false;
     }
-    return disk.handleCommand(input);
-}
+    if (!scheduler.lock(PTIT_BUS_UART2, 1000)) return false;
+    if (!scheduler.lock(PTIT_BUS_SPI, 1000)) {
+        scheduler.unlock(PTIT_BUS_UART2);
+        return false;
+    }
 
-bool captureUniquePhoto() {
-    static uint32_t nextImage = 0;
+    camera.selectCamera();
+    delay(200);
+    static int photoCounter = 0;
+    // Không ghi đè ảnh cũ trên thẻ nhớ.
     String path;
-    do { path = "/photos/rtos_" + String(nextImage++) + ".jpg"; } while (SD.exists(path.c_str()));
-    const bool saved = camera.captureToFile(path.c_str());
-    if (saved) PTIT_Scheduler::println("[OK] Da luu anh: " + path);
-    return saved;
+    do { path = "/photos/rtos_" + String(photoCounter++) + ".jpg"; } while (SD.exists(path.c_str()));
+    bool ok = camera.captureToFile(path.c_str());
+    camera.selectGPS();
+    delay(100);
+
+    scheduler.unlock(PTIT_BUS_SPI);
+    scheduler.unlock(PTIT_BUS_UART2);
+
+    scheduler.println(ok ? ("Photo captured! Path: " + path) : "Camera capture failed!");
+    return ok;
 }
 
-String processSystemCommand(String command) {
-    if (command == "ping") {
-        if (!PTIT_ENABLE_LORA) return "PONG (local Serial)";
-        PTIT_Scheduler::println("[CMD] ping");
-        if (PTIT_ENABLE_LORA && PTIT_Scheduler::lock(PTIT_BUS_LORA, 500)) {
-            for (int i = 0; i < 4; i++) {
-                lora.sendMessage("ACK " + String(i + 1) + "/4");
-                delay(200);
-            }
-            PTIT_Scheduler::unlock(PTIT_BUS_LORA);
-        }
-        return "PING_HANDLED"; // Cờ đặc biệt để không gửi response chung
-    }
-    if (command == "reboot") {
-        PTIT_Scheduler::println("[CMD] reboot");
-        if (PTIT_ENABLE_LORA && PTIT_Scheduler::lock(PTIT_BUS_LORA, 500)) {
-            lora.sendMessage("Rebooting...");
-            PTIT_Scheduler::unlock(PTIT_BUS_LORA);
-        }
+// Xử lý lệnh từ trạm mặt đất (Lệnh 'a'..'f' và các ký tự điều khiển)
+void processCommand(const String& cmdStr) {
+    if (cmdStr.length() == 0) return;
+    lastCmdTime = millis();
+    delay(100); // Độ trễ ổn định RF thu nhận uplink và chuẩn bị phản hồi
+
+    scheduler.println("Received command: " + cmdStr);
+
+    if (cmdStr == "reboot") {
+        if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage("Rebooting..."); scheduler.unlock(PTIT_BUS_LORA); }
         delay(500);
         ESP.restart();
     }
-    if (command == "get_gps") {
-        BusGuard guard(PTIT_BUS_UART2);
-        if (!guard) return "ERR: UART2 busy";
-        if (!PTIT_ENABLE_GPS || !gps.hasFix()) return "GPS: no valid fix";
-        return "GPS: Lat=" + String(gps.getLat(), 6) + ", Lng=" + String(gps.getLng(), 6);
-    }
-    if (command == "get_sensor") {
-        BusGuard guard(PTIT_BUS_I2C);
-        if (!guard) return "ERR: I2C busy";
-        return "Sensor: Temp=" + String(sensor.getTemperature(), 2) + "C, Press=" + String(sensor.getPressure(), 2) + "hPa";
-    }
-    if (command == "get_eps") {
-        BusGuard guard(PTIT_BUS_I2C); // Shared sensor/ADC snapshot lock.
-        if (!guard) return "ERR: Sensors busy";
-        return "EPS: Battery=" + String(eps.getBatteryVoltage(), 2) + "V";
-    }
-    if (command == "clear_log") {
-        if (!PTIT_Scheduler::lock(PTIT_BUS_SPI, 200)) return "ERR: SD busy";
-        String res = storage.removeFile("/datalog.txt") ? "Log cleared" : "ERR: rm /datalog.txt";
-        PTIT_Scheduler::unlock(PTIT_BUS_SPI);
-        return res;
-    }
-    if (command == "capture") {
-        BusGuard uart(PTIT_BUS_UART2, 1000);
-        if (!uart) return "ERR: UART2 busy";
-        BusGuard spi(PTIT_BUS_SPI, 1000);
-        if (!spi) return "ERR: SD busy";
-        bool success = captureUniquePhoto();
-        return success ? "Photo captured!" : "ERR: Capture failed";
-    }
-    if (command == "status") {
-        BusGuard guard(PTIT_BUS_I2C);
-        if (!guard) return "ERR: Sensors busy";
-        return "STATUS: Up " + String(millis() / 1000) + "s, Bat=" + String(eps.getBatteryVoltage(), 1) + 
-               "V, SD=" + (storage.isReady() ? "OK" : "ERR") + (isTelemetryPaused ? " (PAUSED)" : " (ACTIVE)");
-    }
-    if (command == "uptime") {
-        unsigned long sec = millis() / 1000;
-        return "Uptime: " + String(sec / 3600) + "h " + String((sec / 60) % 60) + "m " + String(sec % 60) + "s";
-    }
-    if (command == "pause") {
-        isTelemetryPaused = true;
-        return "Telemetry PAUSED. Satellite is in standby mode.";
-    }
-    if (command == "resume") {
-        isTelemetryPaused = false;
-        return "Telemetry RESUMED. Realtime data active.";
-    }
-    if (command == "help") {
-        return "ping|reboot|uptime|get_gps|get_sensor|get_eps|status|clear_log|capture|pause|resume|pwd|cd|ls|mkdir|rmdir|rm|touch|help";
-    }
-    return "";
-}
 
-// Hỗ trợ lệnh hệ thống + lệnh file/thư mục kiểu Linux
-void comLoop() {
-    if (!PTIT_ENABLE_LORA) return;
-    String cmd = "";
-    if (PTIT_Scheduler::lock(PTIT_BUS_LORA)) {
-        cmd = lora.update();
-        PTIT_Scheduler::unlock(PTIT_BUS_LORA);
-    }
-
-    if (cmd.length() > 0) {
-        cmd.trim();
-        String command = PTIT_Utils::extractCommand(cmd);
-        String response = processSystemCommand(command);
-
-        if (response == "PING_HANDLED") return; // Lệnh ping đã tự xử lý
-
-        // Nếu không phải lệnh hệ thống, chuyển cho SD Card xử lý
-        if (response == "") {
-            if (PTIT_Scheduler::lock(PTIT_BUS_SPI, 200)) {
-                response = checkedStorageCommand(storage, cmd);
-                PTIT_Scheduler::unlock(PTIT_BUS_SPI);
-            } else {
-                response = "ERR: SD busy";
-            }
-            if (response == "") response = "ERR: Unknown cmd '" + command + "'. Send 'help'";
-        }
-
-        // Gửi phản hồi qua LoRa
-        PTIT_Scheduler::println("[CMD] " + command + " → " + response);
-        if (PTIT_Scheduler::lock(PTIT_BUS_LORA, 500)) {
-            lora.sendMessage(response);
-            PTIT_Scheduler::unlock(PTIT_BUS_LORA);
-        }
-    }
-}
-
-// Telemetry: Thu thập dữ liệu → gửi MQTT + LoRa + ghi SD
-void telemetryLoop() {
-    if (isTelemetryPaused) return;
-    String payloads[6];
-    const char* labels[] = {"EPS", "Env", "Acc", "Gyro", "Mag", "GPS"};
-    JsonDocument cloud;
-    cloud["type"] = "telemetry";
-    cloud["device_id"] = DEVICE_UID;
-    cloud["source"] = "hardware";
-    cloud["uptime_ms"] = millis();
-    JsonDocument doc;
-    auto encode = [&](int index) {
-        payloads[index].reserve(160);
-        serializeJson(doc, payloads[index]); // Non-finite measurements become JSON null.
-        doc.clear();
-    };
-    {
-        BusGuard guard(PTIT_BUS_I2C);
-        if (!guard) { PTIT_Scheduler::println("[TELEMETRY] I2C snapshot busy; skipped"); return; }
-        const float battery = eps.getBatteryVoltage();
-        doc["battery_v"] = battery; cloud["battery_v"] = battery; encode(0);
-        const float temperature = sensor.getTemperature(), pressure = sensor.getPressure();
-        doc["temp"] = temperature; doc["pressure"] = pressure;
-        cloud["temp"] = temperature; cloud["pressure"] = pressure; encode(1);
-        doc["acc_x"] = sensor.getAccX(); doc["acc_y"] = sensor.getAccY(); doc["acc_z"] = sensor.getAccZ(); encode(2);
-        doc["gyro_x"] = sensor.getGyroX(); doc["gyro_y"] = sensor.getGyroY(); doc["gyro_z"] = sensor.getGyroZ(); encode(3);
-        doc["mag_x"] = sensor.getMagX(); doc["mag_y"] = sensor.getMagY(); doc["mag_z"] = sensor.getMagZ(); encode(4);
-        cloud["acc_x"] = sensor.getAccX() / 9.80665f; cloud["acc_y"] = sensor.getAccY() / 9.80665f; cloud["acc_z"] = sensor.getAccZ() / 9.80665f;
-        cloud["gyro_x"] = sensor.getGyroX() * 180.0f / PI; cloud["gyro_y"] = sensor.getGyroY() * 180.0f / PI; cloud["gyro_z"] = sensor.getGyroZ() * 180.0f / PI;
-        cloud["mag_x"] = sensor.getMagX() * 100.0f; cloud["mag_y"] = sensor.getMagY() * 100.0f; cloud["mag_z"] = sensor.getMagZ() * 100.0f;
-    }
-    {
-        BusGuard guard(PTIT_BUS_UART2, 20);
-        bool valid = guard && PTIT_ENABLE_GPS && gps.hasFix();
-        doc["valid"] = valid;
-        if (valid) {
-            doc["lat"] = gps.getLat(); doc["lng"] = gps.getLng();
-            cloud["lat"] = gps.getLat(); cloud["lng"] = gps.getLng(); cloud["alt"] = gps.getAltitude();
-        } else { doc["lat"] = nullptr; doc["lng"] = nullptr; cloud["lat"] = nullptr; cloud["lng"] = nullptr; cloud["alt"] = nullptr; }
-        encode(5);
-    }
-    for (int i = 0; i < 6; ++i) PTIT_Scheduler::println(String("[TELEMETRY] ") + labels[i] + ": " + payloads[i]);
-    {
-        BusGuard guard(PTIT_BUS_SPI, 200);
-        if (guard) {
-            String batch; batch.reserve(1024);
-            for (const auto& payload : payloads) { batch += payload; batch += '\n'; }
-            bool saved = storage.appendFile("/datalog.txt", batch.c_str());
-            PTIT_Scheduler::println(saved ? "[SD] telemetry saved" : "[SD] telemetry write failed");
-        } else PTIT_Scheduler::println("[SD] busy; telemetry not saved");
-    }
-    {
-        BusGuard guard(PTIT_BUS_MQTT, 200);
-        if (guard && mqttConfigured && classroomMqtt.connected()) {
-            String payload;
-            serializeJson(cloud, payload);
-            const String topic = strlen(TOPIC_PUB) ? String(TOPIC_PUB) : String("sensors/") + DEVICE_UID + "/telemetry";
-            const bool sent = classroomMqtt.publish(topic.c_str(), payload.c_str());
-            PTIT_Scheduler::println(sent ? "[MQTT] Publish submitted (QoS0; no broker ACK)" : "[MQTT] Publish failed");
-        }
-    }
-    if (PTIT_ENABLE_LORA) for (const auto& payload : payloads) {
-        if (isTelemetryPaused) break;
-        BusGuard guard(PTIT_BUS_LORA, 200);
-        if (guard) lora.sendMessage(payload);
-    }
-}
-
-// Local diagnostic commands use the same resource locks as radio commands.
-void serialLoop() {
-    static String command;
-    static bool discard = false;
-    for (int budget = 0; budget < 64 && cdh.available(); ++budget) {
-        char c = cdh.read();
-        if (c == '\n') {
-            if (!discard) {
-                command.trim();
-                if (command.length()) {
-                    String response = processSystemCommand(command);
-                    if (!response.length()) {
-                        BusGuard guard(PTIT_BUS_SPI, 200);
-                        response = guard ? checkedStorageCommand(storage, command) : "ERR: SD busy";
-                    }
-                    PTIT_Scheduler::println(response.length() ? response : "ERR: Unknown command");
+    char c = cmdStr.charAt(0);
+    switch (c) {
+        case 'a':
+            for (uint8_t i = 0; i < 4; i++) {
+                if (scheduler.lock(PTIT_BUS_LORA, 200)) {
+                    com.sendMessage("ACK " + String(i + 1) + "/4");
+                    scheduler.unlock(PTIT_BUS_LORA);
                 }
+                delay(250);
             }
-            if (discard) PTIT_Scheduler::println("ERR: Command exceeds 128 bytes");
-            command = ""; discard = false;
-        } else if (!discard && c != '\r') {
-            if (command.length() < 128) command += c;
-            else { command = ""; discard = true; }
+            break;
+        case 'b': { // Lưu và đọc lại điện áp & dung lượng pin từ thẻ nhớ SD (nhận nguồn từ OBC, luôn hoạt động)
+            scheduler.println("Saving battery data to SD card...");
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) {
+                com.sendMessage("Saving battery data to SD card...");
+                scheduler.unlock(PTIT_BUS_LORA);
+            }
+            if (scheduler.lock(PTIT_BUS_SPI, 500)) {
+                storage.writeFile("/voltage.txt", "");
+                for (uint8_t i = 0; i < 5; i++) {
+                    if (scheduler.lock(PTIT_BUS_I2C, 200)) {
+                        eps.update();
+                        scheduler.unlock(PTIT_BUS_I2C);
+                    }
+                    float v = eps.getBatteryVoltage();
+                    float pct = eps.getBatteryPercentage();
+                    String line = "[" + String(i + 1) + "/5] Bat: " + String(v, 2) + "V, " + String(pct, 1) + "%";
+                    storage.appendFile("/voltage.txt", (line + "\r\n").c_str());
+                    delay(200);
+                }
+                if (isPowerSaving) {
+                    eps.setBuckState(false);
+                }
+                String data = storage.readFile("/voltage.txt");
+                scheduler.unlock(PTIT_BUS_SPI);
+                scheduler.print(data);
+
+                if (scheduler.lock(PTIT_BUS_LORA, 500)) {
+                    com.sendMessage("Done saving. Reading from SD card:");
+                    delay(100);
+                    int startIdx = 0;
+                    while (startIdx < (int)data.length()) {
+                        int endIdx = data.indexOf('\n', startIdx);
+                        if (endIdx < 0) endIdx = data.length();
+                        String singleLine = data.substring(startIdx, endIdx);
+                        singleLine.trim();
+                        if (singleLine.length() > 0) {
+                            com.sendMessage(singleLine);
+                            delay(120);
+                        }
+                        startIdx = endIdx + 1;
+                    }
+                    com.sendMessage("Done reading from SD card.");
+                    scheduler.unlock(PTIT_BUS_LORA);
+                }
+                scheduler.println("Done reading from SD card.");
+            }
+            break;
+        }
+        case 'c': {
+            if (isPowerSaving) {
+                if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage("ERR: Sensors disabled in power saving mode"); scheduler.unlock(PTIT_BUS_LORA); }
+                break;
+            }
+            String msg = "Acceleration: ax=" + String(sensor.getAccX(), 2) + ", ay=" + String(sensor.getAccY(), 2) + ", az=" + String(sensor.getAccZ(), 2) + " m/s^2";
+            scheduler.println(msg);
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage(msg); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        case 'd': {
+            if (isPowerSaving) {
+                if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage("ERR: Sensors disabled in power saving mode"); scheduler.unlock(PTIT_BUS_LORA); }
+                break;
+            }
+            String msg = "Gyroscope: gx=" + String(sensor.getGyroX(), 2) + ", gy=" + String(sensor.getGyroY(), 2) + ", gz=" + String(sensor.getGyroZ(), 2) + " rad/s";
+            scheduler.println(msg);
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage(msg); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        case 'e': {
+            String msg = "ERR: UART2 busy";
+            // gpsTask cập nhật bộ giải mã trên core khác: đọc tọa độ khi giữ khóa UART2.
+            if (scheduler.lock(PTIT_BUS_UART2, 200)) {
+                msg = gps.hasFix() ? ("GPS: Lat=" + String(gps.getLatitude(), 6) + ", Lng=" + String(gps.getLongitude(), 6)) : "GPS: no valid fix";
+                scheduler.unlock(PTIT_BUS_UART2);
+            }
+            scheduler.println(msg);
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage(msg); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        case 'f': {
+            bool ok = capturePhotoToSD();
+            String msg = ok ? "Photo captured!" : "ERR: Capture failed";
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage(msg); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        case 'p': {
+            isTelemetryPaused = true;
+            scheduler.println("Telemetry PAUSED");
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage("Telemetry PAUSED"); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        case 'r': {
+            isTelemetryPaused = false;
+            scheduler.println("Telemetry RESUMED");
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) { com.sendMessage("Telemetry RESUMED"); scheduler.unlock(PTIT_BUS_LORA); }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+// Task 3: Nhận lệnh LoRa (Core 0)
+void comTask() {
+    String raw = "";
+    if (scheduler.lock(PTIT_BUS_LORA)) {
+        raw = com.update();
+        scheduler.unlock(PTIT_BUS_LORA);
+    }
+    if (raw.length() > 0) {
+        // Lọc bỏ ký tự rác nhị phân
+        String clean = "";
+        for (unsigned int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c >= 32 && c <= 126) clean += c;
+        }
+        clean.trim();
+        if (clean.length() > 0) {
+            processCommand(clean);
         }
     }
 }
 
-// ============================================================================
-// 3. SETUP - Khởi tạo phân hệ + đăng ký task
-// ============================================================================
-void setup() {
-    cdh.begin(115200);
-    while (!cdh) { delay(10); }
+// Task 4: Viễn trắc HK theo từng chunk (Core 0)
+void telemetryTask() {
+    if (isTelemetryPaused) return;
 
-    // Khởi tạo các phân hệ
-    sensor.init();
-    if (PTIT_ENABLE_GPS) gps.init();
-    if (PTIT_ENABLE_LORA) lora.init();
-    eps.init();
-    storage.init();
-    cdh.init();
-    configureTelemetryMqtt();
-    camera.init(12, 14);
+    // Nếu vừa có lệnh từ mặt đất trong vòng 3 giây trước, hoãn telemetry để nhường kênh vô tuyến
+    if (millis() - lastCmdTime < 3000) return;
 
-    // Cấu hình LoRa
-    if (PTIT_ENABLE_LORA) { lora.setChannel(23); lora.setTransmissionMode(0); }
+    if (scheduler.lock(PTIT_BUS_I2C, 200)) {
+        eps.update();
+        scheduler.unlock(PTIT_BUS_I2C);
+    }
 
-    // Đăng ký các task vào Scheduler
-    //                      Tên            Hàm            Chu kỳ   Core  Priority  Stack
-    scheduler.addTask("CDH",       cdhLoop,       500,    0,    2,        8192);
-    scheduler.addTask("Sensor",    sensorLoop,    200,    1,    3,        4096);
-    if (PTIT_ENABLE_GPS) scheduler.addTask("GPS",       gpsLoop,       10,     1,    3,        4096);
-    if (PTIT_ENABLE_LORA) scheduler.addTask("COM",       comLoop,       100,    1,    2,        4096);
-    scheduler.addTask("Telemetry", telemetryLoop, 5000,   1,    1,        8192);
+    // Giám sát ngưỡng pin - chỉ thông báo 1 lần khi chuyển trạng thái
+    float vbat = eps.getBatteryVoltage();
+    float pct  = eps.getBatteryPercentage();
 
-    // Bật watchdog: nếu task bị treo > 30s → ESP32 tự reset
-    scheduler.addTask("Serial", serialLoop, 20, 1, 1, 8192);
-    scheduler.enableWatchdog(30);
+    if (vbat > 0.5f) {
+        if (!isPowerSaving && (vbat < VOLTAGE_THRES || pct < PERCENT_THRES)) {
+            isPowerSaving = true;
+            eps.setBuckState(false);
+            scheduler.println("Power saving mode ENABLED (Low battery). Sensors and camera disabled.");
+            sendLoRa("ALERT: Power saving mode ENABLED");
+        } else if (isPowerSaving && vbat >= VOLTAGE_THRES && pct >= PERCENT_THRES) {
+            isPowerSaving = false;
+            eps.setBuckState(true);
+            scheduler.println("Power saving mode DISABLED (Battery recovered). All subsystems active.");
+            sendLoRa("ALERT: Power saving mode DISABLED");
+        } else if (isPowerSaving) {
+            eps.setBuckState(false);
+        }
+    }
 
-    // Bắt đầu chạy đa nhiệm!
-    scheduler.start();
+    if (!isPowerSaving) {
+        // Chế độ thông thường: 6 Chunks đầy đủ + ghi thẻ nhớ SD
+        String payloads[6];
+        const char* labels[] = {"EPS", "Env", "Acc", "Gyro", "Mag", "GPS"};
 
-    cdh.println("CubeSat Firmware v2.0 — Đang hoạt động!");
+        payloads[0] = "{\"battery_v\":" + num(eps.getBatteryVoltage(), 2) + "}";
+        payloads[1] = "{\"temp\":" + num(sensor.getTemperature(), 2) + ",\"pressure\":" + num(sensor.getPressure(), 2) + "}";
+        payloads[2] = "{\"acc_x\":" + num(sensor.getAccX(), 2) + ",\"acc_y\":" + num(sensor.getAccY(), 2) + ",\"acc_z\":" + num(sensor.getAccZ(), 2) + "}";
+        payloads[3] = "{\"gyro_x\":" + num(sensor.getGyroX(), 2) + ",\"gyro_y\":" + num(sensor.getGyroY(), 2) + ",\"gyro_z\":" + num(sensor.getGyroZ(), 2) + "}";
+        payloads[4] = "{\"mag_x\":" + num(sensor.getMagX(), 2) + ",\"mag_y\":" + num(sensor.getMagY(), 2) + ",\"mag_z\":" + num(sensor.getMagZ(), 2) + "}";
+        payloads[5] = "{\"valid\":false,\"lat\":null,\"lng\":null}";
+        // gpsTask cập nhật bộ giải mã trên core khác: đọc tọa độ khi giữ khóa UART2.
+        if (scheduler.lock(PTIT_BUS_UART2, 200)) {
+            if (gps.hasFix()) payloads[5] = "{\"valid\":true,\"lat\":" + String(gps.getLatitude(), 4) + ",\"lng\":" + String(gps.getLongitude(), 4) + "}";
+            scheduler.unlock(PTIT_BUS_UART2);
+        }
+
+        for (int i = 0; i < 6; i++) {
+            scheduler.println(String("[TELEMETRY] ") + labels[i] + ": " + payloads[i]);
+        }
+
+        if (scheduler.lock(PTIT_BUS_SPI, 200)) {
+            String batch = "";
+            for (int i = 0; i < 6; i++) batch += payloads[i] + "\n";
+            bool saved = storage.appendFile("/datalog.txt", batch.c_str());
+            scheduler.println(saved ? "[SD] telemetry saved" : "[SD] telemetry write failed");
+            scheduler.unlock(PTIT_BUS_SPI);
+        }
+
+        int sent = 0;
+        for (int i = 0; i < 6; i++) {
+            if (isTelemetryPaused || (millis() - lastCmdTime < 3000)) break;
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) {
+                com.sendMessage(payloads[i]);
+                scheduler.unlock(PTIT_BUS_LORA);
+                sent++;
+            }
+            delay(120);
+        }
+        // Một dòng log mỗi đợt phát: là yêu cầu phát tại OBC, không phải xác nhận trạm mặt đất đã nhận.
+        if (sent > 0) scheduler.println("[LORA TX] " + String(sent) + " goi telemetry");
+    } else {
+        // Chế độ Power Saving: Cảm biến tắt, chỉ truyền EPS và GPS qua LoRa
+        String epsPayload = "{\"battery_v\":" + num(eps.getBatteryVoltage(), 2) + ",\"pwr_save\":true}";
+        scheduler.println("[TELEMETRY] EPS: " + epsPayload);
+        if (scheduler.lock(PTIT_BUS_LORA, 200)) {
+            com.sendMessage(epsPayload);
+            scheduler.unlock(PTIT_BUS_LORA);
+        }
+        delay(120);
+
+        String gpsPayload = "";
+        if (scheduler.lock(PTIT_BUS_UART2, 200)) {
+            if (gps.hasFix()) gpsPayload = "{\"valid\":true,\"lat\":" + String(gps.getLatitude(), 4) + ",\"lng\":" + String(gps.getLongitude(), 4) + "}";
+            scheduler.unlock(PTIT_BUS_UART2);
+        }
+        if (gpsPayload.length() > 0) {
+            scheduler.println("[TELEMETRY] GPS: " + gpsPayload);
+            if (scheduler.lock(PTIT_BUS_LORA, 200)) {
+                com.sendMessage(gpsPayload);
+                scheduler.unlock(PTIT_BUS_LORA);
+            }
+            delay(120);
+        }
+    }
 }
 
-// ============================================================================
-// 4. LOOP - Trống (logic đã phân phối vào các task riêng)
-// ============================================================================
+void setup() {
+    cdh.begin();
+    eps.setBuckState(true);
+
+    eps.init();
+    sensor.init();
+    gps.init();
+    camera.init();
+    storage.init();
+    com.init();
+
+    com.setChannel(23);
+    com.setTransmissionMode(0);
+    camera.selectGPS();
+
+    scheduler.addTask("Sensor",    sensorTask,    200,  1, 3);
+    scheduler.addTask("GPS",       gpsTask,       50,   1, 3);
+    scheduler.addTask("COM",       comTask,       100,  0, 2);
+    scheduler.addTask("Telemetry", telemetryTask, 4000, 0, 1);
+
+    scheduler.enableWatchdog(30);
+    scheduler.start();
+}
+
 void loop() {
     vTaskDelay(pdMS_TO_TICKS(10000));
 }

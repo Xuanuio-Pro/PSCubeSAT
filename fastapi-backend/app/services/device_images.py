@@ -40,6 +40,14 @@ def list_images(device_uid: str, root: Path = IMAGE_ROOT) -> list[str]:
     ]
 
 
+def image_sizes(device_uid: str, root: Path = IMAGE_ROOT) -> dict[str, int]:
+    """Byte size per image id; lets the browser skip a copy it already received over Serial."""
+    folder = root / device_uid
+    if not folder.is_dir():
+        return {}
+    return {path.stem: path.stat().st_size for path in folder.glob("*.jpg")}
+
+
 def image_path(device_uid: str, image_id: str, root: Path = IMAGE_ROOT) -> Path | None:
     if not image_id.isdigit():
         return None

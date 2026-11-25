@@ -277,6 +277,22 @@ class CompilerTests(unittest.IsolatedAsyncioTestCase):
             result = await compiler_svc.compile_code("x", "esp32")
         self.assertFalse(result["compilerInstalled"])
 
+    async def test_image_built_for_another_build_config_is_reported_as_version_mismatch(self):
+        mismatch = ValueError("Compiler image configuration or source mismatch; rebuild image")
+        with (
+            patch.object(compiler_svc, "_find_pio", AsyncMock(return_value=["sandbox"])),
+            patch.object(compiler_svc, "_run_build", AsyncMock(side_effect=mismatch)),
+        ):
+            result = await compiler_svc.compile_code("void setup(){} void loop(){}", "esp32")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["error_code"], "COMPILER_VERSION_MISMATCH")
+        with (
+            patch.object(compiler_svc, "_find_pio", AsyncMock(return_value=["sandbox"])),
+            patch.object(compiler_svc, "_run_build", AsyncMock(side_effect=ValueError("Invalid image set"))),
+        ):
+            result = await compiler_svc.compile_code("void setup(){} void loop(){}", "esp32")
+        self.assertEqual(result["error_code"], "COMPILER_UNAVAILABLE")
+
     async def test_admission_queue_is_bounded_across_boards(self):
         from filelock import FileLock
 

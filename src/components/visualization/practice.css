@@ -48,3 +48,10 @@
 .practice-shell-list li > small { flex-basis: 100%; color: var(--text-muted); }
 .practice-shell-list .is-ok > strong { color: var(--status-success-text); }
 .practice-shell-list .is-error > strong { color: var(--status-danger-text); }
+.camera-send-hint { margin: 0 0 12px; padding: 10px 12px; text-align: left; line-height: 1.55; font-size: 13px; color: var(--status-warning-text); background: var(--status-warning-bg); border: 1px solid var(--status-warning-border); border-radius: 8px; }
+.camera-send-hint p, .camera-send-hint ol { margin: 6px 0; }
+.camera-send-hint ol { padding-left: 20px; }
+.camera-send-hint pre { max-height: 220px; overflow: auto; margin: 6px 0; padding: 8px; font-size: 11px; color: #e6edf3; background: #0d1117; border-radius: 6px; }
+.camera-send-hint summary { cursor: pointer; font-weight: 600; }
+.camera-wifi-form { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.camera-wifi-form input { flex: 1 1 140px; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-primary); border-radius: 6px; font-size: 12px; }

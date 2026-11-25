@@ -15,13 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.tables import User
 from app.schemas.device import (
+    CloudProvisionRequest,
     CreateDeviceRequest,
     CreateDeviceResponse,
     DeviceDetailsResponse,
     DevicePositionResponse,
     UpdatePositionRequest,
 )
-from app.services import device_mqtt
+from app.services import cloud_device, device_mqtt
 from app.services.auth import get_required_user
 from app.services.device import DeviceService
 from app.services.firmware_snippets import make_firmware_snippet
@@ -56,6 +57,28 @@ async def list_positions(
 ):
     """Vị trí cuối của các thiết bị thuộc tài khoản đang đăng nhập."""
     return await DeviceService(db).get_all_positions(current_user.id)
+
+
+# Declared before "/{device_uid}" so "cloud" is never read as a device UID.
+@router.get("/cloud")
+async def cloud_device_status(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_required_user)
+):
+    """Thiết bị nhận ảnh camera qua MQTT của tài khoản (không tạo mới, không trả secret)."""
+    return cloud_device.status(await cloud_device.find(db, current_user.id))
+
+
+@router.post("/cloud/provision")
+async def provision_cloud_device(
+    response: Response,
+    req: CloudProvisionRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_required_user),
+):
+    """Cấu hình (WiFi + MQTT) để web app ghi vào NVS của bo qua Serial. Chỉ trả cho chủ tài khoản."""
+    response.headers["Cache-Control"] = "no-store"
+    req = req or CloudProvisionRequest()
+    return await cloud_device.provision(db, current_user.id, req.wifi_ssid, req.wifi_password)
 
 
 @router.patch("/{device_uid}/position")

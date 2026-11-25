@@ -49,13 +49,13 @@ case "$action" in
   install)
     echo 'Building and starting PostgreSQL, Redis, backend and frontend (first run 3-10 min)...'
     "${compose[@]}" up -d --build --wait --wait-timeout 300
-    if ! docker image inspect "$compiler_image" >/dev/null 2>&1; then
-      if [[ "$skip_compiler" == true ]]; then
-        echo "WARNING: compiler image skipped; Compile fails until you rerun without --skip-compiler." >&2
-      else
-        echo "Building compiler image $compiler_image (ESP32 toolchains, ~6 GB, first run 15-40 min)..."
-        docker build -f fastapi-backend/compiler/Dockerfile -t "$compiler_image" fastapi-backend
-      fi
+    # Always rebuild: the backend rejects artifacts from a compiler image built for another build_config
+    # revision (library pin + overrides). Docker's layer cache makes an unchanged rebuild take seconds.
+    if [[ "$skip_compiler" == true ]]; then
+      echo "WARNING: compiler image build skipped; if the library or overrides changed, Compile reports COMPILER_VERSION_MISMATCH until you rerun without --skip-compiler." >&2
+    else
+      echo "Building compiler image $compiler_image (first run downloads ESP32 toolchains ~6 GB, 15-40 min; unchanged: seconds)..."
+      docker build --provenance=false -f fastapi-backend/compiler/Dockerfile -t "$compiler_image" fastapi-backend
     fi
     admins="$("${compose[@]}" exec -T postgres psql -U cubesat -d cubesat -tAc "SELECT count(*) FROM users WHERE role = 'admin'" | tr -d '[:space:]')"
     if [[ "$admins" == 0 ]]; then

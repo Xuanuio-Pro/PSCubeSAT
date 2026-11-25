@@ -98,8 +98,9 @@ void loop() {
         obc.printf("STATUS:ready=%d,init=0x%x,psram=%d,heap=%u\n", cameraReady, cameraInitError, psramFound(), ESP.getFreeHeap());
         return;
     }
-    // "p"/"P" is the PTITCube CAM_Firmware / library v1.1.0 command; "CAPTURE" is kept for older OBC sketches.
-    if (command != "CAPTURE" && command != "p" && command != "P") {
+    // Same commands as PTITCube ESP32_CAM_Firmware (2026-11-22): p/P, capture or photo (any case).
+    // The platform library sends "p"; Lab4-04a sends "capture"; "CAPTURE" keeps older OBC sketches working.
+    if (command != "p" && command != "P" && !command.equalsIgnoreCase("capture") && !command.equalsIgnoreCase("photo")) {
         return;
     }
     Serial.println("[CAM] capture requested by OBC");

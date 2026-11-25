@@ -1,5 +1,73 @@
 # Nhật ký quyết định
 
+## 25/11/2026 — Sửa lỗi phát hiện khi chạy thật 39 bài trên board
+
+- Lab3-04: nút GPIO 4 chỉ được tính khi chuyển HIGH→LOW. Trên chồng bo vệ tinh GPIO 4 là chân Buck của EPS, luôn ở mức LOW; bản cũ đọc theo mức nên bo reset khoảng 6 s một lần ngay khi khởi động. Giữ GPIO 4 (không đổi chân) để PCB thí nghiệm rời vẫn chạy như upstream; trên chồng bo, sketch in hướng dẫn dùng lệnh `f`.
+- Lab4-02a: ghi rõ ACCEL_CONFIG/GYRO_CONFIG về ±2 g / ±250 °/s. MPU6500 giữ dải ±8 g / ±500 °/s do thư viện đặt khi chỉ reset ESP32, nên hệ số 16384/131 cho gia tốc nhỏ đi khoảng 4 lần.
+- Lab1-03_Button/Lab1-04 báo "nhấn" ngay khi khởi động chỉ vì lúc test chúng chạy trên chồng bo. Theo `lesson-reading.js`, Lab 1 chạy trên PCB rời, nên đây không phải lỗi code. Panel `lab1Io` mới có ghi chú về việc này.
+- Trực quan: thêm panel `lab1Io` (trạng thái LED/nút cho Lab1-01, 1-03_Button, 1-04, 1-07, lấy từ dòng log). Lab4-06 in trạng thái GPS chưa fix và gửi ảnh về qua Serial. Lab7-01/7-02 in `[LORA TX] n goi telemetry` sau mỗi đợt phát; dòng này là yêu cầu phát ở OBC, không phải ACK của trạm mặt đất. Lab7-01 gửi `gps.valid=false` khi chưa fix. Bộ giải mã phát sự kiện `gps:waiting` khi JSON báo chưa fix, để System Check có bằng chứng GPS.
+- V4–V11: các thông tin không có trong schema telemetry (hướng la bàn, số vệ tinh, SOC/tốc độ sạc/chế độ nguồn, tiến độ nhận ảnh, chu kỳ task khai báo, dòng `[BOOT]`) được truyền bằng sự kiện activity, không thêm trường vào `shared/telemetry.schema.json`. Lý do: schema dùng chung với backend và MQTT, còn các giá trị này chỉ phục vụ hiển thị trong bài thực hành.
+- Panel 3D chỉ dùng chế độ "số đếm thô" của Lab4-02a khi log thật sự có dòng `raw_accel:` (bản nháp cũ). Sketch hiện tại in m/s² như Lab4-02b, nên trước đó panel luôn ở trạng thái "chờ IMU".
+- Lab7-02 bỏ panel camera: lệnh `f` chỉ lưu ảnh vào SD, không gửi ảnh về; kết quả chụp vẫn hiện ở "Kết quả thực hành".
+- Bản nháp C++/Blockly của sinh viên lưu trong trình duyệt không tự cập nhật khi mã mẫu đổi (quy tắc 3: không xóa bản nháp). Ai đã dán Lab4-02a cũ phải tải lại mã mẫu để có bản sửa dải đo.
+
+## 25/11/2026 — Gỡ 8 bài thực hành cũ khỏi catalog
+
+- Xóa `Lab2-01_Detect_Battery_Voltage`, `Lab3-01_Save_To_MicroSD`, `Lab4-01_Detect_Environment`, `Lab4-02_Detect_IMU_Attitude`, `Lab4-03_Detect_GPS_Rawdata`, `Lab4-04_Camera_Snapshot`, `Lab5-01_Send_Telemetry`, `Lab5-02_Receive_Command` (file `.cpp` và mục trong `catalog.json`; catalog còn 39 bài, trùng với các bài trong `seed.json`).
+- Đây là ngoại lệ có chủ đích với quy tắc 3 (giữ ID bài thực hành), theo yêu cầu của Xuân. Nó thay quyết định "giữ nguyên ID 8 bài cha" ở mục ngày 25/11 bên dưới. Lý do: upstream PTITCube đã xóa các repo này ngày 24/11, các bài không còn trong `seed.json`, và báo cáo kiểm tra code tìm ra lỗi ở 2 bài (Lab2-01 đọc điện áp đứng yên, Lab5-02 không in lệnh nhận được).
+- Rủi ro còn lại: các ID này nằm trong giáo trình từ 11/11 đến 18/11/2026. Lớp nào xuất bản trong khoảng đó trên server mà còn ghim phiên bản giáo trình cũ sẽ không tải được mã mẫu cho các bài này (`GET /api/curriculum/exercises/{id}` trả 404). DB dev không có tham chiếu nào; DB server chưa được kiểm tra. Tiến độ `lab_progress` và bản nháp trình duyệt không bị xóa. Biên dịch vẫn chạy với mã người dùng gửi lên.
+
+## 25/11/2026 — Sửa dứt điểm lỗi "Compiler sandbox chưa sẵn sàng hoặc trả dữ liệu không hợp lệ"
+
+- Nguyên nhân thật là image compiler và backend lệch phiên bản cấu hình build. Backend băm `build_config.py` (pin thư viện, revision override) và chỉ nhận artifact từ image build với đúng cấu hình đó. Hai đường gây lệch:
+  - Hai `dev.py` cùng nghe cổng 8005 (Windows cho bind trùng), bản cũ vẫn trả lời request.
+  - `setup-local` chỉ build image compiler khi chưa có image. Container backend local được build lại nhưng `pscubesat-compiler:1` vẫn cũ, hoặc ngược lại.
+- Sửa:
+  - `setup-local.ps1/.sh` luôn build image compiler, dùng `--provenance=false`. Cache lớp làm lần build không đổi mất vài giây (cả lần cài lại khoảng 25 s), và ID image giữ nguyên nên `catalog.json` ghi được ID ổn định.
+  - `dev.py` từ chối khởi động khi cổng 8005 đã có backend.
+  - Lỗi lệch cấu hình có mã riêng `COMPILER_VERSION_MISMATCH` kèm hướng dẫn, thay cho thông báo chung chung.
+  - `prepare.py` không chép `README.md` override vào thư viện, `.dockerignore` loại file này để sửa tài liệu không làm hỏng cache image.
+- Stack local `pscubesat-local` được dựng lại bằng `compose down` (giữ volume) và `setup-local.ps1 install`. Kiểm tra:
+  - 47/47 sketch biên dịch trong chính container backend local.
+  - Thư viện trong image khớp từng file với `74065b6` cùng override.
+  - `catalog.json` ghi image `sha256:c5122d4e…`.
+- Đã xóa image `pscubesat-compiler:v6-backup`, cùng bản v8 tạm và các image backend/frontend cũ. Giữ `pscubesat-compiler:v7-candidate` để quay lui.
+- `deploy/initialize-cubesat.sh` (server) vốn đã build image compiler ở mỗi lần triển khai, nên không đổi. Không thêm `--provenance` ở đó vì chưa biết bản Docker trên server.
+
+## 25/11/2026 — Cập nhật PTITCube-Library `74065b6` và 39 sketch theo các repo PTITCube (24/11)
+
+- Thư viện: ghim `PTITCube-Library@74065b64f670…`, cũng là bản mà mọi repo Lab vendor trong `lib/PTITCube`. Bố cục mới `CDH/{Scheduler,Storage,WDT}`, `MUX/{MUX,Camera,GPS}`, nên override được dựng lại theo đường dẫn mới, revision compiler **v8** (`compiler/overrides/README.md`). Upstream đã tự nhận các bản vá CDH (console ESP32-S3, timeout WiFi) và MPU6500, nên bỏ override tương ứng.
+- Giữ các bản vá vẫn còn cần: UART2 dùng một instance và đổi baud tại chỗ; camera không MUX giữ 115200; kiểm tra JPEG khi chụp; GPS fix tối đa 5 s; Storage đếm byte ghi (sửa luôn `touch`); cảm biến trả NaN thay vì giá trị cũ.
+- Thêm bản vá mới: mutex bus dạng **đệ quy**. Thư viện tự khóa I2C/SPI trong `Sensor::update()`/`logData()`, còn Lab7-02 đã giữ khóa đó khi gọi, nên mỗi lần gọi lại chờ 100 ms rồi chạy mà không có khóa.
+- Đơn vị từ trường của thư viện đổi từ Gauss sang **µT**: sketch không nhân 100 nữa; nhãn `[TELEMETRY] Mag` trên giao diện dùng hệ số 1.
+- Sketch: merge 3 chiều (base = commit upstream cũ trong `catalog.json`, ours = bản local, theirs = upstream 24/11), giữ nguyên ID bài (quy tắc 3) dù upstream đổi tên repo:
+  - Lab 1 đánh số lại 01–11.
+  - Lab3-04 → `Lab3-04_Watchdog_Timer`; Lab5-03 → `Lab5-03_Ground_Station_Demo`.
+  - Lab4-05/06 đổi chỗ (`Lab4-05_Read_All_Sensors` ↔ repo `Lab4-06_Read_All_Sensors`).
+  - `repositoryUrl` trỏ tới repo mới.
+- Theo upstream về logic, API và log; chỉ giữ hoặc thêm bản vá an toàn và trung thực:
+  - GPS chỉ in tọa độ khi `hasFix()` (Lab4-03c, đọc tổng hợp, Lab5-03); upstream in 0,0 khi chưa fix.
+  - Lab4-02a đọc byte cao/thấp tách riêng.
+  - Lab4-01a không in số rác khi thiếu BMP280.
+  - Camera: kiểm tra JPEG, tên ảnh không ghi đè, gửi ảnh về Camera Viewer.
+  - Thẻ nhớ: báo lưu theo kết quả ghi thật.
+  - Lab3-05 khôi phục debounce.
+  - Lab5-01a kiểm tra AUX.
+  - Lab7-02: cờ atomic, khóa LoRa/UART2, JSON `null` cho NaN.
+- Lab7-02 upstream bỏ MQTT và lệnh dạng chữ, chuyển sang lệnh 1 ký tự `a`–`f`/`p`/`r` qua LoRa. Làm theo upstream: panel `network` bỏ, thêm `groundStation`. MQTT cho Lab 7 làm lại theo `Docs/MQTT_PLAN_2026-11-18.md`.
+- Giao diện: bộ đọc log (`src/telemetry/practice.js`) nhận cả định dạng log mới lẫn cũ (bản nháp cũ của sinh viên vẫn hiển thị). Shell Lab3-02: thư viện trả chuỗi rỗng khi thành công, sketch in `OK`. Lệnh nhanh: Lab3-04 `f`, Lab3-02 `rmdir demo`, Lab4-06 `p`.
+- `camera-slave` nhận thêm `capture`/`photo` (mọi kiểu chữ) như ESP32_CAM_Firmware upstream. Phần còn lại của firmware camera upstream (đèn flash PWM, ngủ khi rảnh) chưa merge.
+- Bài "cha" không còn repo upstream (8 bài) giữ nguyên ID, biên dịch lại với thư viện mới.
+- Đối chiếu log ↔ trực quan hóa: `tests/practice-firmware-logs.test.js` liệt kê mọi dòng mà 39 sketch và thư viện in ra (kể cả nhánh lỗi), kèm dữ liệu panel phải đọc được. Test cũng kiểm tra mỗi panel của bài đều có nguồn dữ liệu từ log, và mọi chuỗi in trong sketch đều có trong danh mục. Quy ước:
+  - Điện áp MAX17048 ≤ 0,5 V coi là chưa đọc được (cùng ngưỡng với Lab 7), không hiển thị 0 V.
+  - "Hello World #n" của Lab 3 không còn bị tính là sự kiện Serial của Lab 1.
+  - Lab 3.5 có thẻ Dispatcher; System Check của Lab 7.2 bỏ hàng WiFi/MQTT.
+- Tiêu đề bài ("Yêu cầu thực hành") sửa cho khớp code: 4.1b, 4.2a, 4.6, 5.1a (không cấu hình thanh ghi), 5.1b (không đóng gói CRC), 5.2b (chỉ nhận và in lệnh).
+- Chưa làm, cần nhóm chốt:
+  - Đổi thứ tự 4.5/4.6 trong giáo trình (ảnh hưởng thứ tự mở khoá và phiên bản khóa học của lớp).
+  - Đối chiếu tên bài và mô tả mới của README `PTITCube/.github` (commit `3ba1246`).
+  - Kiểm thử trên phần cứng thật.
+
 ## 19/11/2026 — Áp giao diện mới của Quân (`quanna1402:fix/frontend-v1`)
 
 - Commit của Quân gộp 282 file trên nền `main` cũ. Phần thay đổi thực, tính so với `develop` (`2adb3ab`), được áp bằng 3-way merge. Chỉ lấy đúng phạm vi: trang loading, sidebar các lab, giao diện Lab 0 (nền, thẻ có tab nổi, icon, font) và các asset đi kèm.
@@ -182,3 +250,33 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Serial Monitor: gom dòng nhận được và cập nhật giao diện mỗi 80 ms (bộ giải mã vẫn nhận từng dòng ngay); thêm Tạm dừng/Tiếp tục, Sao chép, tự cuộn theo vị trí cuộn và nút "↓ Cuối". Áp dụng cho mọi bài.
 - Lab4-04b đổi tên: "Chụp ảnh bằng thư viện PTIT_Camera, lưu thẻ SD và gửi ảnh về trình duyệt qua Serial". ID không đổi.
 - Hiển thị ảnh camera qua MQTT: hoãn, kế hoạch riêng ở `Docs/MQTT_PLAN_2026-11-18.md`.
+
+## 2026-11-25 — Lab 7: System Check thay bảng SD / "Kết quả thực hành", widget trong cửa sổ Trạm mặt đất
+- Lab7-01/02: thẻ "🛰️ Trạm mặt đất" nằm ngay sau Serial Monitor; bỏ bảng "Thẻ SD / Hệ thống tệp" và "Kết quả thực hành". Trạng thái và log 5 dòng gần nhất của Thẻ nhớ SD và Đường truyền LoRa hiển thị trong System Check.
+- Mỗi dòng System Check là Active (xanh) khi có số đo hoặc báo cáo của phân hệ trong 10 giây gần nhất, Inactive (xám) khi không có, Lỗi (đỏ) khi báo cáo mới nhất là lỗi. 10 giây vì Lab 7 phát mỗi 4 giây và tạm dừng viễn trắc khi đang xử lý lệnh. Ảnh lưu bằng lệnh f và log lệnh b (ghi/đọc pin trên SD) được tính là hoạt động của thẻ SD.
+- Lab 7 không làm mờ (opacity) các bảng khi chưa có dữ liệu mới; System Check thể hiện độ mới thay cho việc làm mờ. Các lab khác giữ nguyên.
+- Cửa sổ Trạm mặt đất (`/groundstation?lesson=Lab7-…`) có bản sao các widget (tư thế 3D, GPS, điện áp, môi trường, System Check), lấy dữ liệu **chỉ từ cổng USB-TTL của trạm mặt đất** (gói LoRa thu được), không chia sẻ dữ liệu từ cổng USB của vệ tinh. Lý do: cửa sổ trạm mặt đất phải phản ánh đúng những gì đường truyền LoRa mang về. Ở trạm mặt đất mọi dòng nhận được đều tính là RX của LoRa; gói downlink rút gọn nên có thể thiếu trường (ví dụ Lab7-01 không gửi gia tốc trong gói định kỳ).
+
+## 2026-11-25 — Lab 8: kích thước widget dashboard
+- Mỗi loại widget có kích thước mặc định và tối thiểu (đơn vị lưới, 1 hàng = 60 px); không kéo nhỏ hơn mức tối thiểu được. Lưới nhỏ nhất giữ 4 cột để vừa chiều rộng tối thiểu.
+- Đồ thị, bản đồ, mô hình 3D và Terminal lấp đầy ô widget theo chiều cao còn lại thay vì cao cố định 300–350 px. Bản đồ tự đo lại kích thước khi widget đổi cỡ và luôn hiển thị (tâm mặc định PTIT Hà Đông) khi chưa có fix GPS.
+- Dashboard Lab 8 không làm mờ panel khi chưa có mẫu mới, giống Lab 7.
+- Đồ thị, Gauge, Cảnh báo ngưỡng và Bảng số liệu chọn được trường dữ liệu (⚙ trên tiện ích): điện áp, nhiệt độ, độ ẩm, áp suất, gia tốc/con quay/từ trường X·Y·Z, độ cao, vĩ độ/kinh độ. Một đồ thị chỉ vẽ các trường cùng đơn vị (một trục Y); chọn trường khác đơn vị sẽ thay bằng đồ thị mới. Danh sách trường lấy từ schema telemetry, không có trường "ảo".
+- Bảng tiện ích bổ sung các panel của các lab trước (Môi trường, System Check, LoRa, Trạm mặt đất, WiFi/MQTT, Thẻ SD, Kết quả lệnh, Phát hiện sự cố, LED/Nút nhấn, Bảng lệnh). Bỏ khỏi bảng: WiFi/MQTT, LED/Nút nhấn, Thẻ SD; bỏ trường độ ẩm (bộ cảm biến PTITCube không có).
+- Bố cục dashboard lưu theo tài khoản trong trình duyệt (`localStorage`, khóa `ptit:dashboard:v1:user:<id>`), cùng cách lưu bản nháp code; không lưu cho khách. Không lưu ở server để không thêm bảng/migration cho một tùy chọn giao diện; đổi máy thì về bố cục mặc định. Khi đọc lại, khối đã bị gỡ khỏi bảng và cấu hình không hợp lệ được bỏ qua hoặc trả về mặc định.
+- Bảng lệnh mặc định: ping, status, uptime, get_sensor, get_eps, get_gps, capture, pause, resume, help; học viên chọn thêm/bớt từ danh sách gợi ý hoặc gõ lệnh riêng.
+
+## 2026-11-25 — Ảnh camera chỉ lưu trên thẻ SD, không hiện trên trình duyệt
+- Nguyên nhân gặp thực tế: bản nháp Lab4-04a viết từ phiên bản code cũ (giống upstream PTITCube) chỉ ghi ảnh vào SD và in "Camera: Saved ...", không gọi `sendImageOverSerial()`, nên không có `IMG_BEGIN/IMG_CHUNK/IMG_END`. Trình duyệt không thể đọc thẻ SD của OBC; ảnh chỉ đến được nếu firmware gửi lại qua Serial (hoặc MQTT).
+- Không tự sửa bản nháp của học viên và không cài việc gửi ảnh vào thư viện (các bài 4-04b/4-06 đã tự gửi, sẽ bị gửi trùng). Thay vào đó Camera Viewer phát hiện "đã lưu trên thiết bị nhưng sau 4 giây không có IMG_BEGIN", giải thích lý do và cho xem/sao chép hàm `sendImageOverSerial()` cùng chỗ cần gọi.
+- Bộ giải mã phát sự kiện tiến độ khi đang nhận ảnh qua Serial (mỗi ~3 KB) và đánh dấu ảnh đã thật sự về trình duyệt (`browser: true`) để phân biệt với dòng "Saved" của firmware.
+
+## 2026-11-25 — Ảnh camera lên trình duyệt qua MQTT, ẩn khỏi code học viên
+Thay cho mục "Ảnh camera chỉ lưu trên thẻ SD" ở trên (bỏ hướng dẫn tự chép hàm `sendImageOverSerial()`).
+- Học viên chỉ code chụp và lưu ảnh vào `/photos` trên thẻ SD. Việc đẩy ảnh lên máy chủ nằm trong lớp nền của thư viện (`compiler/overrides/CDH/PTITCloud.*`, bản build v9), chạy ở mọi bài: một task ưu tiên thấp quét `/photos` mỗi 2 giây và publish mỗi JPEG mới (kích thước ổn định qua 2 lần quét, có SOI/EOI, ≤ 2 MB) lên `sensors/<uid>/image`. Ảnh có sẵn trên thẻ lúc bo khởi động không gửi lại.
+- Cấu hình WiFi + MQTT do web app gửi qua Serial và bo lưu trong NVS (không nằm trong mã nguồn hay file .bin). Khi `cdh.begin()`, bo in `[CLOUD] CFG? v1 uid=… ssid=…` và chờ 2 giây (0,6 giây nếu đã có cấu hình). Web app trả `@PTITCLOUD KEEP` nếu bo đã đúng thiết bị/WiFi của tài khoản; nếu không thì gọi `POST /api/devices/cloud/provision` rồi gửi cấu hình. Bo của tài khoản khác bị xóa cấu hình (`CLEAR`) để ảnh không lọt sang tài khoản đó. Dòng cấu hình không hiện trong Serial Monitor, và `cdh.read()` không bao giờ trả các dòng `@PTITCLOUD` cho sketch.
+- Mỗi tài khoản có một thiết bị "CubeSat của tôi (ảnh camera)" (model `ptitcube-cloud`), tạo khi cấp cấu hình lần đầu. `per_device`: mỗi lần cấp sẽ rotate secret riêng `dev_<uid>`. `shared` (HiveMQ demo hiện tại): mọi bo dùng chung `DEVICE_MQTT_USERNAME/PASSWORD`, không có phân quyền theo thiết bị. Đây là rủi ro đã chấp nhận cho demo: một bo có thể publish vào topic của bo khác, nhưng backend vẫn chỉ lưu ảnh cho thiết bị đã đăng ký và chỉ chủ thiết bị xem được.
+- WiFi lấy từ `DEVICE_WIFI_SSID/PASSWORD` (WiFi phòng lab); nếu trống thì Camera Viewer cho học viên nhập WiFi (chỉ giữ trong bộ nhớ trang, bo lưu vào NVS). Lớp nền chỉ bật WiFi khi sketch chưa tự bật WiFi, và không gửi khi sketch đang phát AP.
+- Camera Viewer tải ảnh của thiết bị này cả khi đang dùng Serial, tải ngay khi bo báo `[CLOUD] PHOTO SENT`, và bỏ bản trùng với ảnh đã nhận qua Serial (cùng số byte; các bài mẫu 4-04a/4-04b/4-06 vẫn gửi qua Serial).
+- Rủi ro còn lại: TLS dùng `setInsecure()` (chưa kiểm tra chứng chỉ). Đọc thẻ SD song song với sketch dựa vào khóa FATFS của ESP-IDF và khóa bus SPI của thư viện. Một bo chạy sẵn khi mở cổng (không reset) chỉ nhận cấu hình nếu sketch đọc `cdh`; nếu không thì phải nhấn RST. Bo chưa cấu hình sẽ chậm khởi động thêm 2 giây. Chưa thử trên phần cứng.
+- Sửa sau thử phần cứng (19:08): bản Lab4-04a cũ luôn đặt lại bộ đếm sau khi khởi động và ghi đè `/photos/uart_img_0.jpg`, nên lớp nền coi tệp là "đã có lúc khởi động" và không gửi. Giờ tệp đã biết mà đổi kích thước được coi là ảnh mới (ghi đè cùng kích thước vẫn bị bỏ qua, hiếm gặp). Bo in `[CLOUD] READY photos=<n>` khi bắt đầu theo dõi thẻ SD. Camera Viewer báo rõ nếu sau 30 giây bo vẫn chưa gửi ảnh. Bo chưa từng cấu hình không còn in lỗi `nvs_open failed`.

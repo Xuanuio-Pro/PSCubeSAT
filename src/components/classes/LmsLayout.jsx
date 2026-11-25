@@ -7,7 +7,8 @@ export default function LmsLayout({ roles = null, publicPreview = false, nested 
   const location = useLocation();
   const isLearningPage = /^\/classes\/\d+\/learn$/.test(location.pathname);
   const isAdminUsers = location.pathname === '/admin/users';
-  if (publicPreview) return <div className="lms-shell"><nav className="lms-nav" aria-label="Khám phá CubeSAT"><NavLink to="/">Trang chủ</NavLink><NavLink to="/login">Đăng nhập</NavLink></nav><Outlet /></div>;
+  // The preview is the same full-screen player as /classes/:id/learn; the app Header carries home/login.
+  if (publicPreview) return <div className="lms-shell is-learning-shell"><Outlet /></div>;
   if (classMode === null) return <div className="lms-shell" role="status">Đang tải lớp học…</div>;
   if (!classMode && !(isAdminUsers && user?.role === 'admin')) {
     return <section className="lms-shell"><h1>Lớp học chưa được bật</h1><p>Vui lòng liên hệ quản trị viên để biết thời gian mở lớp.</p></section>;

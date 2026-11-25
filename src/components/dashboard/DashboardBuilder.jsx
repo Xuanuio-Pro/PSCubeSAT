@@ -1,115 +1,62 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/auth-api';
 import { useTelemetry } from '../../contexts/telemetry-api';
 import { useSerial } from '../../contexts/serial-api';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
-import VoltageChart from '../visualization/VoltageChart';
 import GPSMap from '../visualization/GPSMap';
 import AttitudeViewer3D from '../visualization/AttitudeViewer3D';
 import SerialMonitor from '../serial/SerialMonitor';
 import CameraViewer from '../visualization/CameraViewer';
+import EnvironmentPanel from '../visualization/EnvironmentPanel';
+import SystemCheck from '../visualization/SystemCheck';
+import RadioPanel from '../visualization/RadioPanel';
+import ShellResultsPanel from '../visualization/ShellResultsPanel';
+import AnomalyPanel from '../visualization/AnomalyPanel';
+import GroundStationLink from '../visualization/GroundStationLink';
+import CommandPanel from '../groundstation/CommandPanel';
+import { AlertWidget, ButtonWidget, GaugeWidget, MetricChart, ValueWidget, WidgetSettings } from './DashboardWidgets';
+import { metric } from '../../telemetry/metrics';
+import { ROW_HEIGHT, WIDGET_GROUPS, WIDGET_TYPES, createWidget, defaultLayout, layoutKey, nextWidgetId, parseLayout, serializeLayout, typeInfo } from './dashboard-layout';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const WIDGET_TYPES = [
-  { type: 'chart', label: '📈 Đồ thị', icon: '📈', w: 6, h: 4 },
-  { type: 'map', label: '🗺️ Bản đồ', icon: '🗺️', w: 6, h: 4 },
-  { type: '3d', label: '🛰️ Mô hình 3D', icon: '🛰️', w: 6, h: 4 },
-  { type: 'gauge', label: '🎯 Gauge', icon: '🎯', w: 3, h: 3 },
-  { type: 'alert', label: '🚨 Cảnh báo', icon: '🚨', w: 3, h: 2 },
-  { type: 'button', label: '🔘 Nút bấm', icon: '🔘', w: 3, h: 2 },
-  { type: 'terminal', label: '📟 Terminal', icon: '📟', w: 6, h: 4 },
-  { type: 'image', label: '📷 Ảnh', icon: '📷', w: 4, h: 3 },
-];
+const SIZE = Object.fromEntries(WIDGET_TYPES.map(({ type, minW, minH }) => [type, { minW, minH }]));
+// Panels that fill the widget (plot / map / canvas); every other panel scrolls when the widget is short.
+const FILL = ['chart', 'map', '3d', 'terminal'];
 
-function GaugeWidget({ config }) {
-  const { latest } = useTelemetry();
-  const value = latest?.voltageV ?? null;
-  const max = config?.max ?? 4.2;
-  const label = config?.label ?? 'Pin (V)';
-  const pct = value === null ? 0 : Math.max(0, Math.min((value / max) * 100, 100));
-  const color = pct > 60 ? 'var(--accent-green)' : pct > 30 ? 'var(--accent-orange)' : 'var(--accent-red)';
-
-  return (
-    <div style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{
-        width: '110px', height: '110px', borderRadius: '50%', margin: '0 auto var(--space-md)',
-        background: `conic-gradient(${color} ${pct * 3.6}deg, var(--bg-tertiary) 0deg)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 0 20px ${color}20, inset 0 4px 10px rgba(0,0,0,0.5)`,
-      }}>
-        <div style={{
-          width: '90px', height: '90px', borderRadius: '50%', background: 'var(--bg-surface)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-        }}>
-          <span style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color, textShadow: `0 0 10px ${color}40` }}>
-            {value === null ? '—' : value.toFixed(1)}
-          </span>
-        </div>
-      </div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-    </div>
-  );
-}
-
-function AlertWidget({ config }) {
-  const { latest } = useTelemetry();
-  const temperature = latest?.temperatureC ?? null;
-  const label = config?.label ?? 'Nhiệt độ cao';
-  const threshold = config?.threshold ?? 45;
-  const active = temperature !== null && temperature > threshold;
-
-  return (
-    <div style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{
-        width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto var(--space-md)',
-        background: active ? 'var(--accent-red)' : 'var(--bg-tertiary)',
-        boxShadow: active ? '0 0 25px rgba(248,81,73,0.6)' : 'inset 0 4px 8px rgba(0,0,0,0.4)',
-        animation: active ? 'pulse-orange 1s ease-in-out infinite' : 'none',
-        border: active ? '2px solid rgba(255,255,255,0.8)' : '2px solid var(--border-subtle)',
-        transition: 'all 0.3s'
-      }}
-      />
-      <div style={{ fontSize: '1rem', fontWeight: 700, color: active ? 'var(--accent-red)' : 'var(--text-heading)' }}>{temperature === null ? 'Chờ nhiệt độ' : active ? '⚠️ NGUY HIỂM' : `🚨 ${label}`}</div>
-      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>Ngưỡng cảnh báo: &gt; {threshold}°C</div>
-    </div>
-  );
-}
-
-function ButtonWidget({ config, onSend = undefined }) {
-  const label = config?.label ?? 'Chụp ảnh';
-  const command = config?.command ?? 'capture';
-
-  return (
-    <div style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <button
-        className="btn btn-primary"
-        disabled={!onSend}
-        onClick={() => onSend?.(command)}
-        style={{ width: '85%', padding: '16px', fontSize: '1rem', borderRadius: '12px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)', transition: 'all 0.2s' }}
-      >
-        {label}
-      </button>
-      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '12px', background: 'var(--bg-tertiary)', padding: '4px 12px', borderRadius: '20px' }}>
-        Lệnh phát: <code style={{ color: 'var(--accent-cyan)' }}>{command}</code>
-      </div>
-    </div>
-  );
+/** Title follows the data a configurable widget currently shows. */
+function widgetTitle({ type, config }) {
+  const info = typeInfo(type);
+  if (type === 'chart') return `${info.icon} ${config.keys.map(key => metric(key).label).join(' · ')}`;
+  if (type === 'gauge' || type === 'alert') return `${info.icon} ${metric(config.key).label}`;
+  return `${info.icon} ${info.label}`;
 }
 
 export default function DashboardBuilder() {
   const { mode } = useTelemetry();
   const { isConnected, send } = useSerial();
-  const [widgets, setWidgets] = useState([
-    { i: '1', type: 'chart', title: 'Điện áp Pin', x: 0, y: 0, w: 6, h: 4, config: {} },
-    { i: '2', type: 'gauge', title: 'Battery Level', x: 6, y: 0, w: 3, h: 3, config: { value: 3.72, max: 4.2, label: 'Pin (V)' } },
-    { i: '3', type: 'alert', title: 'Cảnh báo nhiệt', x: 9, y: 0, w: 3, h: 3, config: { label: 'Nhiệt độ cao', threshold: 45 } },
-  ]);
-  const [nextId, setNextId] = useState(4);
+  const { user } = useAuth();
+  // Saved per account in this browser; a guest's layout is not kept.
+  const storageKey = user?.id != null ? layoutKey(user.id) : null;
+  const [widgets, setWidgets] = useState(() => {
+    try { return (storageKey && parseLayout(localStorage.getItem(storageKey))) || defaultLayout(); } catch { return defaultLayout(); }
+  });
+  const [nextId, setNextId] = useState(() => nextWidgetId(widgets));
+  const [saveState, setSaveState] = useState('');
+  useEffect(() => {
+    if (!storageKey) return;
+    try { localStorage.setItem(storageKey, serializeLayout(widgets)); setSaveState('Đã lưu bố cục'); }
+    catch { setSaveState('Không lưu được bố cục trên trình duyệt này'); }
+  }, [storageKey, widgets]);
+  const resetLayout = () => {
+    if (!window.confirm('Khôi phục bố cục mặc định? Bố cục hiện tại sẽ bị thay thế.')) return;
+    const layout = defaultLayout();
+    setWidgets(layout); setNextId(nextWidgetId(layout)); setEditing(null);
+  };
+  const [editing, setEditing] = useState(/** @type {string|null} */ (null));
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [droppingItem, setDroppingItem] = useState(null);
 
-  // Handle Drag Start from Palette
   const onDragStart = (e, wt) => {
     e.dataTransfer.setData('text/plain', wt.type);
     e.dataTransfer.effectAllowed = 'copy';
@@ -117,60 +64,45 @@ export default function DashboardBuilder() {
   };
 
   // RGL triggers this when an external item is dropped
-  const onDrop = (_layout, layoutItem, _event) => {
-    if (!layoutItem) return;
-    const type = _event.dataTransfer.getData('text/plain');
-    if (!type) {
-      setDroppingItem(null);
-      return;
-    }
-
-    const info = WIDGET_TYPES.find(w => w.type === type);
-    if (!info) {
-      setDroppingItem(null);
-      return;
-    }
-
-    const newWidget = {
-      i: nextId.toString(),
-      type,
-      title: info.label,
-      x: layoutItem.x,
-      y: layoutItem.y,
-      w: info.w,
-      h: info.h,
-      config: {}
-    };
-
-    setWidgets(prev => [...prev, newWidget]);
-    setNextId(prev => prev + 1);
+  const onDrop = (_layout, layoutItem, event) => {
+    const type = event.dataTransfer.getData('text/plain');
     setIsDraggingOver(false);
     setDroppingItem(null);
+    if (!layoutItem || !typeInfo(type)) return;
+    setWidgets(prev => [...prev, createWidget(nextId.toString(), type, layoutItem.x, layoutItem.y)]);
+    setNextId(prev => prev + 1);
   };
 
-  const removeWidget = (id) => {
-    setWidgets(prev => prev.filter(w => w.i !== id));
-  };
+  const removeWidget = id => setWidgets(prev => prev.filter(w => w.i !== id));
+  const updateConfig = (id, config) => setWidgets(prev => prev.map(w => w.i === id ? { ...w, config } : w));
 
   const onLayoutChange = (layout) => {
-    // Sync React state with RGL layout
     setWidgets(prev => prev.map(w => {
       const l = layout.find(item => item.i === w.i);
-      if (l) return { ...w, x: l.x, y: l.y, w: l.w, h: l.h };
-      return w;
+      return l ? { ...w, x: l.x, y: l.y, w: l.w, h: l.h } : w;
     }));
   };
 
   const renderWidget = (widget) => {
+    const { config } = widget;
     switch (widget.type) {
-      case 'chart': return <div style={{ height: '100%', minHeight: '200px' }}><VoltageChart /></div>;
-      case 'map': return <div style={{ height: '100%', minHeight: '200px' }}><GPSMap height="100%" /></div>;
-      case '3d': return <div style={{ height: '100%', minHeight: '200px' }}><AttitudeViewer3D height="100%" /></div>;
-      case 'gauge': return <GaugeWidget config={widget.config} />;
-      case 'alert': return <AlertWidget config={widget.config} />;
-      case 'button': return <ButtonWidget config={widget.config} onSend={mode === 'serial' && isConnected ? send : undefined} />;
+      // Each panel's card fills the widget body; its plot/map/canvas takes the remaining height (no fixed px).
+      case 'chart': return <MetricChart keys={config.keys} />;
+      case 'map': return <GPSMap height="100%" />;
+      case '3d': return <AttitudeViewer3D height="100%" />;
+      case 'gauge': return <GaugeWidget config={config} />;
+      case 'value': return <ValueWidget config={config} />;
+      case 'alert': return <AlertWidget config={config} />;
+      case 'button': return <ButtonWidget config={config} onSend={mode === 'serial' && isConnected ? send : undefined} />;
+      case 'commands': return <CommandPanel commands={config.commandText.split(',').map(item => item.trim()).filter(Boolean).slice(0, 20)} />;
       case 'terminal': return <SerialMonitor height="100%" />;
       case 'image': return <CameraViewer />;
+      case 'environment': return <EnvironmentPanel />;
+      case 'system': return <SystemCheck />;
+      case 'radio': return <RadioPanel />;
+      case 'groundStation': return <GroundStationLink />;
+      case 'shell': return <ShellResultsPanel />;
+      case 'anomaly': return <AnomalyPanel />;
       default: return <div>Unknown widget</div>;
     }
   };
@@ -182,39 +114,31 @@ export default function DashboardBuilder() {
         <div className="card-header">
           <h3>🧩 Thư viện Tiện ích (Widget Palette)</h3>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
-            Kéo và thả (Drag and Drop) tiện ích xuống Canvas bên dưới
+            Kéo thả tiện ích xuống Canvas; nhấn ⚙ trên tiện ích để chọn dữ liệu hiển thị
+          </span>
+          <span style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+            {storageKey ? saveState : 'Đăng nhập để lưu bố cục'}
+            <button type="button" className="btn btn-sm btn-outline" onClick={resetLayout}>↺ Bố cục mặc định</button>
           </span>
         </div>
         <div className="widget-palette">
-          {WIDGET_TYPES.map(wt => (
-            <div
-              key={wt.type}
-              className="widget-palette-item"
-              draggable={true}
-              onDragStart={(e) => onDragStart(e, wt)}
-            >
-              {wt.icon} {wt.label}
-            </div>
-          ))}
+          {WIDGET_GROUPS.map(group => <div key={group.title} className="widget-palette-group">
+            <span className="widget-palette-title">{group.title}</span>
+            <div className="widget-palette-items">{group.items.map(wt => (
+              <div key={wt.type} className="widget-palette-item" draggable={true} onDragStart={(e) => onDragStart(e, wt)}>
+                {wt.icon} {wt.label}
+              </div>
+            ))}</div>
+          </div>)}
         </div>
       </div>
 
       {/* Dashboard Canvas */}
-      <div 
+      <div
         className={`dashboard-canvas ${isDraggingOver ? 'is-dragging-over' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
         onDragLeave={() => setIsDraggingOver(false)}
       >
-        {widgets.length === 0 && !isDraggingOver && (
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', 
-            justifyContent: 'center', flexDirection: 'column', gap: 'var(--space-md)', 
-            color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 0
-          }}>
-            <span style={{ fontSize: '48px' }}>🧩</span>
-            <p>Kéo các tiện ích từ bảng trên và thả vào đây</p>
-          </div>
-        )}
         {widgets.length === 0 && (
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none', color: 'var(--text-muted)', zIndex: 0 }}>
             <div style={{ fontSize: '48px', opacity: 0.5, marginBottom: '16px' }}>🧩</div>
@@ -225,39 +149,39 @@ export default function DashboardBuilder() {
 
         <ResponsiveGridLayout
           className="layout"
-          layouts={{ lg: widgets }}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-          rowHeight={60}
+          layouts={{ lg: widgets.map(widget => ({ ...widget, ...SIZE[widget.type] })) }}
+          // The narrowest breakpoint keeps 4 columns so every widget's minimum width still fits.
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+          rowHeight={ROW_HEIGHT}
           onLayoutChange={onLayoutChange}
           onDrop={onDrop}
           isDroppable={true}
           droppingItem={droppingItem ? { ...droppingItem, x: 0, y: 0 } : undefined}
           onDropDragOver={() => ({ w: droppingItem?.w || 6, h: droppingItem?.h || 4 })}
           draggableHandle=".dashboard-widget-header"
+          draggableCancel=".dashboard-widget-control"
           resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 's', 'n']}
           style={{ minHeight: '600px', zIndex: 1 }}
         >
-          {widgets.map(widget => (
-            <div key={widget.i} className="dashboard-widget">
+          {widgets.map(widget => {
+            const configurable = Boolean(typeInfo(widget.type).config);
+            const open = editing === widget.i;
+            return <div key={widget.i} className="dashboard-widget">
               <div className="dashboard-widget-header">
-                <span>{widget.title}</span>
-                <button
-                  onClick={() => removeWidget(widget.i)}
-                  onMouseDown={(e) => e.stopPropagation()} // Prevent dragging when clicking close
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--text-muted)',
-                    cursor: 'pointer', fontSize: '14px', padding: '2px 6px',
-                  }}
-                >
-                  ✕
-                </button>
+                <span>{widgetTitle(widget)}</span>
+                <span style={{ display: 'flex', gap: 2 }}>
+                  {configurable && <button type="button" className={`dashboard-widget-control${open ? ' is-active' : ''}`} title="Chọn dữ liệu hiển thị"
+                    aria-label="Cài đặt tiện ích" aria-pressed={open} onClick={() => setEditing(open ? null : widget.i)}>⚙</button>}
+                  <button type="button" className="dashboard-widget-control" title="Xóa tiện ích" aria-label="Xóa tiện ích" onClick={() => removeWidget(widget.i)}>✕</button>
+                </span>
               </div>
-              <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
+              {open && <WidgetSettings widget={widget} onChange={config => updateConfig(widget.i, config)} />}
+              <div className={`dashboard-widget-body${FILL.includes(widget.type) ? '' : ' is-scroll'}`}>
                 {renderWidget(widget)}
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </ResponsiveGridLayout>
       </div>
     </div>

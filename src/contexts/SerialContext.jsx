@@ -161,12 +161,15 @@ export function SerialProvider({ children }) {
     return () => { mountedRef.current = false; clearTimeout(flushTimerRef.current); flushTimerRef.current = null; pendingRef.current = []; disconnect(); };
   }, [disconnect]);
 
-  const send = useCallback(async text => {
+  // `display`: what the Serial Monitor shows instead of the raw text (platform configuration carries
+  // credentials), or null to show nothing. Listeners never see the raw text either.
+  const send = useCallback(async (text, { display = text } = {}) => {
     const session = activeRef.current;
     if (!session || session.stopping || flashRef.current) return false;
     try {
       await session.writer.write(new TextEncoder().encode(text + '\n'));
-      addLine(text, 'tx');
+      if (display === text) addLine(text, 'tx');
+      else if (display) addLine(display, 'system');
       return true;
     } catch (error) {
       addLine(`Lỗi gửi Serial: ${error.message}`, 'error');

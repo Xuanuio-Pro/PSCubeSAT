@@ -39,3 +39,13 @@ test('after "object." only that object\'s methods are suggested', () => {
   assert.equal(declaredSymbols(sketch).find(item => item.name === 'cdh').kind, 'variable');
   assert.equal(declaredSymbols(sketch).find(item => item.name === 'blink').kind, 'function');
 });
+
+test('library 74065b6 API: CDH watchdog/tasks, GPS NMEA helpers and templated queues are suggested', () => {
+  const code = 'PTIT_CDH cdh;\nPTIT_GPS gps;\nPTIT_Sensor sensor;\nstruct Ev { int v; };\nPTIT_Queue<Ev> events;\n';
+  const names = prefix => completionsAt(code, prefix).map(item => item.name);
+  assert.ok(['wdtInit', 'wdtFeed', 'createTask', 'addTask', 'lock', 'delayMs'].every(name => names('  cdh.').includes(name)));
+  assert.ok(['readSentence', 'verifyChecksum', 'getNMEAType', 'hasFix'].every(name => names('  gps.').includes(name)));
+  assert.ok(['getRoll', 'getPitch', 'getHeading', 'getAltitude'].every(name => names('  sensor.').includes(name)));
+  assert.ok(['send', 'receive', 'sendFromISR'].every(name => names('  events.').includes(name)));
+  assert.ok(names('  ').includes('ledcSetup') && names('  ').includes('wdtFeed'));
+});

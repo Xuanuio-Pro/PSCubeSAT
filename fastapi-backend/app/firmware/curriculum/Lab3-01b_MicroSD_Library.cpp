@@ -1,42 +1,40 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/985ba8bbeab459aaf8dee0e0f793db3d64c53cd6/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab3-01b_MicroSD_Library/blob/4155f6ad0276306c34b0c89b89ccffc5e6ac1049/src/main.cpp
 /**
- * VÍ DỤ: LƯU TRỮ LOG VÀO THẺ NHỚ
- * 
- * Mô tả:
- * Sử dụng phân hệ Storage (Giao tiếp SPI với MicroSD) để ghi log.
+ * VÍ DỤ 3-1b: LƯU TRỮ LOG VÀO THẺ NHỚ VỚI THƯ VIỆN PTITCUBE
  */
-
 #include <Arduino.h>
-
 #include <PTITCube.h>
 
 PTIT_CDH cdh;
-
+PTIT_EPS eps;
 PTIT_Storage myDisk;
 
-void setup() {
-    cdh.begin(115200);
-    while (!cdh) { delay(10); }
+// logData() không báo kết quả; appendFile() ghi cùng file /datalog.txt và trả về true khi ghi đủ.
+bool saveLine(const char* text) {
+    const String line = String(text) + "\n";
+    const bool saved = myDisk.appendFile("/datalog.txt", line.c_str());
+    cdh.println(saved ? "[SD] log saved" : "[SD] log write failed/not ready");
+    return saved;
+}
 
-    cdh.println("\n[EXAMPLE] Khởi tạo thẻ nhớ...");
+void setup() {
+    cdh.begin();
+
+    // Kích hoạt hạ áp cấp nguồn ngoại vi trên PCB vệ tinh qua thư viện EPS
+    eps.setBuckState(true);
+
     myDisk.init();
-    
-    // Ghi thử một dòng Boot vào log
-    const bool bootSaved = myDisk.appendFile("/datalog.txt", "=== SYSTEM BOOT: CUBESAT V1 ===\n");
-    cdh.println(bootSaved ? "[SD] log saved" : "[SD] log write failed/not ready");
+    saveLine("BOOT: PTITCUBE C&DH");
 }
 
 void loop() {
     static int counter = 0;
-    
-    String data = "Hello world #" + String(counter) + " - Uptime: " + String(millis()) + "ms";
-    cdh.println(data);
-    
-    const String line = data + "\n";
-    const bool saved = myDisk.appendFile("/datalog.txt", line.c_str());
-    cdh.println(saved ? "[SD] log saved" : "[SD] log write failed/not ready");
-    
-    counter++;
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Hello World #%d", counter++);
+    cdh.println(buf);
+
+    saveLine(buf);
     delay(3000);
 }

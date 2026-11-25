@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import Integer, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_password
 from app.db import get_db
 from app.models.tables import MQTTACL, Base, Device, MQTTCredential, User
@@ -35,6 +36,7 @@ class DeviceMqttTests(unittest.IsolatedAsyncioTestCase):
             await db.commit()
         self.owner = 1
         app = FastAPI()
+        register_exception_handlers(app)
         app.include_router(router)
 
         async def session():
@@ -129,3 +131,79 @@ class DeviceMqttTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(cred.enabled)
             self.assertIsNotNone(cred.revoked_at)
             self.assertEqual((await db.execute(select(MQTTACL))).scalars().all(), [])
+
+
+def _settings(**overrides):
+    values = {
+        "mqtt_host": "broker.test",
+        "mqtt_port": 8883,
+        "mqtt_tls": True,
+        "device_mqtt_auth": "per_device",
+        "device_mqtt_username": "",
+        "device_mqtt_password": "",
+        "device_wifi_ssid": "PTIT-Lab",
+        "device_wifi_password": "lab-pass",
+    }
+    return SimpleNamespace(**{**values, **overrides})
+
+
+class CloudProvisionTests(DeviceMqttTests):
+    """Hidden photo uplink: the board configuration the web app writes into NVS over Serial."""
+
+    async def provision(self, settings, body=None):
+        with patch("app.services.cloud_device.get_settings", return_value=settings):
+            return await self.client.post("/api/devices/cloud/provision", json=body or {})
+
+    async def test_per_device_provision_creates_one_device_and_rotates_its_secret(self):
+        empty = await self.client.get("/api/devices/cloud")
+        self.assertEqual(empty.status_code, 200, empty.text)
+        self.assertIsNone(empty.json()["device_uid"])
+        first = await self.provision(_settings())
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(first.headers["cache-control"], "no-store")
+        config = first.json()
+        uid = config["uid"]
+        self.assertEqual(config["user"], f"dev_{uid}")
+        self.assertEqual(config["topic"], f"sensors/{uid}/image")
+        self.assertEqual((config["ssid"], config["wpass"]), ("PTIT-Lab", "lab-pass"))
+        self.assertEqual((config["host"], config["port"], config["tls"]), ("broker.test", 8883, True))
+        second = (await self.provision(_settings())).json()
+        self.assertEqual(second["uid"], uid)
+        async with self.sessions() as db:
+            self.assertEqual(len((await db.execute(select(Device))).scalars().all()), 1)
+            cred = (await db.execute(select(MQTTCredential))).scalar_one()
+            self.assertTrue(verify_password(second["pass"], cred.password_hash))
+            self.assertFalse(verify_password(config["pass"], cred.password_hash))
+        with patch("app.services.cloud_device.get_settings", return_value=_settings()):
+            status = (await self.client.get("/api/devices/cloud")).json()
+        self.assertEqual(status["device_uid"], uid)
+        self.assertNotIn("pass", status)
+        # Another account gets its own device, never this one.
+        self.owner = 2
+        async with self.sessions() as db:
+            db.add(User(id=2, email="other@example.com", password_hash="unused"))
+            await db.commit()
+        other = (await self.provision(_settings())).json()
+        self.assertNotEqual(other["uid"], uid)
+
+    async def test_student_wifi_overrides_classroom_wifi(self):
+        config = (await self.provision(_settings(), {"wifi_ssid": "Home", "wifi_password": "secret"})).json()
+        self.assertEqual((config["ssid"], config["wpass"]), ("Home", "secret"))
+
+    async def test_shared_broker_credentials_for_demo_brokers(self):
+        settings = _settings(
+            device_mqtt_auth="shared", device_mqtt_username="demo", device_mqtt_password="demo-pass"
+        )
+        config = (await self.provision(settings)).json()
+        self.assertEqual((config["user"], config["pass"]), ("demo", "demo-pass"))
+        missing = await self.provision(_settings(device_mqtt_auth="shared"))
+        self.assertEqual(missing.status_code, 503)
+        self.assertEqual(missing.json()["details"]["reason"], "device_mqtt_missing")
+
+    async def test_missing_wifi_is_a_structured_error(self):
+        result = await self.provision(_settings(device_wifi_ssid="", device_wifi_password=""))
+        self.assertEqual(result.status_code, 409)
+        self.assertEqual(result.json()["code"], "CONFIG_INVALID")
+        self.assertEqual(result.json()["details"]["reason"], "wifi_missing")
+        async with self.sessions() as db:
+            self.assertEqual((await db.execute(select(Device))).scalars().all(), [])

@@ -140,6 +140,14 @@ async def compile_code(
             )
         except (OSError, ValueError, KeyError, TypeError) as exc:
             logger.error(f"[Compiler] Không thể khởi chạy PlatformIO: {type(exc).__name__}")
+            if isinstance(exc, ValueError) and "configuration or source mismatch" in str(exc):
+                # The image was built from another build_config revision than this API process runs.
+                return _err(
+                    "Image compiler khác phiên bản cấu hình của backend. Khởi động lại backend "
+                    "hoặc build lại image compiler.",
+                    installed=False,
+                    error_code="COMPILER_VERSION_MISMATCH",
+                )
             return _err(
                 "Compiler sandbox chưa sẵn sàng hoặc trả dữ liệu không hợp lệ.",
                 installed=False,

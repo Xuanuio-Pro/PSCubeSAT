@@ -19,7 +19,7 @@ export default function Header() {
   const { isConnected, connect, disconnect, serialSupport } = useSerial();
   const { user, logout, classMode } = useAuth();
   const lab = getLabBySlug(location.pathname.replace('/', ''));
-  const isClassLearningRoute = /^\/classes\/\d+\/learn$/.test(location.pathname);
+  const isClassLearningRoute = /^\/(?:classes\/\d+\/learn|preview)\/?$/.test(location.pathname);
   const isLearningRoute = Boolean(lab || isClassLearningRoute);
 
   const accountAvatar = (

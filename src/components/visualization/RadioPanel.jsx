@@ -7,6 +7,7 @@ const time = at => new Date(at).toLocaleTimeString();
 /** LoRa link as the OBC Serial log reports it: a TX line is a send request, never proof of reception. */
 export default function RadioPanel() {
   const { activity, now, mode, link, exerciseId } = useTelemetry();
+  const boot = activity.subsystems.system?.phase === 'boot' ? activity.subsystems.system : null;
   // Lab5-01 only transmits: its OBC never receives, so an RX counter there would only ever read 0.
   const sendOnly = /^Lab5-01/.test(exerciseId ?? '');
   const events = activity.events.filter(event => event.group === 'radio');
@@ -32,7 +33,7 @@ export default function RadioPanel() {
       {events.length ? <ol className="radio-log">{events.slice(-12).reverse().map((event, index) => <li key={`${event.at}:${index}`}>
         <span className={`radio-kind ${KIND[event.phase]?.className ?? ''}`}>{KIND[event.phase]?.label ?? event.phase}</span>
         <time>{time(event.at)}</time><code>{event.text}</code>
-      </li>)}</ol> : <p className="telemetry-empty">Chờ log TX/RX từ thiết bị</p>}
+      </li>)}</ol> : <p className="telemetry-empty">{boot ? `OBC đã khởi động lúc ${time(boot.at)} · đang chờ lệnh từ trạm mặt đất` : 'Chờ log TX/RX từ thiết bị'}</p>}
     </div>
   </section>;
 }

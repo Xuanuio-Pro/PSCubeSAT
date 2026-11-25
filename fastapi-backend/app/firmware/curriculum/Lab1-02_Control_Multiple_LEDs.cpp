@@ -1,11 +1,7 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab1-02_Control_Multiple_LEDs/blob/88c3940782f99e57e3151b413ec7f6baee0d43c0/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab1-02_Control_Multiple_LEDs/blob/54640be92975f924b61736b61a3ae81ffd7cddc7/src/main.cpp
 /**
- * VÍ DỤ 1-02: ĐIỀU KHIỂN NHIỀU ĐÈN LED (MULTIPLE LEDS)
- * 
- * Mô tả:
- * - Cấu hình nhiều chân GPIO làm OUTPUT để điều khiển đồng thời nhiều đèn LED.
- * - Tạo hiệu ứng nhấp nháy tuần tự (chạy đèn LED) và in trạng thái ra Serial Monitor.
+ * VÍ DỤ 1-02: ĐIỀU KHIỂN NHIỀU ĐÈN LED
  */
 #include <Arduino.h>
 
@@ -13,11 +9,6 @@ const int LED_PINS[] = {2, 4, 5};
 const int NUM_LEDS = sizeof(LED_PINS) / sizeof(LED_PINS[0]);
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial) { delay(10); }
-
-    Serial.println("[BOOT] Multi-LED Test");
-    
     for (int i = 0; i < NUM_LEDS; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
@@ -25,10 +16,8 @@ void setup() {
 }
 
 void loop() {
-    // Bật tắt tuần tự từng LED
     for (int i = 0; i < NUM_LEDS; i++) {
         digitalWrite(LED_PINS[i], HIGH);
-        Serial.printf("[LED] Bật LED chân GPIO %d\n", LED_PINS[i]);
         delay(300);
         digitalWrite(LED_PINS[i], LOW);
     }

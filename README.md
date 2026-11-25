@@ -106,7 +106,7 @@ cp ../.env.example ../.env    # biến frontend và port (tùy chọn)
 # Windows PowerShell:
 Copy-Item .env.example .env
 Copy-Item ..\.env.example ..\.env
-docker build -f compiler/Dockerfile -t pscubesat-compiler:1 .   # chỉ cần khi thử biên dịch firmware
+docker build --provenance=false -f compiler/Dockerfile -t pscubesat-compiler:1 .   # chỉ cần khi thử biên dịch firmware
 cd ..
 
 npm run dev:db:docker         # PostgreSQL 16 dev tại 127.0.0.1:5432 (user cubesat / cubesat_dev)

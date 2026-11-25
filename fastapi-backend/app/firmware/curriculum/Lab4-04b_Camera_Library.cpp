@@ -1,33 +1,19 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab4-04b_Camera_Library/blob/8c88576eb56544ca54f19a33e576f00441b3db57/src/main.cpp
-// Lab4-04: OBC MUX pins 12/14; send p to capture. Preserve existing SD images.
-// Source: https://github.com/PTITCube/Lab4-04_Camera_Snapshot
+// Upstream: https://github.com/PTITCube/Lab4-04b_Camera_Library/blob/95ecd5975c7d3e7d2854f550aff90c6833e27210/src/main.cpp
 /**
- * @file 1_Capture_To_SD.cpp
- * @brief Ví dụ cơ bản về khởi tạo Camera và chụp ảnh lưu vào thẻ MicroSD.
- * 
- * Mô tả:
- * - Khởi tạo module ESP32-CAM và thẻ nhớ MicroSD.
- * - Khi nhận p/P qua Serial, chụp một bức ảnh và lưu vào thẻ nhớ với tên 
- *   tuần tự (VD: /photos/image_0.jpg, /photos/image_1.jpg), rồi gửi ảnh vừa lưu
- *   về trình duyệt qua Serial để hiển thị ở Camera Viewer.
- * 
- * Lưu ý: 
- * - Đảm bảo chân CS của thẻ nhớ đã được cấu hình đúng (Mặc định: GPIO 13).
+ * VÍ DỤ 4-4b: CHỤP ẢNH & LƯU THẺ NHỚ BẰNG THƯ VIỆN PTITCUBE
  */
-
 #include <Arduino.h>
-
 #include <PTITCube.h>
 #include <SD.h>
 #include <base64.h>
 
 PTIT_CDH cdh;
-
+PTIT_EPS eps;
 PTIT_Camera camera;
 int imageCount = 0;
 
-// Gửi ảnh đã lưu trên thẻ SD về trình duyệt qua Serial theo từng khối base64 (không cần WiFi/MQTT).
+// Gửi ảnh đã lưu trên thẻ SD về trình duyệt qua Serial theo từng khối base64 (Camera Viewer).
 // Giao thức: IMG_BEGIN:<số byte> -> nhiều dòng IMG_CHUNK:<base64 của 384 byte> -> IMG_END
 static bool sendImageOverSerial(const String& path) {
     File file = SD.open(path.c_str(), FILE_READ);
@@ -56,45 +42,42 @@ static bool sendImageOverSerial(const String& path) {
 }
 
 void setup() {
-    cdh.begin(115200);
-    delay(2000);
-    
-    cdh.println("\n--- CAMERA / SD INITIALIZATION ---");
+    cdh.begin();
 
-    if (!camera.init(12, 14)) {
-        cdh.println("[Loi] Khong the khoi tao the nho!");
-        cdh.println("[SD] Kiem tra the; gui p de thu mount/chup lai.");
+    // Kích hoạt hạ áp cấp nguồn camera và ngoại vi qua thư viện EPS
+    eps.setBuckState(true);
+
+    if (!camera.init()) {
+        cdh.println("Camera: The nho chua san sang; go 'capture' de thu lai.");
     }
 
-    cdh.println("[OK] Nhap 'p' de chup anh.");
+    cdh.println("Camera: San sang. Go 'p' hoac 'capture' de chup anh.");
 }
 
 void loop() {
-    if (cdh.available() > 0) {
-        char command = cdh.read();
-
-        if (command == 'p' || command == 'P') {
+    static String cmd;
+    // Lệnh dài quá 32 ký tự bị bỏ, không làm tràn bộ nhớ.
+    while (cdh.available()) {
+        const char c = cdh.read();
+        if (c != '\n') {
+            if (c != '\r' && cmd.length() < 32) cmd += c;
+            continue;
+        }
+        cmd.trim();
+        if (cmd.equalsIgnoreCase("capture") || cmd.equalsIgnoreCase("photo") || cmd.equalsIgnoreCase("p")) {
+            // Không ghi đè ảnh cũ trên thẻ nhớ.
             String path;
             do { path = "/photos/image_" + String(imageCount++) + ".jpg"; } while (SD.exists(path.c_str()));
-            cdh.println("[Camera] Dang chup: " + path);
+            cdh.println("Camera: Dang chup " + path);
 
             if (camera.captureToFile(path.c_str())) {
-                cdh.println("[OK] Da luu anh: " + path);
                 sendImageOverSerial(path);
-
             } else {
-                cdh.println("[Loi] Chup anh that bai.");
+                cdh.println("Camera: Chup that bai.");
             }
+        } else if (cmd.length() > 0) {
+            cdh.printf("Camera: Lenh '%s' khong hop le. Go 'capture' de chup anh.\n", cmd.c_str());
         }
-
-        // Consume CR/LF from the same cdh Monitor command.
-        while (cdh.available() > 0) {
-            char trailing = cdh.peek();
-            if (trailing != '\r' && trailing != '\n') {
-                break;
-            }
-            cdh.read();
-        }
+        cmd = "";
     }
-    delay(5);
 }

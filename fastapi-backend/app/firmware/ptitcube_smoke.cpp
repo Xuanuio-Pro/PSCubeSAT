@@ -4,7 +4,6 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <TinyGPSPlus.h>
-#include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_QMC5883P.h>
 #include <PTITCube.h>
@@ -17,6 +16,7 @@ PTIT_Storage storage;
 PTIT_Camera camera;
 PTIT_CDH cdh;
 PTIT_Scheduler scheduler;
+PTIT_Queue<int> events(4);
 
 void tick() {
     sensor.update();
@@ -26,6 +26,10 @@ void tick() {
     cdh.publishData("sensors/test/telemetry", telemetry.c_str());
     storage.logData(telemetry.c_str());
     camera.capture();
+    if (PTIT_CDH::lock(PTIT_BUS_UART2)) { PTIT_MUX::selectGPS(); PTIT_CDH::unlock(PTIT_BUS_UART2); }
+    String nmea;
+    if (gps.readSentence(nmea) && PTIT_GPS::verifyChecksum(nmea.c_str())) events.send(1);
+    wdtFeed();
 }
 void setup() {
     Serial.begin(115200);
@@ -41,6 +45,7 @@ void setup() {
     cdh.init();
     scheduler.addTask("sensors", tick, 200, 1, 3);
     scheduler.enableWatchdog(30);
+    Serial.println(sensor.getRoll() + sensor.getAltitude() + (cdh.wasWatchdogReset() ? 1 : 0));
     scheduler.start();
     Serial.println(PTIT_Utils::extractCommand("ping"));
 }

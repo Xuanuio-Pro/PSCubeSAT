@@ -5,6 +5,14 @@ import { LABS } from '../src/data/labs.js';
 import { READING_NOTES, lessonReadingContent } from '../src/data/lesson-reading.js';
 import { projectKey, sourceKey, loadDraft } from '../src/components/editor/blockly-project.js';
 
+const RENAMED_REPOSITORIES = {
+  'Lab1-03_Button': 'Lab1-04_Button', 'Lab1-04_LED_Button': 'Lab1-05_LED_Button', 'Lab1-05_7_Segment_LED': 'Lab1-06_7_Segment_LED',
+  'Lab1-06_Serial_Communication': 'Lab1-07_Serial_Communication', 'Lab1-07_Serial_Control_LED': 'Lab1-08_Serial_Control_LED',
+  'Lab1-08_WiFi_Connection': 'Lab1-09_WiFi_Connection', 'Lab1-09_WiFi_AP_Mode': 'Lab1-10_WiFi_AP_Mode', 'Lab1-10_Web_Server_LED': 'Lab1-11_Web_Server_LED',
+  'Lab3-04_Watchdog_And_Event': 'Lab3-04_Watchdog_Timer', 'Lab4-05_Read_All_Sensors': 'Lab4-06_Read_All_Sensors',
+  'Lab4-06_Camera_Multiplexer': 'Lab4-05_Camera_Multiplexer', 'Lab5-03_Satellite_Comm_System': 'Lab5-03_Ground_Station_Demo',
+};
+
 test('PTITCube syllabus exposes 179 ordered sections and all 39 individual exercises', () => {
   assert.deepEqual(LABS.map(lab => getLessonsForLab(lab.id).length), [10, 37, 13, 24, 39, 18, 12, 14, 12]);
   const sections = Object.values(CURRICULUM).flatMap(lab => lab.lessons);
@@ -27,7 +35,8 @@ test('PTITCube syllabus exposes 179 ordered sections and all 39 individual exerc
     assert.equal(lab.description, CURRICULUM[lab.id].objective);
     if (lab.id === 0) continue;
     for (const lesson of lessons.filter(item => item.type === 'practice')) {
-      assert.equal(lesson.repositoryUrl, `https://github.com/PTITCube/${lesson.id}`);
+      // Practice IDs never change; these PTITCube repositories were renamed on 2026-11-24 (Docs/DECISIONS.md 25/11/2026).
+      assert.equal(lesson.repositoryUrl, `https://github.com/PTITCube/${RENAMED_REPOSITORIES[lesson.id] ?? lesson.id}`);
       assert.ok(lesson.id.startsWith(`Lab${lab.id}-`));
     }
   }

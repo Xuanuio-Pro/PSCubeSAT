@@ -51,7 +51,11 @@ async def list_device_images(
     device_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_required_user)
 ):
     await _owned_device(db, user, device_id)
-    return {"device_id": device_id, "images": device_images.list_images(device_id)}
+    return {
+        "device_id": device_id,
+        "images": device_images.list_images(device_id),
+        "sizes": device_images.image_sizes(device_id),
+    }
 
 
 @router.get("/images/{device_id}/{image_id}")

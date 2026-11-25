@@ -14,6 +14,17 @@ const cubesatIcon = L.divIcon({
 /** @type {import('leaflet').LatLngTuple} */
 const DEFAULT_CENTER = [20.9806, 105.7873];
 
+// Leaflet measures its container once; a resized dashboard widget needs a re-measure or tiles stay grey.
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize({ animate: false }));
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 function MapUpdater({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -22,9 +33,12 @@ function MapUpdater({ center }) {
   return null;
 }
 
-/** @param {{height?: number|string}} props */
+/** @param {{height?: number|string}} props `'100%'` fills a flex parent (dashboard widget). */
 export default function GPSMap({ height = 350 }) {
-  const { latest, history, status, generation } = useTelemetry();
+  const { latest, history, status, generation, activity, now } = useTelemetry();
+  // Satellites in use (GGA field 7 or "N sats" in the log): shows the receiver is searching before the first fix.
+  const gpsEvent = activity.events.findLast(event => event.group === 'gps' && event.satellites != null);
+  const satellites = gpsEvent && now - gpsEvent.at <= 10000 ? gpsEvent.satellites : null;
   const validGPS = sample => sample?.gpsLat != null && sample?.gpsLon != null;
   const lastKnown = history.findLast(validGPS);
   const position = validGPS(latest) ? /** @type {import('leaflet').LatLngTuple} */ ([latest.gpsLat, latest.gpsLon]) : null;
@@ -39,15 +53,16 @@ export default function GPSMap({ height = 350 }) {
           <span>Lat: {display(latest?.gpsLat, 6)}</span>
           <span>Lng: {display(latest?.gpsLon, 6)}</span>
           <span>Alt: {display(latest?.gpsAlt, 1)}m</span>
+          <span>Vệ tinh: {satellites ?? '—'}</span>
         </div>
       </div>
-      {!position && <div className="telemetry-empty">{lastKnown ? 'Mất fix — bản đồ giữ vị trí hợp lệ gần nhất' : 'Chờ fix GPS — đem mạch ra ngoài trời'}</div>}
-      <div style={{ height }}>
+      {!position && <div className="telemetry-empty">{lastKnown ? 'Mất fix — bản đồ giữ vị trí hợp lệ gần nhất' : 'Chờ fix GPS — đem mạch ra ngoài trời'}{satellites != null && ` · module đang dò, thấy ${satellites} vệ tinh (cần ≥ 4)`}</div>}
+      <div style={height === '100%' ? { flex: 1, minHeight: 160, position: 'relative' } : { height, position: 'relative' }}>
         <MapContainer
           key={generation}
           center={position ?? (lastKnown ? /** @type {import('leaflet').LatLngTuple} */ ([lastKnown.gpsLat, lastKnown.gpsLon]) : DEFAULT_CENTER)}
           zoom={16}
-          style={{ height: '100%', width: '100%', borderRadius: '0 0 12px 12px' }}
+          style={{ position: 'absolute', inset: 0, borderRadius: '0 0 12px 12px' }}
           zoomControl={true}
           attributionControl={true}
         >
@@ -55,6 +70,7 @@ export default function GPSMap({ height = 350 }) {
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
+          <MapResizer />
           {position && <MapUpdater center={position} />}
           {position && <Marker position={position} icon={cubesatIcon}>
             <Popup>

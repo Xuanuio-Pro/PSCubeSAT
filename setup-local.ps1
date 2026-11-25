@@ -65,14 +65,13 @@ switch ($Action) {
     'install' {
         Write-Host 'Build va khoi dong PostgreSQL, Redis, backend, frontend (lan dau 3-10 phut)...'
         Invoke-Docker ($compose + @('up', '-d', '--build', '--wait', '--wait-timeout', '300'))
-        & docker image inspect $compilerImage *> $null
-        if ($LASTEXITCODE -ne 0) {
-            if ($SkipCompiler) {
-                Write-Warning "Bo qua image compiler; chuc nang Bien dich se bao loi cho den khi chay lai khong co -SkipCompiler."
-            } else {
-                Write-Host "Build image compiler $compilerImage (tai toolchain ESP32, ~6 GB, lan dau 15-40 phut)..."
-                Invoke-Docker @('build', '-f', 'fastapi-backend/compiler/Dockerfile', '-t', $compilerImage, 'fastapi-backend')
-            }
+        # Always rebuild: the backend rejects artifacts from a compiler image built for another build_config
+        # revision (library pin + overrides). Docker's layer cache makes an unchanged rebuild take seconds.
+        if ($SkipCompiler) {
+            Write-Warning "Bo qua build image compiler; neu thu vien/overrides da doi, Bien dich se bao COMPILER_VERSION_MISMATCH cho den khi chay lai khong co -SkipCompiler."
+        } else {
+            Write-Host "Build image compiler $compilerImage (lan dau tai toolchain ESP32 ~6 GB, 15-40 phut; khong doi gi thi vai giay)..."
+            Invoke-Docker @('build', '--provenance=false', '-f', 'fastapi-backend/compiler/Dockerfile', '-t', $compilerImage, 'fastapi-backend')
         }
         $admins = & docker @($compose + @('exec', '-T', 'postgres', 'psql', '-U', 'cubesat', '-d', 'cubesat', '-tAc', "SELECT count(*) FROM users WHERE role = 'admin'"))
         if ($LASTEXITCODE -eq 0 -and "$admins".Trim() -eq '0') {

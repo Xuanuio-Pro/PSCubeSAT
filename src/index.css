@@ -1459,6 +1459,22 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
 .check-info { min-width: 0; }
 .check-name { color: var(--cubesat-ink); font-size: 13px; font-weight: 750; }
 .check-detail { margin-top: 3px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.check-item:has(.check-row) { flex-direction: column; align-items: stretch; justify-content: center; }
+.check-row { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.check-row .check-info { flex: 1; }
+.check-item--log { grid-column: 1 / -1; }
+.check-badge { flex: 0 0 auto; padding: 2px 9px; border-radius: 999px; background: #e3e8ed; color: #6b7a87; font-size: 11px; font-weight: 750; }
+.check-badge.is-active { background: rgba(40, 173, 120, 0.14); color: #1d8a5e; }
+.check-badge.is-error { background: rgba(232, 87, 101, 0.14); color: #c23a48; }
+.check-log { display: grid; gap: 3px; margin: 10px 0 0; padding: 8px 10px; max-height: 132px; overflow: auto; border-radius: 8px; background: rgba(14, 76, 126, 0.05); list-style: none; font-size: 11px; }
+.check-log li { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.check-log time { flex: 0 0 auto; color: var(--text-muted); }
+.check-log code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check-log-phase { flex: 0 0 auto; font-weight: 750; color: #1d8a5e; }
+.check-log-phase.is-error { color: #c23a48; }
+.check-log-empty { margin: 8px 0 0; color: var(--text-muted); font-size: 11px; }
+/* Lab 7 and the Lab 8 dashboard keep every panel at full contrast (Lab 7 shows freshness in System Check). */
+.lab-visual-stack[data-lab="7"] .card, .lab-visual-stack[data-lab="8"] .card { opacity: 1 !important; }
 
 /* Practice Grid Workspace */
 .practice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 32px 0; }
@@ -1521,7 +1537,10 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
 .leaflet-control-attribution { display: none !important; }
 
 /* Dashboard Builder specific */
-.widget-palette { display: flex; flex-wrap: wrap; gap: 12px; padding: 20px; background: var(--bg-surface); border-radius: 0 0 12px 12px; }
+.widget-palette { display: grid; gap: 14px; padding: 20px; background: var(--bg-surface); border-radius: 0 0 12px 12px; }
+.widget-palette-group { display: grid; gap: 8px; }
+.widget-palette-title { color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.widget-palette-items { display: flex; flex-wrap: wrap; gap: 10px; }
 .widget-palette-item {
   display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px;
   background: var(--bg-app); border: 1px solid var(--border-subtle);
@@ -1568,6 +1587,30 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-heading); font-weight: 700; line-heig
   display: flex; justify-content: space-between; align-items: center; font-weight: 600;
   font-size: 0.9rem; color: var(--text-heading); cursor: move; user-select: none;
 }
+
+/* The panel card fills the widget; its chart/map/3D area (flex: 1) takes whatever height is left. */
+.dashboard-widget-body { flex: 1; min-height: 0; padding: 8px; display: flex; flex-direction: column; overflow: hidden; }
+.dashboard-widget-body > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0; overflow: hidden; }
+.dashboard-widget-body > .card > .card-header { flex: 0 0 auto; flex-wrap: wrap; gap: 4px 12px; }
+/* Panels without a plot/map/canvas scroll instead of being clipped when the widget is short. */
+.dashboard-widget-body.is-scroll { overflow: auto; }
+.dashboard-widget-body.is-scroll > .card { flex: 1 0 auto; overflow: visible; }
+.dashboard-widget-control {
+  border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px;
+}
+.dashboard-widget-control:hover, .dashboard-widget-control.is-active { background: var(--brand-primary-light); color: var(--brand-primary); }
+.dashboard-settings {
+  flex: 0 0 auto; max-height: 55%; overflow: auto; display: grid; gap: 8px; padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); font-size: 12px;
+}
+.dashboard-settings p { margin: 0; color: var(--text-muted); }
+.dashboard-settings label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dashboard-settings input[type="text"], .dashboard-settings input[type="number"], .dashboard-settings select {
+  flex: 1; min-width: 100px; padding: 4px 6px; border: 1px solid var(--border-primary); border-radius: 6px; font-size: 12px;
+}
+.dashboard-settings-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px 10px; }
+.dashboard-settings-checks label { flex-wrap: nowrap; gap: 6px; }
+.dashboard-settings-checks small { color: var(--text-muted); }
 
 /* React Grid Layout overrides */
 .react-grid-item.react-grid-placeholder { background: var(--brand-primary) !important; opacity: 0.2 !important; border-radius: 12px !important; }
