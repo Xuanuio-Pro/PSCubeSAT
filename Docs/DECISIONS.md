@@ -294,3 +294,8 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Bỏ khi chép: mục "Câu hỏi củng cố/đánh giá" (trùng bài quiz chấm ở server), mục H2 "💻 Hướng dẫn thực hành" (có mã lời giải đầy đủ) và phần nhúng doc lắp ráp (link tương đối `./LabX_DocY.md` không dùng được trên web). Mục khám phá 3D trong Doc 0.2 được giữ.
 - Chưa thêm 6 doc lắp ráp/kết nối mới (1.7, 2.3, 3.5, 4.8, 5.4, 6.4): còn chỗ trống "Vị trí chèn hình", và thêm bài vào giữa lộ trình sẽ đổi chuỗi mở khóa của lớp đang học. Sẽ thêm khi có hình và vị trí bài được chốt.
 - Cấu trúc khóa học giữ nguyên (9 lab, 164 bài). `seed.json` có `source_hash` mới; chạy `npm run db:seed` để tạo phiên bản khóa học mới. Lớp nào đã sửa markdown riêng cho bài doc thì giữ bản sửa đó, trừ khi seed chạy với cờ xóa override.
+
+## 2026-11-26 — Admin cấp liên kết đặt lại mật khẩu thì gửi email cho người dùng
+- Quyết định: khi đã cấu hình SMTP, `POST /api/admin/users/{id}/reset-link` gửi liên kết đặt lại tới email của tài khoản đó, trả thêm `email_sent`. Luồng tự phục vụ qua `/forgot-password` giữ nguyên.
+- Gửi lỗi không chặn admin: liên kết vẫn trả về một lần để gửi thủ công (`email_sent=false`), log chỉ ghi email đã che.
+- Thư chỉ gửi tới email đã đăng ký của tài khoản, không nhận địa chỉ từ client; tài khoản admin vẫn không cấp được liên kết qua đường này.

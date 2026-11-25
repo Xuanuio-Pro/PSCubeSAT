@@ -364,6 +364,39 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((log.actor, log.target), (1, "user:4"))
             self.assertNotIn(temporary, f"{log.before}{log.after}")
 
+    async def test_admin_reset_link_is_emailed_when_smtp_configured(self):
+        link_url = "/api/admin/users/4/reset-link"
+        settings = get_settings()
+
+        with patch.object(settings, "smtp_host", ""), patch(
+            "app.services.password_reset.send_password_reset_email", AsyncMock()
+        ) as send:
+            off = await self.call(1, "POST", link_url)
+        self.assertEqual(off.status_code, 200, off.text)
+        self.assertFalse(off.json()["email_sent"])
+        send.assert_not_awaited()
+
+        with patch.object(settings, "smtp_host", "smtp.example.com"), patch(
+            "app.services.password_reset.send_password_reset_email", AsyncMock()
+        ) as send:
+            on = await self.call(1, "POST", link_url)
+        self.assertEqual(on.status_code, 200, on.text)
+        self.assertTrue(on.json()["email_sent"])
+        send.assert_awaited_once()
+        to_email, reset_url, _ttl = send.await_args.args
+        self.assertEqual(to_email, "user4@example.com")
+        self.assertEqual(reset_url, on.json()["reset_url"])
+
+        # A failed send still hands the one-time link to the admin.
+        with patch.object(settings, "smtp_host", "smtp.example.com"), patch(
+            "app.services.password_reset.send_password_reset_email",
+            AsyncMock(side_effect=OSError("smtp down")),
+        ):
+            failed = await self.call(1, "POST", link_url)
+        self.assertEqual(failed.status_code, 200, failed.text)
+        self.assertFalse(failed.json()["email_sent"])
+        self.assertTrue(failed.json()["reset_path"].startswith("/reset-password?token="))
+
     async def test_admin_pending_reset_queue_and_one_time_reset_link(self):
         from urllib.parse import parse_qs, urlsplit
 

@@ -344,10 +344,28 @@ async def issue_admin_reset_link(
 
     reset_path = f"/reset-password?token={raw_token}"
     reset_url = f"{resolve_frontend_base_url(request_origin)}{reset_path}"
+
+    # With SMTP configured, also mail the link to the user. A failed send never blocks the
+    # admin: the link is still returned once so it can be handed over manually.
+    email_sent = False
+    if get_settings().smtp_configured:
+        try:
+            await send_password_reset_email(target.email, reset_url, ttl_minutes)
+            email_sent = True
+            _reset_smtp_failure_state()
+            logger.info("[PasswordReset] Admin link emailed to {}", mask_email(target.email))
+        except Exception as exc:
+            logger.warning(
+                "[PasswordReset] SMTP delivery of admin link failed for {} ({})",
+                mask_email(target.email),
+                type(exc).__name__,
+            )
+
     return {
         "user_id": target.id,
         "email": target.email,
         "reset_path": reset_path,
         "reset_url": reset_url,
         "expires_at": expires_at,
+        "email_sent": email_sent,
     }

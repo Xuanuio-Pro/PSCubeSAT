@@ -83,6 +83,7 @@ Log backend ghi `[PasswordReset] Sent reset email for ...` khi gửi thành côn
 - Endpoint quên mật khẩu có giới hạn tần suất theo IP.
 - Tài khoản quản trị (`admin`) không đặt lại bằng luồng này khi SMTP tắt; khi SMTP bật, liên kết chỉ gửi tới email của chính tài khoản đó.
 - Trang `/admin/users` vẫn dùng được để cấp liên kết hoặc mật khẩu tạm cho trường hợp ngoại lệ (người dùng không còn truy cập email).
+- Khi SMTP bật, nút **Cấp link đặt lại** ở `/admin/users` cũng tự gửi liên kết tới email của người dùng (hộp thoại báo "Đã gửi email…"). Nếu gửi lỗi, liên kết vẫn hiện một lần để admin gửi thủ công.
 
 ## 7. Xác minh email khi đăng ký
 

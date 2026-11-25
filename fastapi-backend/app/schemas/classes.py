@@ -57,6 +57,7 @@ class PasswordResetLinkResponse(BaseModel):
     reset_path: str
     reset_url: str
     expires_at: datetime
+    email_sent: bool = False
 
 
 class ClassCreate(InputModel):

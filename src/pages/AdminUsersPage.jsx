@@ -92,7 +92,9 @@ export default function AdminUsersPage() {
       showClose
       tone="info"
       title={issued.kind === 'link' ? 'Liên kết đặt lại mật khẩu' : 'Mật khẩu tạm'}
-      message={issued.kind === 'link' ? `Liên kết dùng một lần cho ${issued.email}:` : `Mật khẩu tạm của ${issued.email}:`}
+      message={issued.kind === 'link'
+        ? (issued.email_sent ? `Đã gửi email đặt lại mật khẩu tới ${issued.email}. Liên kết dự phòng:` : `Liên kết dùng một lần cho ${issued.email}:`)
+        : `Mật khẩu tạm của ${issued.email}:`}
       confirmLabel={copied ? 'Đã sao chép' : issued.kind === 'link' ? 'Sao chép liên kết' : 'Sao chép'}
       cancelLabel={null}
       onConfirm={copyIssued}
@@ -100,7 +102,9 @@ export default function AdminUsersPage() {
     >
       <code className="confirm-code">{issued.kind === 'link' ? issued.reset_url : issued.temporary_password}</code>
       <p className="confirm-note">{issued.kind === 'link'
-        ? `Gửi riêng liên kết này cho người dùng để tự đặt mật khẩu mới (hết hạn lúc ${new Date(issued.expires_at).toLocaleString('vi-VN')}). Liên kết chỉ dùng được 1 lần và không hiển thị lại.`
+        ? (issued.email_sent
+          ? `Người dùng mở thư (kể cả mục Thư rác) để tự đặt mật khẩu mới trước ${new Date(issued.expires_at).toLocaleString('vi-VN')}. Chỉ gửi thủ công liên kết trên nếu họ không nhận được thư; liên kết chỉ dùng được 1 lần và không hiển thị lại.`
+          : `Gửi riêng liên kết này cho người dùng để tự đặt mật khẩu mới (hết hạn lúc ${new Date(issued.expires_at).toLocaleString('vi-VN')}). Liên kết chỉ dùng được 1 lần và không hiển thị lại.`)
         : 'Gửi riêng cho người dùng và nhắc họ đổi mật khẩu trong trang Hồ sơ sau khi đăng nhập. Mật khẩu này sẽ không hiển thị lại.'}</p>
       {copyError && <p className="confirm-note" role="alert">Không sao chép được. Hãy chọn và sao chép thủ công.</p>}
     </ConfirmDialog>}
