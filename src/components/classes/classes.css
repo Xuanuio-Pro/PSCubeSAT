@@ -1346,3 +1346,100 @@ body:has(.lms-shell:not(.is-learning-shell)) {
   .lms-shell:not(.is-learning-shell) * { transition: none !important; }
   .lms-shell:not(.is-learning-shell) button:hover:not(:disabled) { transform: none; }
 }
+
+/* ===== Complete pass: admin pages, teacher pages and profile share one canvas ===== */
+:root {
+  --fig-navy: #094174;
+  --fig-card: rgba(221, 232, 243, 0.6);
+  --fig-card-strong: rgba(221, 232, 243, 0.78);
+  --fig-surface: rgba(243, 243, 250, 0.92);
+  --fig-shadow: 0 16px 32px -4px rgba(12, 12, 13, 0.1), 0 4px 4px -4px rgba(12, 12, 13, 0.05);
+  --fig-gradient: linear-gradient(180deg, #3e54a0, #1c7caf);
+}
+
+/* One content width that lines up with the pill header */
+.lms-shell:not(.is-learning-shell) { width: 100%; max-width: 1480px; padding: 36px clamp(24px, 4vw, 64px) 72px; }
+.lms-shell:not(.is-learning-shell) .admin-page-shell { max-width: none; margin: 0; padding: 0; }
+
+.lms-shell:not(.is-learning-shell) .admin-page-header {
+  margin: 8px 0 22px; padding: 22px 28px; background: var(--fig-card); border-radius: 32px; box-shadow: var(--fig-shadow);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.lms-shell:not(.is-learning-shell) .admin-page-header h1 { margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); }
+
+.lms-shell:not(.is-learning-shell) .admin-panel,
+.lms-shell:not(.is-learning-shell) .admin-page-panel,
+.lms-shell:not(.is-learning-shell) .admin-card {
+  background: var(--fig-card); border: 0; border-radius: 28px; box-shadow: var(--fig-shadow);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.lms-shell:not(.is-learning-shell) .admin-panel { padding: clamp(16px, 2vw, 28px); }
+.lms-shell:not(.is-learning-shell) .admin-card { padding: 22px 24px; }
+.lms-shell:not(.is-learning-shell) .admin-card--accent { background: var(--fig-gradient); }
+.lms-shell:not(.is-learning-shell) .admin-card--accent span,
+.lms-shell:not(.is-learning-shell) .admin-card--accent strong,
+.lms-shell:not(.is-learning-shell) .admin-card--accent small { color: #fff; }
+.lms-shell:not(.is-learning-shell) .admin-card:not(.admin-card--accent) span,
+.lms-shell:not(.is-learning-shell) .admin-card:not(.admin-card--accent) strong,
+.lms-shell:not(.is-learning-shell) .admin-card:not(.admin-card--accent) small,
+.lms-shell:not(.is-learning-shell) .admin-panel h2,
+.lms-shell:not(.is-learning-shell) .admin-note,
+.lms-shell:not(.is-learning-shell) .admin-empty,
+.lms-shell:not(.is-learning-shell) .admin-filter-grid label { color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) .admin-summary-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+/* Filter bar: fields share the row; the button keeps its own width on the field baseline */
+.lms-shell:not(.is-learning-shell) .admin-filter-grid { grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(150px, 1fr)) auto; gap: 14px 16px; align-items: end; }
+.lms-shell:not(.is-learning-shell) .admin-filter-grid input,
+.lms-shell:not(.is-learning-shell) .admin-filter-grid select { min-height: 44px; padding: 0 16px; }
+.lms-shell:not(.is-learning-shell) .admin-filter-grid button { min-height: 44px; padding: 0 26px; width: auto; justify-self: start; }
+.lms-shell:not(.is-learning-shell) .admin-primary-btn { background: var(--fig-gradient); border-color: transparent; color: #fff; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25); }
+.lms-shell:not(.is-learning-shell) .admin-primary-btn:hover { background: linear-gradient(180deg, #34478c, #17688f); color: #fff; }
+.lms-shell:not(.is-learning-shell) .admin-secondary-btn { background: rgba(255, 255, 255, 0.9); border: 0.3px solid var(--fig-navy); color: var(--fig-navy); }
+.lms-shell:not(.is-learning-shell) .admin-danger-btn { border-color: #b42318; color: #b42318; }
+.lms-shell:not(.is-learning-shell) .admin-danger-btn:hover:not(:disabled) { background: #b42318; color: #fff; border-color: #b42318; }
+.lms-shell:not(.is-learning-shell) .admin-reset-badge { border-radius: 999px; }
+
+/* Tables: no cramped wrapping; actions compact and tidy */
+.lms-shell:not(.is-learning-shell) .lms-table-wrap { overflow-x: auto; }
+.lms-shell:not(.is-learning-shell) table { min-width: 640px; }
+.lms-shell:not(.is-learning-shell) th, .lms-shell:not(.is-learning-shell) td { padding: 14px 18px; vertical-align: middle; }
+.lms-shell:not(.is-learning-shell) td > strong { display: block; }
+.lms-shell:not(.is-learning-shell) td .lms-secondary { display: block; overflow-wrap: anywhere; word-break: break-word; }
+.admin-page-shell .lms-table-wrap td:nth-child(2),
+.admin-page-shell .lms-table-wrap td:nth-child(3) { white-space: nowrap; }
+.admin-page-shell .lms-table-wrap td:first-child { min-width: 220px; }
+.lms-shell:not(.is-learning-shell) .lms-table-wrap .lms-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.lms-shell:not(.is-learning-shell) .lms-table-wrap .lms-actions button,
+.lms-shell:not(.is-learning-shell) .lms-table-wrap .lms-actions a { min-height: 34px; padding: 5px 14px; font-size: 0.8rem; }
+.lms-shell:not(.is-learning-shell) .lms-pagination { margin-top: 18px; }
+
+/* ===== Profile ===== */
+.profile-page {
+  width: 100%; max-width: 1480px; margin: 0 auto; padding: 36px clamp(24px, 4vw, 64px) 72px;
+  font-family: 'Plus Jakarta Sans', var(--font-sans); color: var(--fig-navy);
+}
+.profile-title { margin: 8px 0 22px; padding: 22px 28px; font-size: clamp(1.5rem, 2.4vw, 2rem); color: var(--fig-navy); background: var(--fig-card); border-radius: 32px; box-shadow: var(--fig-shadow); backdrop-filter: blur(8px); }
+.profile-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 22px; align-items: start; }
+.profile-page .card { background: var(--fig-card); border: 0; border-radius: 28px; box-shadow: var(--fig-shadow); overflow: hidden; backdrop-filter: blur(8px); }
+.profile-page .card-header { background: transparent; border-bottom: 1px solid rgba(9, 65, 116, 0.18); color: var(--fig-navy); font-size: 1.02rem; }
+.profile-page .card-body { color: var(--fig-navy); }
+.profile-page label, .profile-page h2, .profile-page h3 { color: var(--fig-navy); }
+.profile-page input, .profile-page select { background: #f3f3fa; border: 0; border-radius: 18px; color: var(--fig-navy); box-shadow: 0 1px 4px rgba(12, 12, 13, 0.05); font-family: inherit; }
+.profile-page input:focus, .profile-page select:focus { background: #fff; box-shadow: 0 0 0 3px rgba(9, 65, 116, 0.18); outline: none; }
+.profile-page .btn { border-radius: 999px; font-weight: 700; font-family: inherit; }
+.profile-page .btn-primary { background: var(--fig-gradient); border-color: transparent; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25); }
+.profile-page .btn-primary:hover { background: linear-gradient(180deg, #34478c, #17688f); }
+.profile-page .btn-outline { background: rgba(255, 255, 255, 0.85); border: 0.3px solid var(--fig-navy); color: var(--fig-navy); }
+
+@media (max-width: 1100px) {
+  .lms-shell:not(.is-learning-shell) .admin-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lms-shell:not(.is-learning-shell) .admin-filter-grid button { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .lms-shell:not(.is-learning-shell), .profile-page { padding: 20px 14px 56px; }
+  .lms-shell:not(.is-learning-shell) .admin-filter-grid { grid-template-columns: 1fr; }
+  .lms-shell:not(.is-learning-shell) .admin-page-header, .profile-title { padding: 18px 20px; border-radius: 24px; }
+  .lms-shell:not(.is-learning-shell) .admin-panel, .profile-page .card { border-radius: 22px; }
+  .header.is-lms .header-search { display: none; }
+}

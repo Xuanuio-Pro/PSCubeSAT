@@ -120,7 +120,7 @@ function ServiceLayout() {
           {!isAuthRoute && !isNotFoundRoute && <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>}
           {!isAuthRoute && !isNotFoundRoute && <Header />}
           <main id="main-content" className={isAuthRoute || isNotFoundRoute ? '' : `main-content${isLabRoute || isClassLearningRoute ? ' is-lab-route' : ''}`}>
-            {!isAuthRoute && !isNotFoundRoute && !isLabRoute && !isClassRoute && <TelemetryControls />}
+            {!isAuthRoute && !isNotFoundRoute && !isLabRoute && !isClassRoute && normalizedPath !== '/profile' && <TelemetryControls />}
             <Outlet />
           </main>
         </div>

@@ -272,9 +272,9 @@ export default function ProfilePage() {
   if (loading || !user) return null;
 
   return (
-    <div className="player-content" style={{ padding: '40px max(24px, calc((100vw - 1280px) / 2))', maxWidth: '1280px' }}>
-      <h2 style={{ fontSize: '2rem', marginBottom: '24px' }}>Hồ sơ của tôi</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+    <div className="player-content profile-page">
+      <h1 className="profile-title">Hồ sơ của tôi</h1>
+      <div className="profile-stack">
         <ProfileInfo user={user} />
         <ChangePasswordForm />
         <LearningProgress user={user} />

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSerial } from '../../contexts/serial-api';
 import { useAuth } from '../../contexts/auth-api';
 import { getLabBySlug } from '../../data/lab-metadata';
+import '../classes/classes.css';
 import logoSvg from '../../assets/logo.svg';
 import notificationIcon from '../../assets/lab-ui/Notification 1.svg';
 import {
@@ -22,7 +23,7 @@ export default function Header() {
   const isClassLearningRoute = /^\/(?:classes\/\d+\/learn|preview)\/?$/.test(location.pathname);
   const isLearningRoute = Boolean(lab || isClassLearningRoute);
   // Admin and class-management pages share the lab's floating pill header (not the auth screens).
-  const isLmsRoute = !isLearningRoute && /^\/(?:classes|admin\/(?:dashboard|users))(?:\/|$)/.test(location.pathname);
+  const isLmsRoute = !isLearningRoute && /^\/(?:classes|profile|admin\/(?:dashboard|users))(?:\/|$)/.test(location.pathname);
 
   const accountAvatar = (
     <span className="header-avatar" aria-hidden="true">
