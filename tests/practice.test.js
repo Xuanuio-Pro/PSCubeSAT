@@ -221,11 +221,11 @@ test('each exercise shows only the panels its reference sketch has data for', ()
     'Lab4-03a': ['gps'], 'Lab4-03b': ['gps'], 'Lab4-03c': ['gps'],
     'Lab4-04a': ['camera', 'commands'], 'Lab4-04b': ['camera', 'commands'],
     'Lab4-05': ['gps', 'camera', 'commands'], 'Lab4-06': ['environment', 'attitude', 'gps'],
-    'Lab5-01a': ['radio'], 'Lab5-01b': ['radio'],
+    'Lab5-01a': ['radio', 'groundStation'], 'Lab5-01b': ['radio', 'groundStation'],
     'Lab5-02a': ['radio', 'groundStation'], 'Lab5-02b': ['radio', 'groundStation'], 'Lab5-03': ['radio', 'groundStation'],
     'Lab7-01': ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system'],
     'Lab7-02': ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system'],
-    'Lab8-01': ['dashboard'],
+    'Lab8-01': ['groundStation', 'dashboard'],
   };
   for (const fixture of fixtures) {
     const plan = visualizationPlan(practiceProfile(fixture.id));
@@ -537,4 +537,60 @@ test('cloud handshake answers: keep own config, re-provision a stale one, clear 
   assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_bbbb2222 ssid=Home', noWifi), 'clear');
   assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=none ssid=', noWifi), 'need-wifi');
   assert.equal(cloudAnswer('[CLOUD] PHOTO SENT /photos/a.jpg 10', mine), null);
+  // Uplink v10 reports its broker: a board still pointing at a retired broker is provisioned again.
+  const withBroker = { ...mine, broker: 'broker.example:8883' };
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 host=broker.example:8883 ssid=PTIT-Lab', withBroker), 'keep');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 host=old.example:8883 ssid=PTIT-Lab', withBroker), 'provision');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 ssid=PTIT-Lab', withBroker), 'provision');
+  assert.equal(cloudAnswer('[CLOUD] CFG? v1 uid=cube_aaaa1111 host=none:8883 ssid=PTIT Lab 2', { ...withBroker, wifiSsid: 'PTIT Lab 2' }), 'provision');
+});
+
+test('Lab5-01 ground station counts downlink packets and estimates losses from their numbers', async () => {
+  const { countPacket, emptyPackets, lostPackets } = await import('../src/telemetry/downlink.js');
+  const lines = ['PACKET #4 - CUBESAT TELEMETRY', 'noise', 'PACKET #5 - CUBESAT TELEMETRY', 'PACKET #8 - CUBESAT TELEMETRY'];
+  let stats = lines.reduce(countPacket, emptyPackets);
+  assert.deepEqual([stats.packets, stats.firstPacket, stats.lastPacket, lostPackets(stats)], [3, 4, 8, 2]);
+  stats = countPacket(stats, 'PACKET #1 - CUBESAT TELEMETRY'); // satellite reset
+  assert.deepEqual([stats.packets, stats.firstPacket, lostPackets(stats)], [1, 1, 0]);
+  assert.equal(lostPackets(emptyPackets), null);
+});
+
+test('Lab3-05 queue events keep their producer, payload and per-kind totals', () => {
+  const decode = createPracticeDecoder('Lab3-05_Event_Driven_Queue');
+  const lines = ['Event: Button (t=1200ms) -> LED: ON', 'Event: Temp Alert: 33 C (t=2000ms)', "Event: Cmd: 'A' (t=2500ms)", 'Event: Button (t=3200ms) -> LED: OFF'];
+  const events = lines.flatMap((line, index) => decode(entry(line, 10000 + index)).events);
+  assert.deepEqual(events.map(event => [event.kind, event.lane, event.deviceMs]), [
+    ['button', 'Nút nhấn (ISR)', 1200], ['temp', 'Cảm biến giả lập', 2000], ['cmd', 'Lệnh Serial', 2500], ['button', 'Nút nhấn (ISR)', 3200]]);
+  assert.deepEqual([events[0].led, events[1].value, events[1].illustrative, events[2].command, events[3].led], [true, 33, true, 'A', false]);
+  const activity = events.reduce(reduceActivity, emptyActivity());
+  const { kinds, count } = activity.tasks.Dispatcher;
+  assert.equal(count, 4);
+  assert.deepEqual([kinds.button.count, kinds.temp.count, kinds.cmd.count, kinds.button.led], [2, 1, 1, false]);
+});
+
+test('Lab4-03 GLL fixes decode and a GPS position outlives the generic 5 s staleness', () => {
+  const decode = createPracticeDecoder('Lab4-03a_GPS_UART');
+  // $GPGLL,4916.45,N,12311.12,W,225444,A,*1D (NMEA reference sentence).
+  const gll = decode(entry('$GPGLL,4916.45,N,12311.12,W,225444,A,*1D'));
+  assert.ok(Math.abs(gll.frame.gpsLat - 49.274167) < 1e-5);
+  assert.ok(Math.abs(gll.frame.gpsLon + 123.185333) < 1e-5);
+  let clock = 10000;
+  const store = createTelemetryStore(() => clock);
+  store.setLink('connected');
+  store.ingest(gll.frame);
+  clock += 20000;
+  store.tick();
+  const readings = currentReadings(store.getSnapshot());
+  assert.ok(readings.gpsLat !== null && readings.gpsLon !== null, 'a fix 20 s old is still shown');
+  clock += 15000;
+  store.tick();
+  assert.equal(currentReadings(store.getSnapshot()).gpsLat, null);
+});
+
+test('Lab4-06 TELEM roll/pitch reach the 3D model even without an Accel line', () => {
+  const decode = createPracticeDecoder('Lab4-06_Read_All_Sensors');
+  const result = decode(entry('TELEM: T: 28.5C | P: 1012.2hPa | Roll: 12.5 | Pitch: -3.0 | GPS: (no fix, 0sats)'));
+  const attitude = result.events.find(event => event.group === 'attitude');
+  assert.deepEqual([attitude.roll, attitude.pitch, attitude.heading], [12.5, -3, null]);
+  assert.equal(decode(entry('TELEM: T: nanC | P: nanhPa | Roll: nan | Pitch: nan | GPS: (no fix, 0sats)')).events.some(event => event.group === 'attitude'), false);
 });

@@ -4,13 +4,17 @@ import { emptyActivity, reduceActivity } from './practice.js';
 export const MODES = { serial: 'hardware', hardware: 'hardware', simulator: 'simulator', demo: 'demo' };
 export const STALE_AFTER_MS = 5000;
 export const HISTORY_LIMIT = 200;
+// A position fix arrives far less often than other readings: Lab4-03a/b print one NMEA sentence of any type
+// every 2 s, so GGA/RMC/GLL come every 10–20 s; the Lab4-05 MUX and Lab7 alternate GPS with other work.
+export const GPS_STALE_AFTER_MS = 30000;
+const staleAfter = key => (key === 'gpsLat' || key === 'gpsLon' || key === 'gpsAlt' ? GPS_STALE_AFTER_MS : STALE_AFTER_MS);
 
 // Keep sparse samples in history, but present a fresh value for each measurement independently.
 export function currentReadings(state) {
   if (!state.latest) return null;
   const frame = { ...state.latest };
   for (const key of Object.keys(state.readings)) {
-    frame[key] = state.link === 'connected' && state.now - state.fieldReceivedAt[key] <= STALE_AFTER_MS ? state.readings[key] : null;
+    frame[key] = state.link === 'connected' && state.now - state.fieldReceivedAt[key] <= staleAfter(key) ? state.readings[key] : null;
   }
   // Never compose a location from latitude and longitude belonging to different fixes.
   if (state.fieldReceivedAt.gpsLat !== state.fieldReceivedAt.gpsLon || frame.gpsLat === null || frame.gpsLon === null) {

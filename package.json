@@ -22,7 +22,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b",
     "test:be": "cd fastapi-backend && node ../scripts/python.mjs -m unittest discover -s app/tests -p test_*.py",
-    "test:telemetry": "node --test tests/telemetry.test.js tests/practice.test.js tests/practice-firmware-logs.test.js",
+    "test:telemetry": "node --test tests/telemetry.test.js tests/practice.test.js tests/practice-firmware-logs.test.js tests/vietnam-map.test.js",
     "telemetry:schema": "node scripts/python.mjs scripts/export-telemetry-schema.py",
     "telemetry:schema:check": "npm run telemetry:schema -- --check",
     "check": "npm run lint && npm run typecheck && npm run telemetry:schema:check && npm run test:auth-storage && npm run test:curriculum && npm run test:blockly && npm run test:flash && npm run test:telemetry && npm run test:be",

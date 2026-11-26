@@ -12,12 +12,19 @@ const TaskTimeline = lazy(() => import('./TaskTimeline'));
 const TASK_CARDS = {
   TelemGen: { title: 'Viễn trắc giả lập · minh họa', unit: 'gói', detail: task => task?.value != null ? `${task.value.toFixed(1)} °C · số giả lập trong code` : 'Chờ log TELEM' },
   SysDiag: { title: 'Tự chẩn đoán · Core 0', unit: 'lần chạy', detail: task => task?.durationMs != null ? `Thời gian quan sát: ${task.durationMs} ms` : task ? 'Mỗi dòng DIAG là một lần chạy (heap, tần số CPU)' : 'Chờ log DIAG' },
-  Dispatcher: { title: 'Dispatcher · hàng đợi sự kiện', unit: 'sự kiện', detail: task => !task ? 'Chờ log Event: (nhấn nút GPIO 4 hoặc gửi một ký tự)'
-    : task.illustrative ? 'Sự kiện cuối: cảnh báo nhiệt độ giả lập' : 'Sự kiện cuối: nút nhấn hoặc lệnh Serial' },
+  Dispatcher: { title: 'Dispatcher · lấy từ Queue', unit: 'sự kiện', detail: task => !task ? 'Chờ log Event: (nhấn nút GPIO 4 hoặc gửi một ký tự)'
+    : `Sự kiện cuối: ${{ button: 'nút nhấn', temp: 'cảnh báo nhiệt độ giả lập', cmd: 'lệnh Serial' }[task.kind] ?? (task.illustrative ? 'cảnh báo nhiệt độ giả lập' : 'nút nhấn hoặc lệnh Serial')}` },
   Sensor: { title: 'Đọc cảm biến · minh họa', unit: 'lần đọc', detail: task => task?.value != null ? `${task.value.toFixed(1)} °C · giá trị mẫu trong code` : 'Chờ log [Sensor]' },
-  Heartbeat: { title: 'Heartbeat LED', unit: 'lần chạy', detail: () => 'LED nhịp tim nháy theo chu kỳ; sketch không in log cho task này.' },
+  Heartbeat: { title: 'Heartbeat · LED GPIO 2', unit: '', detail: () => 'Sketch không in log cho task này: đèn bên trái nháy theo chu kỳ khai báo khi Scheduler đang chạy. Đối chiếu với LED thật trên bo.' },
   Network: { title: 'Gửi mạng · minh họa', unit: 'lần hoàn tất', detail: task => task?.durationMs != null ? `Thời gian quan sát: ${task.durationMs} ms` : 'Chờ cặp log bắt đầu / hoàn tất' },
 };
+
+// Lab3-05: the three producers that put events into the FreeRTOS queue, in the sketch's enum order.
+const QUEUE_SOURCES = [
+  { kind: 'button', title: 'Nút nhấn GPIO 4 · ngắt ISR', detail: source => source?.led == null ? 'Mỗi lần nhấn đảo LED GPIO 2' : `LED GPIO 2: ${source.led ? 'BẬT' : 'TẮT'}` },
+  { kind: 'temp', title: 'sensorTask · nhiệt độ giả lập', detail: source => Number.isFinite(source?.value) ? `${source.value} °C > 30 °C (số ngẫu nhiên, không phải phép đo)` : 'Chỉ gửi khi số ngẫu nhiên > 30 °C' },
+  { kind: 'cmd', title: 'serialTask · lệnh Serial', detail: source => source?.command ? `Ký tự nhận: '${source.command}'` : 'Gửi một ký tự từ ô lệnh' },
+];
 
 /** @param {{ exclude?: string[] }} props Evidence groups already shown by a dedicated panel. */
 export default function PracticeActivity({ exclude = [] }) {
@@ -25,7 +32,9 @@ export default function PracticeActivity({ exclude = [] }) {
   const profile = practiceProfile(exerciseId);
   const queue = profile.id.startsWith('Lab3-05');
   const events = activity.events.filter(event => event.group === 'task');
-  const tasks = queue ? ['Dispatcher'] : ['TelemGen', 'SysDiag', ...['Heartbeat', 'Sensor', 'Network'].filter(name => activity.tasks[name])];
+  // Heartbeat never logs, so its card is always shown (Lab3-03 registers it in setup(), often before the port opens).
+  const tasks = queue ? ['Dispatcher'] : ['TelemGen', 'SysDiag', 'Heartbeat', ...['Sensor', 'Network'].filter(name => activity.tasks[name])];
+  const dispatcher = activity.tasks.Dispatcher;
   // Declared period ("Scheduler: Đã đăng ký task") against the gaps actually observed between log lines.
   const measured = name => {
     const at = events.filter(event => event.name === name && event.phase === 'sample').slice(-6).map(event => event.at);
@@ -43,6 +52,18 @@ export default function PracticeActivity({ exclude = [] }) {
         <div className="practice-task-grid">
           {tasks.map(name => {
             const task = activity.tasks[name];
+            if (name === 'Heartbeat') {
+              // Running = the same Scheduler is visibly executing its logged tasks right now.
+              const running = live && ['TelemGen', 'SysDiag'].some(other => activity.tasks[other] && now - activity.tasks[other].at <= 6000);
+              const period = task?.periodMs ?? 500;
+              return <article className="practice-task" key={name}>
+                <div><strong>{TASK_CARDS[name].title}</strong><span className={running ? 'practice-live-dot' : 'practice-muted-dot'} /></div>
+                <b className="practice-heartbeat-row"><span className={`practice-heartbeat ${running ? 'is-running' : ''}`} style={/** @type {import('react').CSSProperties} */ ({ '--heartbeat-period': `${period * 2}ms` })} aria-hidden="true" />
+                  <small>{running ? 'Đang chạy' : 'Chờ Scheduler'}</small></b>
+                <span>Chu kỳ {period} ms{task?.periodMs != null ? ` · Core ${task.core} · Priority ${task.priority}` : ' (theo mã mẫu)'}</span>
+                <span>{TASK_CARDS.Heartbeat.detail()}</span>
+              </article>;
+            }
             const fresh = live && task && now - task.at <= 5000;
             return <article className="practice-task" key={name}>
               <div><strong>{TASK_CARDS[name].title}</strong><span className={fresh ? 'practice-live-dot' : 'practice-muted-dot'} /></div>
@@ -51,6 +72,16 @@ export default function PracticeActivity({ exclude = [] }) {
               {task && <span>Lần cuối {time(task.at)}{!fresh && ' · đã cũ / ngắt kết nối'}</span>}
               <span>{TASK_CARDS[name].detail(task)}</span>
               {task?.periodMs != null && <span>Khai báo: {task.periodMs} ms · Core {task.core} · Priority {task.priority}{measured(name) != null && ` · đo được ~${measured(name)} ms`}</span>}
+            </article>;
+          })}
+          {queue && QUEUE_SOURCES.map(({ kind, title, detail }) => {
+            const source = dispatcher?.kinds?.[kind];
+            const fresh = live && source && now - source.at <= 5000;
+            return <article className="practice-task" key={kind}>
+              <div><strong>{title}</strong><span className={fresh ? 'practice-live-dot' : 'practice-muted-dot'} /></div>
+              <b>{source?.count ?? 0} <small>sự kiện</small></b>
+              <span>{source ? `Lần cuối ${time(source.at)}${source.deviceMs != null ? ` · t = ${source.deviceMs} ms trên bo` : ''}` : 'Chưa có sự kiện'}</span>
+              <span>{detail(source)}</span>
             </article>;
           })}
           {activity.tasks.LED && <article className="practice-task"><div><strong>LED · GPIO</strong><span className={live && now - activity.tasks.LED.at <= 5000 ? 'practice-live-dot' : 'practice-muted-dot'} /></div><b>{activity.tasks.LED.count}</b><span>{`Lệnh cuối: ${activity.tasks.LED.value ? 'Bật' : 'Tắt'} · ${time(activity.tasks.LED.at)}`}</span></article>}

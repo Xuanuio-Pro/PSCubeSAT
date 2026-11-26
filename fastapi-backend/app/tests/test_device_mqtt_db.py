@@ -178,6 +178,8 @@ class CloudProvisionTests(DeviceMqttTests):
             status = (await self.client.get("/api/devices/cloud")).json()
         self.assertEqual(status["device_uid"], uid)
         self.assertNotIn("pass", status)
+        # The broker (never the credential) lets the web app re-provision a board left on a retired broker.
+        self.assertEqual(status["mqtt_broker"], "broker.test:8883")
         # Another account gets its own device, never this one.
         self.owner = 2
         async with self.sessions() as db:

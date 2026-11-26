@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useTelemetry } from '../../contexts/telemetry-api';
+import { addVietnamMap } from './vietnam-map';
+import './vietnam-map.css';
 
 const cubesatIcon = L.divIcon({
   html: '<div style="font-size:24px;text-align:center;margin-top:-12px">🛰️</div>',
@@ -22,6 +24,13 @@ function MapResizer() {
     observer.observe(map.getContainer());
     return () => observer.disconnect();
   }, [map]);
+  return null;
+}
+
+// Base map with Hoàng Sa / Trường Sa drawn as Vietnamese territory (see vietnam-map.js).
+function VietnamLayers() {
+  const map = useMap();
+  useEffect(() => addVietnamMap(map), [map]);
   return null;
 }
 
@@ -46,7 +55,7 @@ export default function GPSMap({ height = 350 }) {
   const display = (value, decimals) => value == null ? '—' : value.toFixed(decimals);
 
   return (
-    <div className="card" style={{ opacity: status === 'live' ? 1 : 0.65 }}>
+    <div className="card" style={{ opacity: status === 'offline' && !position ? 0.65 : 1 }}>
       <div className="card-header">
         <h3>🌍 GPS Map</h3>
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
@@ -66,10 +75,7 @@ export default function GPSMap({ height = 350 }) {
           zoomControl={true}
           attributionControl={true}
         >
-          <TileLayer
-            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap"
-          />
+          <VietnamLayers />
           <MapResizer />
           {position && <MapUpdater center={position} />}
           {position && <Marker position={position} icon={cubesatIcon}>

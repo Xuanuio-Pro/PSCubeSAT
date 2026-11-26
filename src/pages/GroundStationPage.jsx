@@ -6,6 +6,7 @@ import { PracticePanels } from '../components/visualization/PracticeVisualizatio
 import { useTelemetry } from '../contexts/telemetry-api';
 import { practiceProfile } from '../telemetry/practice';
 import { visualizationPlan } from '../telemetry/visualization-plan';
+import { countPacket, emptyPackets, lostPackets } from '../telemetry/downlink';
 
 // Command set understood by the Lab5-03 satellite firmware. Lab5-02 only prints whatever text it receives.
 const SATELLITE_COMMANDS = [
@@ -18,10 +19,27 @@ const SATELLITE_COMMANDS = [
   { cmd: 'led off', label: '🌑 led off', desc: 'Tắt LED trên OBC' },
   { cmd: 'telemetry', label: '📦 telemetry', desc: 'Gói JSON trạng thái' },
 ];
+// Lab7-01/02 firmware: one-letter commands received over LoRa (switch in the sketch's command handler).
+const LAB7_COMMANDS = [
+  { cmd: 'a', label: '📶 a · ACK', desc: 'Kiểm tra đường truyền' },
+  { cmd: 'b', label: '🔋 b · pin → SD', desc: 'Ghi và đọc lại điện áp/dung lượng pin trên thẻ SD' },
+  { cmd: 'c', label: '🧭 c · gia tốc', desc: 'Gia tốc kế' },
+  { cmd: 'd', label: '🌀 d · con quay', desc: 'Con quay hồi chuyển' },
+  { cmd: 'e', label: '🌍 e · GPS', desc: 'Tọa độ GPS' },
+  { cmd: 'f', label: '📷 f · chụp ảnh', desc: 'Chụp ảnh lưu thẻ SD' },
+  { cmd: 'p', label: '⏸ p · tạm dừng', desc: 'Tạm dừng viễn trắc định kỳ' },
+  { cmd: 'r', label: '▶ r · tiếp tục', desc: 'Tiếp tục viễn trắc định kỳ' },
+];
 const BAUD_RATES = [9600, 19200, 38400, 57600, 115200];
 const REPLY_WINDOW_MS = 10000;
 const time = at => new Date(at).toLocaleTimeString();
-const emptyStats = { tx: 0, rx: 0, lastRxAt: null, lastRxText: '' };
+const emptyStats = { tx: 0, rx: 0, lastRxAt: null, lastRxText: '', ...emptyPackets };
+// Uplink buttons and hint per lab; Lab8 missions define their own commands, so only free text is offered.
+const UPLINK = {
+  5: { commands: SATELLITE_COMMANDS, note: 'Lab 5.2 chỉ in lại bản tin nhận được trên Serial của vệ tinh; Lab 5.3 mới thực thi các lệnh dưới đây và phản hồi qua LoRa.' },
+  7: { commands: LAB7_COMMANDS, note: 'Lab 7 nhận lệnh một ký tự qua LoRa; phản hồi và gói viễn trắc hiện ở các bảng bên dưới.' },
+  8: { commands: [], note: 'Nhập lệnh theo nhiệm vụ bạn tự thiết kế trong Lab 8.' },
+};
 
 /**
  * Ground station window. It owns its own Web Serial port (USB-TTL wired to the ground LoRa module), so the
@@ -38,8 +56,11 @@ export default function GroundStationPage() {
   const { exerciseId } = useTelemetry();
   const profile = practiceProfile(exerciseId);
   const plan = visualizationPlan(profile);
-  // Lab 7: the same widgets as the lab window, fed only by what this ground station received over LoRa.
-  const mirrored = profile.lab === 7 ? plan.panels.filter(name => name !== 'groundStation') : [];
+  // Lab 7/8: the same widgets as the lab window, fed only by what this ground station received over LoRa.
+  const mirrored = profile.lab === 7 || profile.lab === 8 ? plan.panels.filter(name => name !== 'groundStation') : [];
+  const downlinkOnly = /^Lab5-01/.test(exerciseId);
+  const { commands, note: commandNote } = UPLINK[profile.lab] ?? UPLINK[5];
+  const lost = lostPackets(stats);
 
   useEffect(() => { document.title = 'Trạm mặt đất · PTIT CubeSat'; }, []);
   useEffect(() => { setStats(emptyStats); setHistory([]); }, [sessionId]);
@@ -47,7 +68,7 @@ export default function GroundStationPage() {
   useEffect(() => subscribe(entry => {
     if (entry.type === 'tx') setStats(current => ({ ...current, tx: current.tx + 1 }));
     if (entry.type !== 'rx' || entry.origin !== 'serial') return;
-    setStats(current => ({ ...current, rx: current.rx + 1, lastRxAt: entry.receivedAt, lastRxText: entry.text.slice(0, 300) }));
+    setStats(current => countPacket({ ...current, rx: current.rx + 1, lastRxAt: entry.receivedAt, lastRxText: entry.text.slice(0, 300) }, entry.text));
     setHistory(current => {
       const index = current.findIndex(item => item.ok && !item.reply && entry.receivedAt - item.at <= REPLY_WINDOW_MS);
       return index < 0 ? current : current.map((item, i) => i === index ? { ...item, reply: entry.text.slice(0, 300), replyAt: entry.receivedAt } : item);
@@ -96,14 +117,17 @@ export default function GroundStationPage() {
     <div className="radio-tiles">
       <article className="practice-task"><strong>Lệnh đã ghi vào USB-TTL</strong><b>{stats.tx}</b><span>Chưa phải đã tới vệ tinh</span></article>
       <article className="practice-task"><strong>Dòng nhận từ vệ tinh (RX)</strong><b>{stats.rx}</b><span>{stats.lastRxAt ? time(stats.lastRxAt) : 'Chưa nhận'}</span></article>
+      {downlinkOnly && <article className="practice-task"><strong>Gói PACKET #n nhận được</strong><b>{stats.packets}</b>
+        <span>{stats.lastPacket === null ? 'Chưa thấy gói PACKET #n' : `Gói cuối #${stats.lastPacket} · ước tính mất ${lost} gói từ #${stats.firstPacket}`}</span></article>}
     </div>
 
-    <section className="card">
+    {downlinkOnly ? <p className="practice-note">Lab 5.1 chỉ <strong>phát xuống (downlink)</strong>: vệ tinh gửi gói mỗi 2 giây, trạm mặt đất chỉ cần kết nối và nhận. Gửi lệnh uplink bắt đầu từ Lab 5.2.</p>
+      : <section className="card">
       <div className="card-header"><h3>🎮 Gửi lệnh lên vệ tinh (Command Uplink)</h3></div>
       <div className="card-body">
-        <p className="telemetry-empty" style={{ textAlign: 'left' }}>Lab 5.2 chỉ in lại bản tin nhận được trên Serial của vệ tinh; Lab 5.3 mới thực thi các lệnh dưới đây và phản hồi qua LoRa.</p>
+        <p className="telemetry-empty" style={{ textAlign: 'left' }}>{commandNote}</p>
         <div className="cmd-btn-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {SATELLITE_COMMANDS.map(({ cmd, label, desc }) => <button key={cmd} type="button" className="btn btn-sm btn-outline" disabled={!canSend} title={desc} onClick={() => sendCommand(cmd)}>{label}</button>)}
+          {commands.map(({ cmd, label, desc }) => <button key={cmd} type="button" className="btn btn-sm btn-outline" disabled={!canSend} title={desc} onClick={() => sendCommand(cmd)}>{label}</button>)}
         </div>
         <div className="serial-input-bar" style={{ marginTop: 16, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-primary)' }}>
           <input type="text" aria-label="Lệnh tùy chỉnh" disabled={!canSend} placeholder="Nhập lệnh gửi lên vệ tinh…" maxLength={200} value={customCmd}
@@ -121,7 +145,7 @@ export default function GroundStationPage() {
           </li>)}
         </ol>}
       </div>
-    </section>
+    </section>}
 
     {mirrored.length > 0 && <section className="lab-visual-stack" data-lab={profile.lab} aria-label="Trực quan dữ liệu thu qua LoRa">
       <p className="practice-note">Các bảng dưới đây chỉ dùng dữ liệu mà trạm mặt đất <strong>thu được qua LoRa</strong> (không lấy từ cổng USB của vệ tinh).

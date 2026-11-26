@@ -1,6 +1,6 @@
 {
-  "library_commit": "74065b64f670b14b7987c901c854ffe0e6fe69c5",
-  "checked_at": "2026-11-25",
+  "library_commit": "b684dc01a76d4a0f5e646339cefa9cad2672c85b",
+  "checked_at": "2026-11-26",
   "exercises": [
     {
       "id": "Lab1-01_Blink_LED",
@@ -15,7 +15,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "963a2d2326a9d0f35cabbc975f9b9141c293fe96a5ac91ed32c9a060363df7cc",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -32,7 +32,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "296e846d7f9ba431b1d89e311de423d6b27c0ac8f5d0f3045a34c725567e76db",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -49,7 +49,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "e8315de0edb778b8984b1cf73b2cf6d36c89c5bcec14f97e6d4b3523c19370de",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -66,7 +66,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "b9ed38a252ea39277f3937bd7d79c030e021079bcd8b25a87e336b0a8b25e897",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -83,7 +83,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "237c0edf0a8ba2e043dc18dc508d08f00a9a219acb2444b6aa886fc1ff673f56",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -100,7 +100,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "0716bdf201a62b600b25e134a7204808eadbb0d9dc07214d16bcb2cc57bba35f",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -117,7 +117,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "64cea55a1fca3223c09b14eea3daa1b13c47ad2e197070dd98b3bcd271b3a321",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -134,7 +134,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "41c2354c346ddcd7ae52564089b7ac31b044f565b9514435009246682c8b7392",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -151,7 +151,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "c34d8103c0e6561317945c1ed1858ae71b403366eccf66e1b895a4b774888257",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -168,7 +168,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "8dc45b456a23f93555bee36b2fb40806b71d5c8ec18b8ebe738e7bfb3e29586c",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -185,7 +185,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "18de111b79bd907d7adc37e34740e376f29a6546c4ad85d3bedea9ef70de12c1",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -202,7 +202,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "2e961a490a61c8c3f351a5bcd6980dc697140d9fc6706d95b97aa0e8d3be9962",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -215,11 +215,11 @@
       "notes": [
         "Upstream 2026-11-24: PTIT_EPS reads the MAX17048 (voltage, SOC, charge rate). Prints V | SOC | Rate."
       ],
-      "source_sha256": "5f8a91e020191d01524bde898e614e93624ed1e0067cf82a866a61d383141ef2",
+      "source_sha256": "b6e18cd5b592e1b546d09c712ad81cc95f4b714de7c76002617593e3bc0ad714",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "5f8a91e020191d01524bde898e614e93624ed1e0067cf82a866a61d383141ef2",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "source_sha256": "b6e18cd5b592e1b546d09c712ad81cc95f4b714de7c76002617593e3bc0ad714",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -232,11 +232,11 @@
       "notes": [
         "Upstream 2026-11-24: power saving driven by battery thresholds (3.70 V or 25 %): buck off in low power, on otherwise. Replaces the fixed duty cycle."
       ],
-      "source_sha256": "8efb1644c64399b35dd11f9d57317d49ebf0e92f9f7f124be90a590bc9522673",
+      "source_sha256": "58cb890c7ecd8797ba74917e38d1159067656f1644470f42a325e61d212c6cad",
       "verified_build": {
         "board": "esp32",
-        "source_sha256": "8efb1644c64399b35dd11f9d57317d49ebf0e92f9f7f124be90a590bc9522673",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "source_sha256": "58cb890c7ecd8797ba74917e38d1159067656f1644470f42a325e61d212c6cad",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -253,7 +253,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "5aa4bf2af7b647ae8ade991debd65ac7b967f6004e4fae9956cfa937f2db178f",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -270,7 +270,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "595de782e576682a5c18befe32c9492208c9ab602b84cd7db0c09df701b3df9b",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -287,7 +287,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "e40f61643f6ca277b3ac9084c14f78b50733635eb6d446295e9481e4d5e0bd12",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -304,7 +304,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "2902d28365e862eff878274d528038bf97fb27510476c9378a1b16a0cf8c6c14",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -322,7 +322,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "0db85322460346eb4dac55d7a5ab9dcc552fde75040aa73b716dbf8fd3f73124",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -339,7 +339,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "8f51197a9816d32499eaac3cd0ef222a1807244f872076cc8aa448d73c14a984",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -356,7 +356,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "dc9669fb755956916fb365e03f8b144ef66160c1e29e945b5901e92ed00d6b0f",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -373,7 +373,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "7ce6a78feb46d533f66c285731f4f941df57eb34ac47ac8b7b623d0000f06cab",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -391,7 +391,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "1e0e1a8167ded086b963397b622cd4daa7e2c4416c78b0ab8c335718556e451c",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -408,7 +408,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "633229cdb81492047e88837b3b3cd76bee84cd7dcac9f1bf24bc340ff1741278",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -425,7 +425,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "bafc24c6d19b64b9be1246d2c39dc5c40d74b81b0ab8f3f0f2cb267e0cd3e6c4",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -442,7 +442,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "e052b888f64100a74abb0b96674fbfc7e1dac3ae6fb6f5e2e0c08b46a7b20145",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -459,7 +459,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "9098e9352afb68a89c6658bb49f762de36d2873f9eb011739f9f99883be6ccc3",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -476,7 +476,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "dc920823c42fe80688661d3fb94332516b6ed4d61f78aa47ead22bc7fe6089e7",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -493,7 +493,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "89d5c0db589209908345c4281da444ace96bf7ed229009fa29bcf61152275372",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -511,7 +511,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "129c5cc926bcba8907fff96b718885230db6d4317be3fd645436ef3ad178c920",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -528,7 +528,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "0f5b5796df31d2a162777c3656f4513adb667730ba49846fdc48420b370e1ae9",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -545,7 +545,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "38b535449ffc2c70c63c562081c401af9f2958a6a819c387c74c499bf8098755",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -562,7 +562,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "54271073ec4a472165de47e3e8d5730baac120819deedbade5d5a5a87aab647c",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -580,7 +580,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "d28f93a6e38f1d014a47f32d4c13bb69beaa715bef59566f04e1cac5a0119aa1",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -598,7 +598,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "29cfdedefa16ceb4ca26bb46c90eb18829362343f041d9b2f4252bdf119e0697",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -616,7 +616,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "af7f2cc6a0ea2b2d16cbacafb431f05238a1b2c7aaf197836335968d98b2e226",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -634,7 +634,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "49021b2a622a933fe605c60ab2daac585c34cfc32fc8dda2297dffe168c84c85",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -652,7 +652,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "e7d1d43eab08a59a59e6e97893fd0e4068d98547a185bd9acdf7313dd2ab6ee5",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     },
@@ -670,7 +670,7 @@
       "verified_build": {
         "board": "esp32",
         "source_sha256": "a71d5d44a5dc9eec7bf11f78a6aabc81d252e51c28994b7f4b773228715d5c0e",
-        "compiler_image": "sha256:740df9d30198bed42db3cbd25937b5326e6c37ebc8961ba74de9c72270ee03d9",
+        "compiler_image": "sha256:a4da4c228357dc098e3dfe9d8cff41eb380d552c960d9db4a685f4e000397312",
         "result": "passed"
       }
     }

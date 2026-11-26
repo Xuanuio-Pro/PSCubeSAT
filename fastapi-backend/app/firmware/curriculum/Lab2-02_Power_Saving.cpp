@@ -1,5 +1,5 @@
 // Reviewed classroom source for the ESP32 OBC hardware profile.
-// Upstream: https://github.com/PTITCube/Lab2-02_Power_Saving/blob/7ae7cd506b3df8392ab4117ccaad02f147b0d8ad/src/main.cpp
+// Upstream: https://github.com/PTITCube/Lab2-02_Power_Saving/blob/8684607d6a3d5fee460299ff2d6066fcb3107d10/src/main.cpp
 /**
  * VÍ DỤ 2-2: QUẢN LÝ TIẾT KIỆM NĂNG LƯỢNG - POWER SAVING MODE DỰA VÀO ĐIỆN ÁP / PHẦN TRĂM PIN
  */
@@ -19,11 +19,13 @@ void setup() {
 
 void loop() {
     eps.update();
-    float vcell = eps.getBatteryVoltage();
-    float soc   = eps.getBatteryPercent();
 
-    // Kích hoạt Power Saving Mode nếu điện áp hoặc dung lượng pin thấp hơn ngưỡng
-    bool isLowPower = (vcell < LOW_VOLTAGE_THRESHOLD) || (soc < LOW_SOC_THRESHOLD);
+    bool connected = eps.isConnected();
+    float vcell    = connected ? eps.getBatteryVoltage() : 0.0f;
+    float soc      = connected ? eps.getBatteryPercent() : 0.0f;
+
+    // Kích hoạt Power Saving Mode nếu chưa bật/ngắt nguồn (!connected) hoặc điện áp/dung lượng thấp
+    bool isLowPower = !connected || (vcell < LOW_VOLTAGE_THRESHOLD) || (soc < LOW_SOC_THRESHOLD);
 
     if (isLowPower) {
         // Chế độ tiết kiệm năng lượng: TẮT mạch hạ áp để ngắt tải phụ, kéo dài thời gian ngủ

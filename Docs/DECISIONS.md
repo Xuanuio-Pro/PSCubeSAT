@@ -299,3 +299,18 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Quyết định: khi đã cấu hình SMTP, `POST /api/admin/users/{id}/reset-link` gửi liên kết đặt lại tới email của tài khoản đó, trả thêm `email_sent`. Luồng tự phục vụ qua `/forgot-password` giữ nguyên.
 - Gửi lỗi không chặn admin: liên kết vẫn trả về một lần để gửi thủ công (`email_sent=false`), log chỉ ghi email đã che.
 - Thư chỉ gửi tới email đã đăng ký của tài khoản, không nhận địa chỉ từ client; tài khoản admin vẫn không cấp được liên kết qua đường này.
+
+## 2026-11-26 — Bản đồ GPS thể hiện Hoàng Sa, Trường Sa thuộc Việt Nam
+- Quyết định: bỏ tile OSM chuẩn ở mọi mức zoom. Zoom < 8 dùng nền Esri Ocean Base (không nhãn) và nhãn tiếng Việt do ứng dụng tự vẽ; zoom ≥ 8 dùng tile OSM (chi tiết đường phố cho GPS), riêng mọi ô tile chạm vùng biển khơi Biển Đông (`MASKED_AREAS` trong `vietnam-map-data.js`) được thay bằng nền biển trơn. "QĐ. Hoàng Sa (Việt Nam)", "QĐ. Trường Sa (Việt Nam)", các đảo, "Biển Đông" luôn do ứng dụng vẽ.
+- Lý do: tile công cộng in sẵn tên tiếng Trung, "South China Sea" và ranh giới biển nước ngoài quanh hai quần đảo; không gỡ được khỏi ảnh. CARTO (đã có trong CSP) nay trả tile "API KEY REQUIRED"; Vietmap cần API key.
+- Vùng che tránh bờ biển Việt Nam (≤ 109,5° Đ), Hải Nam, Palawan, Sabah; `tests/vietnam-map.test.js` kiểm tra không ô đất liền nào bị thay và mọi đảo đều nằm trong vùng che ở mọi zoom ≥ 8.
+- CSP (`nginx-security-headers.conf`) thêm `https://server.arcgisonline.com`. Esri yêu cầu ghi nguồn, đã có trong attribution.
+
+## 2026-11-26 — Rà soát trực quan Lab 2–8 sau buổi thử phần cứng
+- Thư viện PTITCube nâng lên `b684dc0` (EPS trả 0 khi chưa đọc được MAX17048); Lab2-01b, Lab2-02 đồng bộ bản upstream mới nhất. Cần build lại image compiler.
+- GPS: vị trí giữ "tươi" 30 s (các trường khác 5 s) vì Lab4-03a/b chỉ in một câu NMEA mỗi 2 s, câu có tọa độ đến 10–20 s một lần; trước đây bản đồ nhấp nháy giữa có vị trí và "Mất fix". Nhận thêm câu GLL.
+- Lab3-03: thẻ Heartbeat luôn hiện; đèn nháy theo chu kỳ khai báo (500 ms) khi Scheduler đang chạy (TELEM/DIAG còn mới). Đây là minh họa, ghi rõ trên thẻ, vì sketch không in log cho task này.
+- Lab3-05: tách ba nguồn đưa sự kiện vào Queue (ngắt nút nhấn, sensorTask giả lập, serialTask) thành thẻ riêng, có trạng thái LED, nhiệt độ giả lập, ký tự lệnh và thời điểm trên bo.
+- Lab4-06: Roll/Pitch trong dòng `TELEM:` dựng tư thế 3D khi sketch không in dòng `Accel:` (bản upstream).
+- Ảnh camera qua MQTT: bo báo thêm `host=<host>:<port>` trong `[CLOUD] CFG?`; trình duyệt chỉ trả `KEEP` khi broker trùng với `mqtt_broker` từ `/api/devices/cloud` (không bí mật), nếu không thì cấp lại cấu hình. Bo còn lưu broker cũ (p-tech) trong NVS trước đây nhận `KEEP` và gửi ảnh thất bại mãi. Khi `PHOTO FAIL ... mqtt-state=` trình duyệt tự cấp lại cấu hình một lần mỗi phiên Serial.
+- Lab 5.1 và Lab 8 có nút mở cửa sổ Trạm mặt đất; Lab 5.1 đếm gói `PACKET #n` và ước tính gói mất. Bộ lệnh ở trạm mặt đất theo bài: Lab 5 (ping, battery…), Lab 7 (a–f, p, r), Lab 8 (lệnh tự nhập; dashboard dựng từ dữ liệu LoRa).

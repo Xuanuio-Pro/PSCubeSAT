@@ -116,7 +116,10 @@ bool save(const Config& next) {
 
 void announce() {
     const Config c = currentConfig();
-    say(String("CFG? v1 uid=") + (c.uid.length() ? c.uid : "none") + " ssid=" + c.ssid);
+    // The broker is reported too: a board provisioned for a retired broker must not be told KEEP.
+    // ssid stays last because it may contain spaces.
+    say(String("CFG? v1 uid=") + (c.uid.length() ? c.uid : "none") + " host=" + (c.host.length() ? c.host : "none") + ":" +
+        String(c.port) + " ssid=" + c.ssid);
 }
 
 void startTask();

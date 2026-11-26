@@ -55,3 +55,8 @@
 .camera-send-hint summary { cursor: pointer; font-weight: 600; }
 .camera-wifi-form { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .camera-wifi-form input { flex: 1 1 140px; min-width: 0; padding: 5px 8px; border: 1px solid var(--border-primary); border-radius: 6px; font-size: 12px; }
+.practice-heartbeat-row { display: flex; align-items: center; gap: 10px; }
+.practice-heartbeat { width: 22px; height: 22px; border-radius: 50%; background: var(--status-neutral-border); box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
+.practice-heartbeat.is-running { animation: practice-heartbeat var(--heartbeat-period, 1000ms) steps(1, end) infinite; }
+@keyframes practice-heartbeat { 0% { background: #ef4444; box-shadow: 0 0 10px 2px rgba(239,68,68,.55); } 50% { background: var(--status-neutral-border); box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .practice-heartbeat.is-running { animation: none; background: #ef4444; } }

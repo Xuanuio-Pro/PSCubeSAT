@@ -17,9 +17,9 @@ const EXERCISE_PANELS = [
   [/^Lab4-03/, ['gps']],
   [/^Lab4-04/, ['camera']],
   [/^Lab4-06/, ['environment', 'attitude', 'gps']],
-  [/^Lab5-01/, ['radio']],
-  // Uplink commands are sent from the separate ground-station window, not from the OBC's USB port.
-  [/^Lab5-0[23]/, ['radio', 'groundStation']],
+  // Lab5-01 downlink packets are received in the ground-station window; Lab5-02/03 uplink commands are sent
+  // from it, not from the OBC's USB port.
+  [/^Lab5-0[123]/, ['radio', 'groundStation']],
   // Lab3-04 (watchdog) and Lab3-05 (event queue) report events, not measurements: activity log only.
   [/^Lab3-0[45]/, []],
   [/^Lab4-05/, ['gps', 'camera']],
@@ -28,7 +28,8 @@ const EXERCISE_PANELS = [
   [/^Lab7-01/, ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system']],
   // Lab7-02 saves photos to SD only (command f over LoRa), so a camera panel would never show an image.
   [/^Lab7-02/, ['groundStation', 'attitude', 'gps', 'voltage', 'environment', 'system']],
-  [/^Lab8-/, ['dashboard']],
+  // Lab8 custom mission: the dashboard, plus the ground station like Lab7 (missions usually downlink over LoRa).
+  [/^Lab8-/, ['groundStation', 'dashboard']],
 ];
 
 // Profiles describe the shipped examples, not capabilities discovered on a board.
@@ -68,7 +69,9 @@ export function reduceActivity(state, event) {
   if (event.group === 'task') {
     const previous = state.tasks[event.name] ?? { count: 0, startedAt: null, durationMs: null };
     const durationMs = event.phase === 'done' && previous.startedAt !== null ? (event.at >= previous.startedAt ? event.at - previous.startedAt : null) : previous.durationMs;
-    next.tasks = { ...state.tasks, [event.name]: { ...previous, ...event, durationMs,
+    // Lab3-05: running totals per event kind (button / temp / cmd), each with its last payload.
+    const kinds = event.kind ? { ...previous.kinds, [event.kind]: { ...event, count: (previous.kinds?.[event.kind]?.count ?? 0) + 1 } } : previous.kinds;
+    next.tasks = { ...state.tasks, [event.name]: { ...previous, ...event, durationMs, ...(kinds ? { kinds } : {}),
       count: previous.count + (event.phase === 'sample' || event.phase === 'done' ? 1 : 0),
       startedAt: event.phase === 'start' ? event.at : event.phase === 'done' ? null : previous.startedAt } };
   } else if (event.group !== 'serial') next.subsystems = { ...state.subsystems, [event.group]: event.group === 'network'
@@ -76,12 +79,14 @@ export function reduceActivity(state, event) {
   return next;
 }
 
+// Lab3-05 "Event: <kind>" → [kind, timeline lane], one per producer that feeds the queue.
+const QUEUE_KINDS = { button: ['button', 'Nút nhấn (ISR)'], 'temp alert': ['temp', 'Cảm biến giả lập'], cmd: ['cmd', 'Lệnh Serial'] };
 const NUMBER = '([-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[-+]?\\d+)?)';
 const valueAfter = (line, label) => new RegExp(`${label}\\s*[:=]\\s*${NUMBER}`, 'iu').exec(line);
 const fold = line => line.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/gi, 'd').toLowerCase();
 
 function nmeaPosition(line) {
-  const match = /^\$(G[PNLBA](?:GGA|RMC)),([^*]+)\*([\dA-Fa-f]{2})$/.exec(line);
+  const match = /^\$(G[PNLBA](?:GGA|RMC|GLL)),([^*]+)\*([\dA-Fa-f]{2})$/.exec(line);
   if (!match) return null;
   const body = `${match[1]},${match[2]}`;
   let checksum = 0;
@@ -89,7 +94,9 @@ function nmeaPosition(line) {
   if (checksum !== parseInt(match[3], 16)) return null;
   const fields = body.split(',');
   const gga = fields[0].endsWith('GGA');
-  const valid = gga ? /^[1-8]$/.test(fields[6]) : fields[2] === 'A';
+  const gll = fields[0].endsWith('GLL');
+  // GLL: lat,N,lon,E,time,status — status A is a valid fix.
+  const valid = gga ? /^[1-8]$/.test(fields[6]) : gll ? fields[6] === 'A' : fields[2] === 'A';
   // GGA field 7 = satellites in use; shown while searching, never turned into a position.
   const satellites = gga && /^\d{1,2}$/.test(fields[7]) ? Number(fields[7]) : undefined;
   if (!valid) return { valid: false, satellites };
@@ -99,7 +106,7 @@ function nmeaPosition(line) {
     if (minutes >= 60) return NaN;
     return (Number(text.slice(0, width)) + minutes / 60) * ('SW'.includes(hemisphere) ? -1 : 1);
   };
-  const offset = gga ? 2 : 3;
+  const offset = gga ? 2 : gll ? 1 : 3;
   const lat = coordinate(fields[offset], fields[offset + 1], 2, ['N', 'S']);
   const lng = coordinate(fields[offset + 2], fields[offset + 3], 3, ['E', 'W']);
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
@@ -153,7 +160,7 @@ export function createPracticeDecoder(exerciseId = '', { groundStation = false }
     }
     // Lab4-03b prints "NMEA RAW: OK   (GGA) $GPGGA,..." (older: "[NMEA RAW] [OK  ] [GGA (...)] $GPGGA,...").
     // Decode the embedded sentence; its checksum is re-verified here.
-    const embedded = /^(?:\[NMEA RAW\]\s+\[OK\s*\]|NMEA RAW:\s+OK\b).*\s(\$G[PNLBA](?:GGA|RMC),\S+)$/.exec(line);
+    const embedded = /^(?:\[NMEA RAW\]\s+\[OK\s*\]|NMEA RAW:\s+OK\b).*\s(\$G[PNLBA](?:GGA|RMC|GLL),\S+)$/.exec(line);
     if (line.startsWith('$') || embedded) {
       const fix = nmeaPosition(embedded ? embedded[1] : line);
       if (!fix) return result;
@@ -247,7 +254,18 @@ export function createPracticeDecoder(exerciseId = '', { groundStation = false }
     if (/^\[obc heartbeat\]/.test(lower)) { event('task', 'sample', { name: 'Heartbeat', illustrative: false }); return result; }
     if (/^\[dispatcher\]/.test(lower)) { event('task', 'sample', { name: 'Dispatcher', illustrative: /canh bao vien trac/.test(lower) }); return result; }
     // Lab3-05 (2026-11-24): "Event: Button ...", "Event: Temp Alert: 33 C ..." (simulated), "Event: Cmd: 'A' ...".
-    if (/^event: (?:button|temp alert|cmd)\b/.test(lower)) { event('task', 'sample', { name: 'Dispatcher', illustrative: /temp alert/.test(lower) }); return result; }
+    // Each kind keeps its own payload so the panel mirrors the three producers (ISR, sensorTask, serialTask).
+    const queued = /^event: (button|temp alert|cmd)\b/.exec(lower);
+    if (queued) {
+      const [kind, lane] = QUEUE_KINDS[queued[1]];
+      const deviceMs = /\(t=(\d+)\s*ms\)/.exec(lower);
+      const led = /led: (on|off)\b/.exec(lower);
+      const extra = kind === 'button' ? { led: led ? led[1] === 'on' : null }
+        : kind === 'temp' ? { value: Number(/temp alert:\s*(-?\d+)/.exec(lower)?.[1] ?? NaN) }
+          : { command: /cmd:\s*'(.)'/i.exec(line)?.[1] ?? null };
+      event('task', 'sample', { name: 'Dispatcher', lane, kind, illustrative: kind === 'temp', deviceMs: deviceMs ? Number(deviceMs[1]) : null, ...extra });
+      return result;
+    }
     if (/\[su co\b|emergency:|freefall detected|overheat\s*\(|watchdog.*(?:triggered|timed out)|task_wdt.*(?:error|failed)|guru meditation|backtrace:|\bpanic\b|^wdt: treo/.test(lower)) event('alert', 'error');
     if (/^\[event\] no current anomaly|^\[fdir\].*phuc hoi|twdt da tu phuc hoi/.test(lower)) event('alert', 'recovered');
     if (/^\[event\] anomaly state unknown/.test(lower)) event('alert', 'waiting');
@@ -353,6 +371,11 @@ export function createPracticeDecoder(exerciseId = '', { groundStation = false }
         add('temperature', '\\bt'); add('pressure', '\\bp');
         const fix = new RegExp(`gps: \\(${NUMBER}, ${NUMBER}, \\d+\\s*sats\\)`).exec(lower);
         if (fix) { data.lat = Number(fix[1]); data.lng = Number(fix[2]); }
+        // Roll/Pitch computed by the library from the accelerometer: the 3D model's only tilt source when the
+        // sketch (upstream Lab4-06) prints no "Accel:" line.
+        const roll = valueAfter(lower, '\\broll');
+        const pitch = valueAfter(lower, '\\bpitch');
+        if (roll && pitch) event('attitude', 'sample', { roll: Number(roll[1]), pitch: Number(pitch[1]), heading: null });
       }
       // Lab2 EPS (MAX17048): "V: 3.700 V | SOC: 85.0 % | Rate: .." and "EPS: Normal Mode (V: 3.70V, SOC: 85.0%)".
       if (/\bsoc:/.test(lower)) {

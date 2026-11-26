@@ -48,6 +48,8 @@ def status(device: Device | None) -> dict:
         # The network name is not secret; the board reports it so the web app can tell a stale config.
         "wifi_ssid": settings.device_wifi_ssid,
         "image_topic": f"sensors/{device.device_uid}/image" if device else None,
+        # Not secret: lets the web app re-provision a board still pointing at a retired broker.
+        "mqtt_broker": f"{settings.mqtt_host}:{settings.mqtt_port}" if settings.mqtt_host else None,
     }
 
 

@@ -77,6 +77,11 @@ function VectorArrow({ vector, length, color }) {
 
 const finiteVector = (x, y, z) => [x, y, z].every(value => typeof value === 'number' && Number.isFinite(value)) && Math.hypot(x, y, z) > 1e-6 ? [x, y, z] : null;
 const sensorToScene = (x, y, z) => new THREE.Vector3(x, z, -y); // sensor Z (up when flat) -> scene Y, sensor Y -> scene -Z
+/** Body-frame "up" vector for firmware roll/pitch in degrees: inverse of roll = atan2(ay, az), pitch = atan2(-ax, √(ay² + az²)). */
+function upFromEuler(roll, pitch) {
+  const [r, p] = [roll, pitch].map(THREE.MathUtils.degToRad);
+  return [-Math.sin(p), Math.sin(r) * Math.cos(p), Math.cos(r) * Math.cos(p)];
+}
 const ACCEL_COLOR = '#e3b341';
 const MAG_COLOR = '#a371f7';
 
@@ -120,16 +125,22 @@ export default function AttitudeViewer3D({ height = 350 }) {
   const rotation = raw
     ? { pitch: rawFresh ? Math.atan2(-rx, Math.hypot(ry, rz)) * 180 / Math.PI : null, roll: rawFresh ? Math.atan2(ry, rz) * 180 / Math.PI : null, yaw: null }
     : attitude;
-  const imuFresh = raw ? rawFresh : attitudeReceivedAt !== null && now - attitudeReceivedAt <= 5000;
-  const waiting = raw ? !rawSample : attitudeReceivedAt === null;
   const accelBody = raw ? (rawFresh ? finiteVector(rx, ry, rz) : null) : finiteVector(latest?.accX, latest?.accY, latest?.accZ);
   const magBody = raw ? null : finiteVector(latest?.magX, latest?.magY, latest?.magZ);
-  const [ax, ay, az] = accelBody ?? [];
+  // Firmware attitude: "Roll/Pitch/Head" (Lab4-02), TELEM Roll/Pitch (Lab4-06) or Lab7 imu.* — computed on the board.
+  const euler = activity.subsystems.attitude;
+  const eulerFresh = Boolean(!raw && euler && mode === 'serial' && link === 'connected' && now - euler.at <= 5000);
+  // Without an accelerometer vector, tilt the model from the firmware's roll/pitch.
+  const eulerTilt = !accelBody && eulerFresh && Number.isFinite(euler.roll) && Number.isFinite(euler.pitch);
+  const tiltBody = accelBody ?? (eulerTilt ? upFromEuler(euler.roll, euler.pitch) : null);
+  const imuFresh = raw ? rawFresh : (attitudeReceivedAt !== null && now - attitudeReceivedAt <= 5000) || eulerTilt;
+  const waiting = raw ? !rawSample : attitudeReceivedAt === null && !euler;
+  const [ax, ay, az] = tiltBody ?? [];
   const [mx, my, mz] = magBody ?? [];
   // Firmware heading (magnetometer, "Head:" / Lab7 imu.yaw) is absolute; without it only the relative gyro yaw exists.
-  const euler = activity.subsystems.attitude;
-  const heading = !raw && euler && mode === 'serial' && link === 'connected' && now - euler.at <= 5000 ? euler.heading : null;
+  const heading = eulerFresh && Number.isFinite(euler.heading) ? euler.heading : null;
   const yaw = raw ? 0 : heading ?? rotation.yaw ?? 0;
+  const shown = eulerTilt ? { pitch: euler.pitch, roll: euler.roll, yaw: rotation.yaw } : rotation;
   // At rest |a| must be ~1 g; far from it the conversion factor does not match the sensor range (or it is moving).
   const magnitude = !raw && accelBody ? Math.hypot(...accelBody) : null;
   const offScale = magnitude !== null && imuFresh && Math.abs(magnitude - 1) > 0.15;
@@ -145,17 +156,17 @@ export default function AttitudeViewer3D({ height = 350 }) {
       mag: mx === undefined ? null : sensorToScene(mx, my, mz).applyQuaternion(q).toArray(),
     };
   }, [ax, ay, az, mx, my, mz, yaw]);
-  const accelLength = ax === undefined ? 0 : raw ? 2 : Math.min(Math.hypot(ax, ay, az), 2.5) * 1.5;
+  const accelLength = ax === undefined ? 0 : raw || eulerTilt ? 2 : Math.min(Math.hypot(ax, ay, az), 2.5) * 1.5;
   return (
     <div className="card" style={{ opacity: status === 'live' && imuFresh ? 1 : 0.65 }}>
       <div className="card-header">
         <h3>🛰️ 3D Attitude Viewer {!imuFresh && <small>· {link !== 'connected' ? 'mất kết nối' : waiting ? 'chờ IMU' : 'chưa có mẫu IMU mới'}</small>}</h3>
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
-          <span style={{ color: 'var(--accent-red)' }}>P: {display(rotation.pitch)}°</span>
-          <span style={{ color: 'var(--accent-green)' }}>R: {display(rotation.roll)}°</span>
+          <span style={{ color: 'var(--accent-red)' }}>P: {display(shown.pitch)}°</span>
+          <span style={{ color: 'var(--accent-green)' }}>R: {display(shown.roll)}°</span>
           {heading !== null
             ? <span style={{ color: 'var(--accent-blue)' }}>Hướng la bàn: {display(heading)}°</span>
-            : <span style={{ color: 'var(--accent-blue)' }}>Y tương đối: {display(rotation.yaw)}°</span>}
+            : <span style={{ color: 'var(--accent-blue)' }}>Y tương đối: {display(shown.yaw)}°</span>}
         </div>
       </div>
       <div style={{ ...(height === '100%' ? { flex: 1, minHeight: 160 } : { height }), position: 'relative', background: '#16213a' }}>
@@ -191,7 +202,7 @@ export default function AttitudeViewer3D({ height = 350 }) {
         </Canvas>
       </div>
       <div className="vector-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '8px 12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
-        <span style={{ color: ACCEL_COLOR }}>Trọng lực g (hướng xuống): {accelBody ? raw ? `đo [${accelBody.join(', ')}] số đếm thô (chỉ hướng)` : `đo ${accelBody.map(value => value.toFixed(2)).join(', ')} g · |a| = ${Math.hypot(...accelBody).toFixed(2)} g` : '—'}</span>
+        <span style={{ color: ACCEL_COLOR }}>Trọng lực g (hướng xuống): {eulerTilt ? `theo Roll/Pitch firmware tính (${display(euler.roll)}°, ${display(euler.pitch)}°)` : accelBody ? raw ? `đo [${accelBody.join(', ')}] số đếm thô (chỉ hướng)` : `đo ${accelBody.map(value => value.toFixed(2)).join(', ')} g · |a| = ${Math.hypot(...accelBody).toFixed(2)} g` : '—'}</span>
         {offScale && <span role="status" style={{ color: 'var(--accent-red)' }}>|a| = {magnitude.toFixed(2)} g khi đứng yên phải ≈ 1 g: kiểm tra dải đo (ACCEL_CONFIG) và hệ số quy đổi, hoặc giữ bo đứng yên.</span>}
         {!raw && <span style={{ color: MAG_COLOR }}>Từ trường: {magBody ? `${magBody.map(value => value.toFixed(1)).join(', ')} µT · |B| = ${Math.hypot(...magBody).toFixed(1)} µT (chỉ hướng)` : '—'}</span>}
       </div>

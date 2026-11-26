@@ -34,6 +34,8 @@ export function PracticePanels({ profile, plan, panels = plan.panels }) {
   const render = name => {
     if (name === 'lab1Connection') { const Panel = PANELS[name]; return <Panel key={name} />; }
     if (name === 'system') return <SystemCheck key={name} rows={plan.systemRows} />;
+    // Lab 8 ground-station window mirrors the custom dashboard, fed by the LoRa downlink.
+    if (name === 'dashboard') return <DashboardBuilder key={name} />;
     const Panel = PANELS[name];
     return <section key={name} className="practice-panel" aria-label={PANEL_LABELS[name]}>
       {name === 'commands' ? <CommandPanel commands={profile.commands} /> : <Panel {...(['attitude', 'gps'].includes(name) ? { height: 320 } : {})} />}
@@ -49,14 +51,13 @@ export default function PracticeVisualization() {
   const { exerciseId } = useTelemetry();
   const profile = practiceProfile(exerciseId);
   const plan = visualizationPlan(profile);
-  // Lab 7: the ground-station link sits right under the Serial Monitor; SD and LoRa are reported in System Check.
-  const lead = profile.lab === 7 ? plan.panels.filter(name => name === 'groundStation') : [];
+  // Lab 7/8: the ground-station link sits right under the Serial Monitor; SD and LoRa are reported in System Check.
+  const lead = profile.lab === 7 || profile.lab === 8 ? plan.panels.filter(name => name === 'groundStation') : [];
   return <div className="lab-visual-stack" data-exercise-id={exerciseId} data-lab={profile.lab}>
     <SerialMonitor height={350} />
-    {profile.lab === 8 ? <Suspense fallback={<p className="telemetry-empty">Đang tải bảng trực quan…</p>}><DashboardBuilder /></Suspense> : <>
-      {lead.length > 0 && <PracticePanels profile={profile} plan={plan} panels={lead} />}
-      <PracticePanels profile={profile} plan={plan} panels={plan.panels.filter(name => !lead.includes(name))} />
-    </>}
+    {lead.length > 0 && <PracticePanels profile={profile} plan={plan} panels={lead} />}
+    {profile.lab === 8 ? <Suspense fallback={<p className="telemetry-empty">Đang tải bảng trực quan…</p>}><DashboardBuilder /></Suspense>
+      : <PracticePanels profile={profile} plan={plan} panels={plan.panels.filter(name => !lead.includes(name))} />}
     {profile.lab !== 1 && profile.lab !== 7 && !profile.serialOnly && <PracticeActivity exclude={plan.panels.flatMap(name => DEDICATED[name] ?? [])} />}
   </div>;
 }

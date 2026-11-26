@@ -14,7 +14,7 @@ const QUERY_AFTER_CONNECT_MS = 2500;
 export function CloudProvider({ children }) {
   const { user } = useAuth();
   const { subscribe, send, isConnected, sessionId } = useSerial();
-  const [status, setStatus] = useState({ loaded: false, deviceUid: null, wifiSsid: '' });
+  const [status, setStatus] = useState({ loaded: false, deviceUid: null, wifiSsid: '', broker: null });
   const [board, setBoard] = useState({ state: 'unknown', message: '' });
   const [photoSentAt, setPhotoSentAt] = useState(0);
   const statusRef = useRef(status);
@@ -23,12 +23,14 @@ export function CloudProvider({ children }) {
   const ownWifi = useRef(/** @type {{ ssid: string, password: string } | null} */ (null));
   const asked = useRef(false);
   const busy = useRef(false);
+  // One automatic re-provision per Serial session after a photo failed at the MQTT connect step.
+  const retried = useRef(false);
 
   useEffect(() => {
     if (!user) return undefined;
     let active = true;
     request('/api/devices/cloud')
-      .then(data => { if (active) setStatus({ loaded: true, deviceUid: data.device_uid, wifiSsid: data.wifi_ssid || '' }); })
+      .then(data => { if (active) setStatus({ loaded: true, deviceUid: data.device_uid, wifiSsid: data.wifi_ssid || '', broker: data.mqtt_broker || null }); })
       .catch(() => { if (active) setStatus(current => ({ ...current, loaded: true })); });
     return () => { active = false; };
   }, [user]);
@@ -60,7 +62,7 @@ export function CloudProvider({ children }) {
       if (entry.type !== 'rx' || entry.origin !== 'serial' || !entry.text.startsWith('[CLOUD] ')) return;
       const text = entry.text;
       const current = statusRef.current;
-      const answer = cloudAnswer(text, { deviceUid: current.deviceUid, wifiSsid: ownWifi.current?.ssid || current.wifiSsid });
+      const answer = cloudAnswer(text, { deviceUid: current.deviceUid, wifiSsid: ownWifi.current?.ssid || current.wifiSsid, broker: current.broker });
       if (answer) asked.current = true;
       if (answer === 'keep') {
         send('@PTITCLOUD KEEP', { display: null });
@@ -76,6 +78,10 @@ export function CloudProvider({ children }) {
         setBoard({ state: 'error', message: 'Bo từ chối cấu hình gửi ảnh. Thử nhấn RST trên bo.' });
       } else if (/^\[CLOUD\] PHOTO SENT /.test(text)) {
         setPhotoSentAt(Date.now());
+      } else if (/^\[CLOUD\] PHOTO FAIL \S+ mqtt-state=/.test(text)) {
+        // The broker refused or was unreachable: stale credentials/host in NVS are the usual cause.
+        if (!retried.current) { retried.current = true; provision(); }
+        else setBoard({ state: 'error', message: 'Bo không kết nối được máy chủ MQTT để gửi ảnh. Kiểm tra WiFi có ra Internet (cổng 8883) rồi nhấn RST.' });
       }
     });
   }, [user, subscribe, send, provision]);
@@ -83,6 +89,7 @@ export function CloudProvider({ children }) {
   // Boards that were already running when the port opened did not see the boot handshake.
   useEffect(() => {
     asked.current = false;
+    retried.current = false;
     if (!user || !isConnected) return undefined;
     const timer = setTimeout(() => { if (!asked.current) send('@PTITCLOUD ?', { display: null }); }, QUERY_AFTER_CONNECT_MS);
     return () => clearTimeout(timer);
