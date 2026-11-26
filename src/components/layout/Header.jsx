@@ -14,6 +14,21 @@ import {
   ChevronDownIcon,
 } from '../common/HeaderIcons';
 
+function SerialConnectButton({ className, isConnected, serialSupport, onToggle, children }) {
+  return (
+    <button
+      type="button"
+      className={`header-icon-action ${className} ${isConnected ? 'is-connected' : ''}`}
+      onClick={onToggle}
+      aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
+      disabled={!isConnected && !serialSupport.available}
+      title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,14 +37,17 @@ export default function Header() {
   const lab = getLabBySlug(location.pathname.replace('/', ''));
   const isClassLearningRoute = /^\/(?:classes\/\d+\/learn|preview)\/?$/.test(location.pathname);
   const isLearningRoute = Boolean(lab || isClassLearningRoute);
-  // Admin and class-management pages share the lab's floating pill header (not the auth screens).
-  const isLmsRoute = !isLearningRoute && /^\/(?:classes|profile|admin\/(?:dashboard|users))(?:\/|$)/.test(location.pathname);
+  // Home, admin and class-management pages share the lab's floating pill header (not the auth screens).
+  const isLmsRoute = !isLearningRoute && (location.pathname === '/' || /^\/(?:classes|profile|admin\/(?:dashboard|users))(?:\/|$)/.test(location.pathname));
 
   const accountAvatar = (
     <span className="header-avatar" aria-hidden="true">
       <UserIcon size={17} />
     </span>
   );
+
+  const toggleSerial = () => (isConnected ? disconnect() : connect());
+  const serialProps = { isConnected, serialSupport, onToggle: toggleSerial };
 
   return (
     <header className={`header${isLearningRoute ? ' is-lab-route' : ''}${isLearningRoute ? ' is-fig' : ''}${isLmsRoute ? ' is-lms' : ''}`}>
@@ -54,48 +72,27 @@ export default function Header() {
         {lab && (
           <span className="header-lab-tools">
             {lab.id === 0 ? (
-              <button
-                type="button"
-                className={`header-icon-action header-lab-message ${isConnected ? 'is-connected' : ''}`}
-                onClick={() => isConnected ? disconnect() : connect()}
-                aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-                disabled={!isConnected && !serialSupport.available}
-                title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
-              >
+              <SerialConnectButton className="header-lab-message" {...serialProps}>
                 <img src={notificationIcon} alt="" className="header-notification-icon" draggable="false" />
                 <span className="header-serial-indicator" aria-hidden="true" />
-              </button>
+              </SerialConnectButton>
             ) : (
               <>
                 <button type="button" className="header-icon-action header-lab-alert" aria-label="Thông báo" title="Thông báo">
                   <BellIcon size={18} />
                 </button>
-                <button
-                  type="button"
-                  className={`header-icon-action header-lab-message ${isConnected ? 'is-connected' : ''}`}
-                  onClick={() => isConnected ? disconnect() : connect()}
-                  aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-                  disabled={!isConnected && !serialSupport.available}
-                  title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
-                >
+                <SerialConnectButton className="header-lab-message" {...serialProps}>
                   <MessageIcon size={18} />
                   <span className="header-serial-indicator" aria-hidden="true" />
-                </button>
+                </SerialConnectButton>
               </>
             )}
           </span>
         )}
         {!isLearningRoute && (
-          <button
-            type="button"
-            className={`header-icon-action header-serial-action ${isConnected ? 'is-connected' : ''}`}
-            onClick={() => isConnected ? disconnect() : connect()}
-            aria-label={isConnected ? 'Ngắt kết nối Web Serial' : 'Kết nối mạch qua Web Serial'}
-            disabled={!isConnected && !serialSupport.available}
-            title={isConnected ? 'Serial đã kết nối' : serialSupport.available ? 'Kết nối Web Serial' : serialSupport.message}
-          >
+          <SerialConnectButton className="header-serial-action" {...serialProps}>
             <span className="header-serial-dot" />
-          </button>
+          </SerialConnectButton>
         )}
 
         {user ? (

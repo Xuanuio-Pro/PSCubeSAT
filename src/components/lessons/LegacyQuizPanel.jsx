@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../contexts/auth-api';
 import { Notice } from '../classes/LmsCommon';
+import QuizQuestionBody from '../classes/QuizQuestionBody';
 import '../classes/classes.css';
 import '../classes/quiz.css';
-
-function formatChoiceIds(value) {
-  return String(value || '').split('|').filter(Boolean).map(v => v.toUpperCase()).join(', ');
-}
 
 export default function LegacyQuizPanel({ labId, lessonId, title = '', kind = 'quiz' }) {
   const [quiz, setQuiz] = useState(null);
@@ -118,153 +115,24 @@ export default function LegacyQuizPanel({ labId, lessonId, title = '', kind = 'q
         />
       )}
 
-      {displayItems.map((item, index) => {
-        const qType = item.question_type || 'single_choice';
-        const currentAns = selections[item.question_id] || '';
-        const multiSelected = new Set(currentAns ? currentAns.split('|') : []);
-        const tfSelected = qType === 'true_false' && currentAns
-          ? Object.fromEntries(currentAns.split('|').filter(p => p.includes(':')).map(pair => pair.split(':')))
-          : {};
-        const verdict = (correct, picked) => (result ? (correct ? ' correct' : picked ? ' wrong' : '') : '');
-        const explainChoice = (choice, tone) => {
-          const text = item.choice_explanations?.[choice.id];
-          return result && tone && text
-            ? <p className={`quiz-choice-note${tone}`}>{text}</p>
-            : null;
-        };
-
-        return (
-          <fieldset className="quiz-question" key={item.question_id} disabled={Boolean(result) || submitting}>
-            <legend><span>Câu {index + 1}</span> {item.prompt}</legend>
-
-            {qType === 'single_choice' && item.choices.map(choice => {
-              const tone = verdict(item.correct_choice_id === choice.id, currentAns === choice.id);
-              return (
-                <div className="quiz-choice-block" key={choice.id}>
-                  <label className={`quiz-choice${currentAns === choice.id ? ' selected' : ''}${tone}`}>
-                    <input
-                      type="radio"
-                      name={`legacy-${lessonId}-${item.question_id}`}
-                      checked={currentAns === choice.id}
-                      onChange={() => choose(item.question_id, choice.id)}
-                    />
-                    <span>{choice.text}</span>
-                    {result && currentAns === choice.id && <em className="quiz-picked">Bạn đã chọn</em>}
-                    {result && item.correct_choice_id === choice.id && <strong>Đáp án đúng</strong>}
-                  </label>
-                  {explainChoice(choice, tone)}
-                </div>
-              );
-            })}
-
-            {qType === 'multiple_choice' && (
-              <>
-                <small className="lms-secondary">Chọn tất cả các phương án đúng:</small>
-                {item.choices.map(choice => {
-                  const isChecked = multiSelected.has(choice.id);
-                  const isCorrectChoice = Boolean(result && item.correct_choice_id?.split('|').includes(choice.id));
-                  const tone = verdict(isCorrectChoice, isChecked);
-                  return (
-                    <div className="quiz-choice-block" key={choice.id}>
-                      <label className={`quiz-choice${isChecked ? ' selected' : ''}${tone}`}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={event => {
-                            const next = new Set(multiSelected);
-                            if (event.target.checked) next.add(choice.id);
-                            else next.delete(choice.id);
-                            choose(item.question_id, [...next].sort().join('|'));
-                          }}
-                        />
-                        <span>{choice.text}</span>
-                        {result && isChecked && <em className="quiz-picked">Bạn đã chọn</em>}
-                        {isCorrectChoice && <strong>Đáp án đúng</strong>}
-                      </label>
-                      {explainChoice(choice, tone)}
-                    </div>
-                  );
-                })}
-                {result && item.correct_choice_id && (
-                  <p className="lms-secondary"><strong>Đáp án đúng:</strong> {formatChoiceIds(item.correct_choice_id)}</p>
-                )}
-              </>
-            )}
-
-            {qType === 'true_false' && (
-              <>
-                <small className="lms-secondary">Chọn Đúng hoặc Sai cho từng mệnh đề:</small>
-                {item.choices.map((choice, cIdx) => {
-                  const letter = String.fromCharCode(97 + cIdx);
-                  const val = tfSelected[choice.id] || '';
-                  const rightVal = result && item.correct_choice_id
-                    ? Object.fromEntries(item.correct_choice_id.split('|').map(pair => pair.split(':')))
-                    : {};
-                  const tone = verdict(Boolean(val) && val === rightVal[choice.id], Boolean(val));
-                  return (
-                    <div className="quiz-choice-block" key={choice.id}>
-                      <div className={`quiz-choice quiz-tf-row${tone}`}>
-                        <span><strong>{letter})</strong> {choice.text}</span>
-                        <div className="quiz-tf-options">
-                          {['Đ', 'S'].map(opt => (
-                            <label key={opt}>
-                              <input
-                                type="radio"
-                                name={`legacy-${lessonId}-${item.question_id}-${choice.id}`}
-                                checked={val === opt}
-                                onChange={() => {
-                                  const next = { ...tfSelected, [choice.id]: opt };
-                                  const encoded = Object.keys(next).sort().map(k => `${k}:${next[k]}`).join('|');
-                                  choose(item.question_id, encoded);
-                                }}
-                              />
-                              {opt === 'Đ' ? 'Đúng' : 'Sai'}
-                            </label>
-                          ))}
-                        </div>
-                        {result && val && <em className="quiz-picked">Bạn chọn: {val === 'Đ' ? 'Đúng' : 'Sai'}</em>}
-                      </div>
-                      {explainChoice(choice, tone)}
-                    </div>
-                  );
-                })}
-                {result && item.correct_choice_id && (
-                  <p className="lms-secondary"><strong>Đáp án đúng:</strong> {item.correct_choice_id}</p>
-                )}
-              </>
-            )}
-
-            {qType === 'short_answer' && (
-              <div className="quiz-short-answer">
-                <label>
-                  Câu trả lời của bạn
-                  <input
-                    type="text"
-                    maxLength={64}
-                    value={draftText[item.question_id] ?? currentAns}
-                    placeholder="Nhập kết quả (VD: 10 hoặc -1.5)"
-                    onChange={event => {
-                      const val = event.target.value;
-                      setDraftText(current => ({ ...current, [item.question_id]: val }));
-                      choose(item.question_id, val.trim() ? val : '');
-                    }}
-                  />
-                </label>
-                {result && item.correct_choice_id && (
-                  <p className="lms-secondary"><strong>Đáp án đúng:</strong> {item.correct_choice_id}</p>
-                )}
-              </div>
-            )}
-
-            {result && item.explanation && (
-              <div className="quiz-explanation">
-                <p>{item.explanation}</p>
-                {item.source_reference && <small>Nguồn: {item.source_reference}</small>}
-              </div>
-            )}
-          </fieldset>
-        );
-      })}
+      {displayItems.map((item, index) => (
+        <QuizQuestionBody
+          key={item.question_id}
+          item={item}
+          index={index}
+          questionId={item.question_id}
+          radioName={`legacy-${lessonId}-${item.question_id}`}
+          currentAns={selections[item.question_id] || ''}
+          draftValue={draftText[item.question_id]}
+          revealed={Boolean(result)}
+          disabled={Boolean(result) || submitting}
+          requireToneForExplanation
+          allowEmptySelection
+          showMultiCorrectSummary
+          onChoose={choose}
+          onDraftChange={(id, val) => setDraftText(current => ({ ...current, [id]: val }))}
+        />
+      ))}
 
       <div className="quiz-footer">
         {!result ? (

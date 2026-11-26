@@ -26,3 +26,30 @@ export function ClassFields({ value, onChange, creating = false }) {
     <label className="lms-wide">Mô tả<textarea {...field('description')} rows={3} maxLength={5000} /></label>
   </div>;
 }
+
+export function MaxAttemptsField({ label, value, fallbackAttempts = 5, required = false, onChange }) {
+  const isUnlimited = value === null;
+  return <div className="lms-attempts-field">
+    <span className="lms-attempts-label">{label}</span>
+    <label className="lms-attempts-toggle">
+      <input
+        type="checkbox"
+        checked={isUnlimited}
+        onChange={event => onChange(event.target.checked ? null : fallbackAttempts)}
+      />
+      <span>Không giới hạn lượt</span>
+    </label>
+    {!isUnlimited && (
+      <input
+        type="number"
+        aria-label={label}
+        min={1}
+        max={100}
+        step="1"
+        required={required}
+        value={value === '' ? '' : value}
+        onChange={event => onChange(event.target.value === '' ? '' : Number(event.target.value))}
+      />
+    )}
+  </div>;
+}

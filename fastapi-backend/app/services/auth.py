@@ -101,6 +101,12 @@ async def get_required_user(
 LOGIN_FAILURES = FixedWindowLimiter()
 PAIR_FAILURES, PAIR_WINDOW_S = 5, 15 * 60
 EMAIL_FAILURES, EMAIL_WINDOW_S = 30, 60 * 60
+
+
+def clear_login_failures_for_email(email: str) -> None:
+    """Reset per-email and per-(email, IP) brute-force windows after admin/self recovery."""
+    LOGIN_FAILURES.reset(f"email:{email}")
+    LOGIN_FAILURES.reset_prefix(f"pair:{email}:")
 # Verified for unknown emails too, so response time does not reveal which emails exist.
 _DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
 

@@ -879,5 +879,65 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(output.getvalue().decode("utf-8"), "Kết nối → localhost")
 
 
+class EmailDeliveryTests(unittest.TestCase):
+    def test_resolve_sender_pairs_display_name_with_smtp_user(self):
+        from app.core.config import Settings
+        from app.services.email_service import resolve_sender
+
+        s1 = Settings(_env_file=None, smtp_user="sender@gmail.com", smtp_from="PTIT Stem CubeSAT")
+        self.assertEqual(
+            resolve_sender(s1),
+            ("PTIT Stem CubeSAT <sender@gmail.com>", "sender@gmail.com"),
+        )
+
+        s2 = Settings(
+            _env_file=None,
+            smtp_user="sender@gmail.com",
+            smtp_from="PTIT Stem CubeSAT <noreply@ptit.edu.vn>",
+        )
+        self.assertEqual(
+            resolve_sender(s2),
+            ("PTIT Stem CubeSAT <noreply@ptit.edu.vn>", "noreply@ptit.edu.vn"),
+        )
+
+        s3 = Settings(_env_file=None, smtp_user="sender@gmail.com", smtp_from="")
+        self.assertEqual(resolve_sender(s3), ("sender@gmail.com", "sender@gmail.com"))
+
+    def test_send_smtp_sync_formats_valid_from_and_envelope_sender(self):
+        from app.services.email_service import _send_smtp_sync
+
+        smtp_instance = unittest.mock.MagicMock()
+        smtp_cls = unittest.mock.MagicMock()
+        smtp_cls.return_value.__enter__.return_value = smtp_instance
+        settings = get_settings()
+
+        with (
+            patch.object(settings, "smtp_host", "smtp.example.com"),
+            patch.object(settings, "smtp_port", 587),
+            patch.object(settings, "smtp_use_tls", True),
+            patch.object(settings, "smtp_use_ssl", False),
+            patch.object(settings, "smtp_user", "pnews.vn@gmail.com"),
+            patch.object(settings, "smtp_password", "app-pass"),
+            patch.object(settings, "smtp_from", "PTIT Stem CubeSAT"),
+            patch("app.services.email_service.smtplib.SMTP", smtp_cls),
+        ):
+            _send_smtp_sync("user@example.com", "Subject", "text", "<p>html</p>")
+
+        smtp_instance.starttls.assert_called_once()
+        smtp_instance.login.assert_called_once_with("pnews.vn@gmail.com", "app-pass")
+        smtp_instance.send_message.assert_called_once()
+        sent_msg = smtp_instance.send_message.call_args.args[0]
+        self.assertEqual(sent_msg["From"], "PTIT Stem CubeSAT <pnews.vn@gmail.com>")
+        self.assertEqual(sent_msg["To"], "user@example.com")
+        self.assertEqual(
+            smtp_instance.send_message.call_args.kwargs["from_addr"],
+            "pnews.vn@gmail.com",
+        )
+        self.assertEqual(
+            smtp_instance.send_message.call_args.kwargs["to_addrs"],
+            ["user@example.com"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

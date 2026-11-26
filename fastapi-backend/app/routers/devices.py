@@ -30,6 +30,21 @@ from app.services.firmware_snippets import make_firmware_snippet
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
 
+async def _require_owned_device(
+    db: AsyncSession, device_uid: str, user_id: int, forbidden_detail: str
+):
+    """Fetch a device by UID and enforce ownership (404 if missing, 403 if not owner)."""
+    service = DeviceService(db)
+    device = await service.get_device_by_uid(device_uid)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thiết bị."
+        )
+    if device.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=forbidden_detail)
+    return service, device
+
+
 @router.post("/register", response_model=CreateDeviceResponse, status_code=201)
 async def register_device(
     req: CreateDeviceRequest,
@@ -89,19 +104,9 @@ async def update_position(
     current_user: User = Depends(get_required_user),
 ):
     """Cập nhật vị trí cuối của thiết bị (dùng cho ground station báo GPS từ trình duyệt)."""
-    service = DeviceService(db)
-    device = await service.get_device_by_uid(device_uid)
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thiết bị."
-        )
-
-    if device.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền cập nhật thiết bị này.",
-        )
+    service, _ = await _require_owned_device(
+        db, device_uid, current_user.id, "Bạn không có quyền cập nhật thiết bị này."
+    )
 
     updated = await service.update_position(device_uid, req.lat, req.lon, req.alt)
     return {
@@ -120,19 +125,9 @@ async def get_device(
     current_user: User = Depends(get_required_user),
 ):
     """Trả về chi tiết thiết bị và firmware template (chỉ chủ sở hữu)."""
-    service = DeviceService(db)
-    device = await service.get_device_by_uid(device_uid)
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thiết bị."
-        )
-
-    if device.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền truy cập thiết bị này.",
-        )
+    _, device = await _require_owned_device(
+        db, device_uid, current_user.id, "Bạn không có quyền truy cập thiết bị này."
+    )
 
     _, credential = await device_mqtt.owned_credential(db, device_uid, current_user.id)
     snippet = make_firmware_snippet(
@@ -154,18 +149,9 @@ async def delete_device(
     current_user: User = Depends(get_required_user),
 ):
     """Xoá thiết bị (chỉ chủ sở hữu mới được xoá)."""
-    service = DeviceService(db)
-    device = await service.get_device_by_uid(device_uid)
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy thiết bị."
-        )
-
-    if device.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền xoá thiết bị này."
-        )
+    service, _ = await _require_owned_device(
+        db, device_uid, current_user.id, "Bạn không có quyền xoá thiết bị này."
+    )
 
     await service.delete_device(device_uid)
     logger.info(f"[Devices] Deleted: {device_uid} by user_id={current_user.id}")

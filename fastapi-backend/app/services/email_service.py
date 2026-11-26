@@ -4,10 +4,32 @@ import html
 import smtplib
 import ssl
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
+
+
+def _clean_header_value(value: str) -> str:
+    return value.replace("\r", "").replace("\n", "").strip()
+
+
+def resolve_sender(settings=None) -> tuple[str, str]:
+    """Return (From header value, SMTP envelope MAIL FROM address)."""
+    cfg = settings or get_settings()
+    smtp_from = _clean_header_value(cfg.smtp_from)
+    smtp_user = _clean_header_value(cfg.smtp_user)
+    fallback = smtp_user if "@" in smtp_user else "no-reply@cubesat.local"
+    if not smtp_from:
+        return fallback, fallback
+    display_name, addr = parseaddr(smtp_from)
+    if "@" in addr:
+        header_from = formataddr((display_name, addr)) if display_name else addr
+        return header_from, addr
+    # If SMTP_FROM is only a display name (e.g. "PTIT Stem CubeSAT"), pair it with SMTP_USER
+    # so both the RFC 5322 From header and SMTP MAIL FROM remain valid email addresses.
+    return formataddr((smtp_from, fallback)), fallback
 
 
 def resolve_frontend_base_url(request_origin: str | None = None) -> str:
@@ -27,11 +49,10 @@ def resolve_frontend_base_url(request_origin: str | None = None) -> str:
 
 def _send_smtp_sync(to_email: str, subject: str, text_body: str, html_body: str) -> None:
     settings = get_settings()
+    header_from, envelope_from = resolve_sender(settings)
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = (
-        settings.smtp_from.strip() or settings.smtp_user.strip() or "no-reply@cubesat.local"
-    )
+    msg["From"] = header_from
     msg["To"] = to_email
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
@@ -43,7 +64,7 @@ def _send_smtp_sync(to_email: str, subject: str, text_body: str, html_body: str)
             server.starttls(context=context)
         if settings.smtp_user.strip():
             server.login(settings.smtp_user.strip(), settings.smtp_password)
-        server.send_message(msg)
+        server.send_message(msg, from_addr=envelope_from, to_addrs=[to_email])
 
 
 async def send_password_reset_email(to_email: str, reset_url: str, ttl_minutes: int) -> None:

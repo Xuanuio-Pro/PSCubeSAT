@@ -17,8 +17,9 @@ export default function LmsLayout({ roles = null, publicPreview = false, nested 
   // A role guard nested inside another LmsLayout only checks the role; the parent already draws the shell and nav.
   if (nested) return <Outlet />;
   return <div className={`lms-shell${isLearningPage ? ' is-learning-shell' : ''}`}>
-    {!isLearningPage && <nav className="lms-nav" aria-label="Quản lý học tập">
-      {classMode && <NavLink to="/classes">{user.role === 'user' ? 'Lớp của tôi' : 'Lớp học'}</NavLink>}
+    {/* Students usually belong to a single class, so they get no class-list tab (the header keeps a link). */}
+    {!isLearningPage && user.role !== 'user' && <nav className="lms-nav" aria-label="Quản lý học tập">
+      {classMode && <NavLink to="/classes">Lớp học</NavLink>}
       {user.role === 'admin' && <>{classMode && <NavLink to="/admin/dashboard">Tổng quan</NavLink>}<NavLink to="/admin/users">Tài khoản</NavLink></>}
     </nav>}
     <Outlet />

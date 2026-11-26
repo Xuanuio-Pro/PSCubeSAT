@@ -309,7 +309,7 @@ export function tokenizeCodeLines(code, rawLang = '') {
       continue;
     }
 
-    if (isCLike && source[pos] === '/' && source[pos + 1] === '/') {
+    if ((isCLike && source[pos] === '/' && source[pos + 1] === '/') || (supportsHashComment && ch === '#')) {
       const nl = source.indexOf('\n', pos);
       const end = nl === -1 ? source.length : nl;
       pushTokenAcrossLines(lines, 'comment', source.slice(pos, end));
@@ -321,15 +321,6 @@ export function tokenizeCodeLines(code, rawLang = '') {
     if (isCLike && source[pos] === '/' && source[pos + 1] === '*') {
       const close = source.indexOf('*/', pos + 2);
       const end = close === -1 ? source.length : close + 2;
-      pushTokenAcrossLines(lines, 'comment', source.slice(pos, end));
-      afterMemberDot = false;
-      pos = end;
-      continue;
-    }
-
-    if (supportsHashComment && ch === '#') {
-      const nl = source.indexOf('\n', pos);
-      const end = nl === -1 ? source.length : nl;
       pushTokenAcrossLines(lines, 'comment', source.slice(pos, end));
       afterMemberDot = false;
       pos = end;

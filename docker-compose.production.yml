@@ -106,7 +106,7 @@ services:
     env_file:
       - ${BACKEND_ENV_FILE:-./fastapi-backend/.env}
     environment: *backend-env
-    command: ["sh", "-c", "python server_preflight.py && python -m alembic upgrade head"]
+    command: ["sh", "-c", "python server_preflight.py && python -m alembic upgrade head && python -m app.services.curriculum_seed --quiet"]
     restart: "no"
     logging: *bounded-logs
     networks:

@@ -174,7 +174,7 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
     : remainingSeconds > 0
       ? `Đã học ${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')} · còn ${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, '0')}`
       : 'Hoàn thành bài học';
-  const unmeasuredVideo = lesson.type === 'video' && !preview && !lesson.content.confirmation_allowed && !/\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(lesson.content.url);
+  const unmeasuredVideo = lesson.type === 'video' && !preview && !lesson.content.confirmation_allowed && !/\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(lesson.content.url || '');
   const bodyNode = lesson.type === 'practice' ? <Practice lesson={lesson} labId={labId} classId={classId} preview={preview} staffView={staffView} onRefresh={onRefresh} exercises={exercises} activeExercise={activeExercise} onSelectExercise={onSelectExercise} />
     : lesson.type === 'quiz' ? (preview || !lesson.content.bank_ready
       ? <p className="lesson-achieved" role="status">{preview ? 'Chế độ xem toàn bộ không tạo lượt làm bài.' : 'Câu hỏi kiểm tra của mục này chưa sẵn sàng.'} {staffView && <Link to={`/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/questions`}>Soạn câu hỏi</Link>}</p>
@@ -206,6 +206,7 @@ export default function ClassLearningPage({ experience = false }) {
   const { user } = useAuth();
   const [search, setSearch] = useSearchParams();
   const [navigationNotice, setNavigationNotice] = useState('');
+  const mainRef = useRef(null);
   const preview = experience || search.get('preview') === 'true';
   const path = experience ? '/api/curriculum/preview' : `/api/classes/${classId}/curriculum${preview ? '?draft=true&student_view=true' : '?student_view=true'}`;
   const { data, loading, error, reload } = useLmsResource(path, true);
@@ -227,6 +228,11 @@ export default function ClassLearningPage({ experience = false }) {
   const continueItem = allLessons.find(item => item.lesson.id === data?.learning_path?.continue_lesson_id && (isPrivileged || (item.lesson.access !== 'locked' && item.lesson.content)));
   const firstAvailableItem = allLessons.find(item => isPrivileged || (item.lesson.access !== 'locked' && item.lesson.content));
   const selected = (!requestedLocked && requestedItem) || continueItem || firstAvailableItem || allLessons[0] || null;
+  const selectedLabId = selected?.lab?.id;
+  const selectedLessonId = selected?.lesson?.id;
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [selectedLabId, selectedLessonId]);
   useEffect(() => {
     if (requestedLocked && selected && selected.lesson.id !== search.get('lesson')) {
       setNavigationNotice('Bạn cần hoàn thành bài học trước để mở khóa bài này.');
@@ -268,7 +274,7 @@ export default function ClassLearningPage({ experience = false }) {
   };
   return <div className="player-layout class-player-layout">
     <ClassCourseSidebar labs={data?.labs || []} classId={classId} homePath={experience ? '/' : `/classes/${classId}`} activeLesson={selected?.lesson.id} onSelectLesson={selectLesson} unlockedView={isPrivileged} />
-    <div className="player-main">
+    <div className="player-main" ref={mainRef}>
       {selected && <div className="lab-mobile-lessons lab-mobile-lessons--curriculum">
         <label htmlFor={`class-${classId}-lesson`}>Nội dung Lab {selected.lab.id} · {activeLessons.length} phần</label>
         <select id={`class-${classId}-lesson`} value={selected.lesson.id} onChange={event => selectLesson(event.target.value)}>

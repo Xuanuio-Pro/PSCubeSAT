@@ -1,6 +1,7 @@
 """Password recovery tokens, admin reset requests, and email/link reset confirmation."""
 
 import secrets
+import smtplib
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from typing import Literal
@@ -31,6 +32,21 @@ def _is_smtp_failing() -> bool:
         return True
     _last_smtp_failure_at = None
     return False
+
+
+def _log_smtp_failure(context: str, email: str, exc: Exception) -> None:
+    smtp_code = (
+        getattr(exc, "smtp_code", None)
+        if isinstance(exc, smtplib.SMTPResponseException)
+        else None
+    )
+    logger.warning(
+        "[PasswordReset] {} for {} ({}{})",
+        context,
+        mask_email(email),
+        type(exc).__name__,
+        f" code={smtp_code}" if smtp_code is not None else "",
+    )
 
 
 def _reset_smtp_failure_state() -> None:
@@ -174,11 +190,7 @@ async def request_password_reset(
     except Exception as exc:
         global _last_smtp_failure_at
         _last_smtp_failure_at = now
-        logger.warning(
-            "[PasswordReset] SMTP delivery failed for {} ({}); falling back to admin queue",
-            mask_email(user.email),
-            type(exc).__name__,
-        )
+        _log_smtp_failure("SMTP delivery failed; falling back to admin queue", user.email, exc)
         if user.role != UserRole.admin:
             row.status = "pending"
             row.token_hash = None
@@ -200,17 +212,18 @@ def _invalid_token_error() -> LMSError:
     )
 
 
-async def validate_reset_token(db: AsyncSession, raw_token: str) -> PasswordResetToken:
+async def _load_valid_reset_token(
+    db: AsyncSession, raw_token: str, *, for_update: bool = False
+) -> tuple[PasswordResetToken, User, datetime]:
     token_clean = raw_token.strip()
     if len(token_clean) < 16:
         raise _invalid_token_error()
-    row = (
-        await db.execute(
-            select(PasswordResetToken).where(
-                PasswordResetToken.token_hash == hash_reset_token(token_clean)
-            )
-        )
-    ).scalar_one_or_none()
+    token_stmt = select(PasswordResetToken).where(
+        PasswordResetToken.token_hash == hash_reset_token(token_clean)
+    )
+    if for_update:
+        token_stmt = token_stmt.with_for_update()
+    row = (await db.execute(token_stmt)).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     if (
         row is None
@@ -219,56 +232,28 @@ async def validate_reset_token(db: AsyncSession, raw_token: str) -> PasswordRese
         or _as_utc(row.expires_at) <= now
     ):
         raise _invalid_token_error()
-    user = (
-        await db.execute(
-            select(User).where(
-                User.id == row.user_id,
-                User.deleted_at.is_(None),
-                User.status == AccountStatus.active,
-            )
-        )
-    ).scalar_one_or_none()
+    user_stmt = select(User).where(
+        User.id == row.user_id,
+        User.deleted_at.is_(None),
+        User.status == AccountStatus.active,
+    )
+    if for_update:
+        user_stmt = user_stmt.with_for_update()
+    user = (await db.execute(user_stmt)).scalar_one_or_none()
     if user is None:
         raise _invalid_token_error()
+    return row, user, now
+
+
+async def validate_reset_token(db: AsyncSession, raw_token: str) -> PasswordResetToken:
+    row, _, _ = await _load_valid_reset_token(db, raw_token)
     return row
 
 
 async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password: str) -> User:
-    from app.services.auth import LOGIN_FAILURES
+    from app.services.auth import clear_login_failures_for_email
 
-    token_clean = raw_token.strip()
-    if len(token_clean) < 16:
-        raise _invalid_token_error()
-
-    row = (
-        await db.execute(
-            select(PasswordResetToken)
-            .where(PasswordResetToken.token_hash == hash_reset_token(token_clean))
-            .with_for_update()
-        )
-    ).scalar_one_or_none()
-    now = datetime.now(timezone.utc)
-    if (
-        row is None
-        or row.status != "issued"
-        or row.used_at is not None
-        or _as_utc(row.expires_at) <= now
-    ):
-        raise _invalid_token_error()
-
-    user = (
-        await db.execute(
-            select(User)
-            .where(
-                User.id == row.user_id,
-                User.deleted_at.is_(None),
-                User.status == AccountStatus.active,
-            )
-            .with_for_update()
-        )
-    ).scalar_one_or_none()
-    if user is None:
-        raise _invalid_token_error()
+    row, user, now = await _load_valid_reset_token(db, raw_token, for_update=True)
 
     user.password_hash = await run_in_threadpool(hash_password, new_password)
     user.updated_at = now
@@ -287,8 +272,7 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
         )
     )
     await db.commit()
-    LOGIN_FAILURES.reset(f"email:{user.email}")
-    LOGIN_FAILURES.reset_prefix(f"pair:{user.email}:")
+    clear_login_failures_for_email(user.email)
     logger.info("[PasswordReset] Password updated via reset token for user_id={}", user.id)
     return user
 
@@ -299,7 +283,7 @@ async def issue_admin_reset_link(
     user_id: int,
     request_origin: str | None = None,
 ) -> dict:
-    from app.services.auth import LOGIN_FAILURES
+    from app.services.auth import clear_login_failures_for_email
 
     target = (
         await db.execute(
@@ -339,8 +323,7 @@ async def issue_admin_reset_link(
         )
     )
     await db.commit()
-    LOGIN_FAILURES.reset(f"email:{target.email}")
-    LOGIN_FAILURES.reset_prefix(f"pair:{target.email}:")
+    clear_login_failures_for_email(target.email)
 
     reset_path = f"/reset-password?token={raw_token}"
     reset_url = f"{resolve_frontend_base_url(request_origin)}{reset_path}"
@@ -355,11 +338,7 @@ async def issue_admin_reset_link(
             _reset_smtp_failure_state()
             logger.info("[PasswordReset] Admin link emailed to {}", mask_email(target.email))
         except Exception as exc:
-            logger.warning(
-                "[PasswordReset] SMTP delivery of admin link failed for {} ({})",
-                mask_email(target.email),
-                type(exc).__name__,
-            )
+            _log_smtp_failure("SMTP delivery of admin link failed", target.email, exc)
 
     return {
         "user_id": target.id,

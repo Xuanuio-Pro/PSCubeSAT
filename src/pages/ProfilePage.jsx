@@ -9,6 +9,7 @@ import { validatePassword } from '../utils/passwordPolicy';
 
 import DeviceManager from '../components/profile/DeviceManager';
 
+const FIELD_LABEL_STYLE = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' };
 const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Học viên' };
 
 function ProfileInfo({ user }) {
@@ -23,26 +24,19 @@ function ProfileInfo({ user }) {
         }}>
           {(user.full_name || user.email)[0].toUpperCase()}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '16px', flex: 1, minWidth: 0 }}>
-          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Họ và tên</div>
-            <div style={{ fontWeight: 600 }}>{user.full_name || '—'}</div>
-          </div>
-          <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Email</div>
-            <div style={{ fontWeight: 600 }}>{user.email}</div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Vai trò</div>
-            <div style={{ fontWeight: 600 }}>{ROLE_LABEL[user.role] || user.role}</div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ngày tham gia</div>
-            <div style={{ fontWeight: 600 }}>
-              {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '—'}
+        <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '16px', flex: 1, minWidth: 0, margin: 0 }}>
+          {[
+            ['Họ và tên', user.full_name || '—'],
+            ['Email', user.email],
+            ['Vai trò', ROLE_LABEL[user.role] || user.role],
+            ['Ngày tham gia', user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '—'],
+          ].map(([label, value]) => (
+            <div key={label} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <dt style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</dt>
+              <dd style={{ fontWeight: 600, margin: 0 }}>{value}</dd>
             </div>
-          </div>
-        </div>
+          ))}
+        </dl>
       </div>
     </div>
   );
@@ -85,16 +79,16 @@ function ChangePasswordForm() {
       <div className="card-body">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px' }}>
           <div>
-            <label htmlFor="profile-current-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu hiện tại</label>
+            <label htmlFor="profile-current-password" style={FIELD_LABEL_STYLE}>Mật khẩu hiện tại</label>
             <PasswordInput id="profile-current-password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           <div>
-            <label htmlFor="profile-new-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Mật khẩu mới</label>
+            <label htmlFor="profile-new-password" style={FIELD_LABEL_STYLE}>Mật khẩu mới</label>
             <PasswordInput id="profile-new-password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-requirements profile-password-error' : 'profile-password-requirements'} />
             <PasswordRequirements id="profile-password-requirements" value={newPassword} />
           </div>
           <div>
-            <label htmlFor="profile-confirm-password" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Xác nhận mật khẩu mới</label>
+            <label htmlFor="profile-confirm-password" style={FIELD_LABEL_STYLE}>Xác nhận mật khẩu mới</label>
             <PasswordInput id="profile-confirm-password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
           </div>
           {error && <div id="profile-password-error" className="auth-error-text" role="alert">⚠ {error}</div>}

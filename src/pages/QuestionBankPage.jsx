@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
-import { Notice } from '../components/classes/LmsCommon';
+import { MaxAttemptsField, Notice } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { useConfirm } from '../components/classes/use-confirm';
+import { toBase64 } from '../utils/base64';
 import '../components/classes/quiz.css';
 
 const labels = { draft: 'Nháp', approved: 'Đã duyệt', retired: 'Đã thu hồi', published: 'Đã xuất bản', queued: 'Chờ xử lý', running: 'Đang tạo', succeeded: 'Đã tạo nháp', failed: 'Thất bại' };
@@ -22,15 +23,6 @@ const bankNeed = bank => bank.required_questions || 1;
 const bankReady = bank => bank.approved_count >= bankNeed(bank);
 const bankTitle = (bank, labId) => (bank.kind === 'quiz' ? `Câu hỏi ${bank.lesson_id}` : `Ngân hàng Lab ${labId}`);
 const bankPage = (classId, labId, lessonId) => `/classes/${classId}/${lessonId ? `lessons/${encodeURIComponent(lessonId)}` : `labs/${labId}`}/questions`;
-
-function toBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return btoa(binary);
-}
 
 async function readImportFile(targetFile) {
   const lower = targetFile.name.toLowerCase();
@@ -457,32 +449,17 @@ function PolicyForm({ initial, busy, onSave }) {
   return <details className="lms-panel"><summary><h2>Chính sách bài test</h2></summary><p>Áp dụng cho lượt mới. Tham số riêng trong cấu hình chương trình đã xuất bản được ưu tiên. Các lượt đang thi giữ chính sách ban đầu.</p>
     <form onSubmit={event => { event.preventDefault(); const { revision, ...fields } = value; onSave({ ...fields, cooldown_minutes: isUnlimited ? 0 : Number(fields.cooldown_minutes || 0), expected_revision: revision, closes_at: close ? new Date(close).toISOString() : null }); }}><div className="lms-form-grid">
       {[['num_questions', 'Số câu rút mỗi lượt', 200], ['time_limit_minutes', 'Thời gian (phút)', 180], ['pass_score', 'Số câu đúng tối thiểu để đạt', 200]].map(([key, label, max]) => <label key={key}>{label}<input type="number" min={1} max={max} required value={value[key] ?? ''} onChange={event => setValue(current => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>Số lượt làm mỗi đợt</span>
-        <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
-          <input
-            type="checkbox"
-            checked={isUnlimited}
-            onChange={event => setValue(current => ({
-              ...current,
-              max_attempts: event.target.checked ? null : 5,
-              cooldown_minutes: event.target.checked ? 0 : (current.cooldown_minutes ?? 30),
-            }))}
-          />
-          <span>Không giới hạn lượt</span>
-        </label>
-        {!isUnlimited && (
-          <input
-            type="number"
-            aria-label="Số lượt làm mỗi đợt"
-            min={1}
-            max={100}
-            required
-            value={value.max_attempts ?? 5}
-            onChange={event => setValue(current => ({ ...current, max_attempts: Number(event.target.value) }))}
-          />
-        )}
-      </div>
+      <MaxAttemptsField
+        label="Số lượt làm mỗi đợt"
+        value={isUnlimited ? null : (value.max_attempts ?? 5)}
+        fallbackAttempts={5}
+        required
+        onChange={nextValue => setValue(current => ({
+          ...current,
+          max_attempts: nextValue,
+          cooldown_minutes: nextValue === null ? 0 : (current.cooldown_minutes ?? 30),
+        }))}
+      />
       <label>
         Thời gian chờ khi hết lượt (phút)
         <input

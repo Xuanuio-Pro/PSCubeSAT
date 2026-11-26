@@ -217,6 +217,21 @@ async def seed_banks(db, access, course_id, *, commit=False):
             await db.commit()
 
 
+def _clone_question_payloads(target_bank_id: str, rows) -> list[dict]:
+    return [
+        {
+            "id": uid(),
+            "bank_id": target_bank_id,
+            "question_id": q.question_id,
+            "content": deepcopy(q.content),
+            "status": q.status,
+            "reviewer": q.reviewer,
+            "reviewed_at": q.reviewed_at,
+        }
+        for q in rows
+    ]
+
+
 async def _clone_bank_to_course_version(
     db, old_bank, *, target_course_version_id: str, lab_id: int, next_version: int, actor_id: int
 ):
@@ -236,21 +251,7 @@ async def _clone_bank_to_course_version(
     )
     db.add(new_bank)
     await db.flush()
-    await _bulk_insert_question_versions(
-        db,
-        [
-            {
-                "id": uid(),
-                "bank_id": new_bank.id,
-                "question_id": q.question_id,
-                "content": deepcopy(q.content),
-                "status": q.status,
-                "reviewer": q.reviewer,
-                "reviewed_at": q.reviewed_at,
-            }
-            for q in old_questions
-        ],
-    )
+    await _bulk_insert_question_versions(db, _clone_question_payloads(new_bank.id, old_questions))
     if old_bank.status == "published":
         new_bank.status = "published"
         new_bank.published_by = old_bank.published_by or actor_id
@@ -258,38 +259,46 @@ async def _clone_bank_to_course_version(
     return new_bank
 
 
+async def _load_banks_by_lesson(db, class_id: int) -> dict[str, list[QuestionBank]]:
+    all_banks = list(
+        (
+            await db.execute(
+                select(QuestionBank)
+                .where(QuestionBank.class_id == class_id)
+                .order_by(QuestionBank.lesson_id, QuestionBank.version.desc())
+            )
+        ).scalars()
+    )
+    by_key: dict[str, list[QuestionBank]] = {}
+    for bank in all_banks:
+        by_key.setdefault(bank.lesson_id, []).append(bank)
+    return by_key
+
+
+def _quiz_indices_and_targets(labs, lessons) -> tuple[dict[str, int], list[tuple[str, int]]]:
+    quiz_lessons = sorted(
+        (item for item in lessons if item.type == "quiz"),
+        key=lambda item: (item.lab_id, item.order_no, item.id),
+    )
+    per_lab_count: dict[int, int] = {}
+    quiz_indices: dict[str, int] = {}
+    for item in quiz_lessons:
+        idx = per_lab_count.get(item.lab_id, 0)
+        quiz_indices[item.id] = idx
+        per_lab_count[item.lab_id] = idx + 1
+    targets = [(f"labtest-{lab.id}", lab.id) for lab in labs] + [
+        (item.id, item.lab_id) for item in quiz_lessons
+    ]
+    return quiz_indices, targets
+
+
 async def upgrade_banks_for_course_version(
     db, class_id: int, actor_id: int, target_course_version_id: str, labs, lessons
 ):
     """Clone existing banks onto `target_course_version_id` and seed missing quiz/labtest banks."""
     async with _seed_lock(class_id):
-        all_banks = list(
-            (
-                await db.execute(
-                    select(QuestionBank)
-                    .where(QuestionBank.class_id == class_id)
-                    .order_by(QuestionBank.lesson_id, QuestionBank.version.desc())
-                )
-            ).scalars()
-        )
-        by_key: dict[str, list[QuestionBank]] = {}
-        for bank in all_banks:
-            by_key.setdefault(bank.lesson_id, []).append(bank)
-
-        quiz_lessons = sorted(
-            (item for item in lessons if item.type == "quiz"),
-            key=lambda item: (item.lab_id, item.order_no, item.id),
-        )
-        per_lab_count: dict[int, int] = {}
-        quiz_indices: dict[str, int] = {}
-        for item in quiz_lessons:
-            idx = per_lab_count.get(item.lab_id, 0)
-            quiz_indices[item.id] = idx
-            per_lab_count[item.lab_id] = idx + 1
-
-        targets = [(f"labtest-{lab.id}", lab.id) for lab in labs] + [
-            (item.id, item.lab_id) for item in quiz_lessons
-        ]
+        by_key = await _load_banks_by_lesson(db, class_id)
+        quiz_indices, targets = _quiz_indices_and_targets(labs, lessons)
         seeded_at = datetime.now(timezone.utc)
         for key, lab_id in targets:
             banks_for_key = by_key.get(key, [])
@@ -457,35 +466,11 @@ async def refresh_default_banks_for_class(
             )
         ).scalars()
     )
-    quiz_lessons = sorted(
-        (item for item in lessons if item.type == "quiz"),
-        key=lambda item: (item.lab_id, item.order_no, item.id),
-    )
-    per_lab_count: dict[int, int] = {}
-    quiz_indices: dict[str, int] = {}
-    for item in quiz_lessons:
-        idx = per_lab_count.get(item.lab_id, 0)
-        quiz_indices[item.id] = idx
-        per_lab_count[item.lab_id] = idx + 1
-
-    targets = [(f"labtest-{lab.id}", lab.id) for lab in labs] + [
-        (item.id, item.lab_id) for item in quiz_lessons
-    ]
+    quiz_indices, targets = _quiz_indices_and_targets(labs, lessons)
     refreshed_banks = 0
     updated_policies = 0
     async with _seed_lock(class_id):
-        all_banks = list(
-            (
-                await db.execute(
-                    select(QuestionBank)
-                    .where(QuestionBank.class_id == class_id)
-                    .order_by(QuestionBank.lesson_id, QuestionBank.version.desc())
-                )
-            ).scalars()
-        )
-        by_key: dict[str, list[QuestionBank]] = {}
-        for item in all_banks:
-            by_key.setdefault(item.lesson_id, []).append(item)
+        by_key = await _load_banks_by_lesson(db, class_id)
 
         seeded_at = datetime.now(timezone.utc)
         for key, lab_id in targets:
@@ -578,18 +563,7 @@ async def refresh_default_banks_for_class(
 
             await _bulk_insert_question_versions(
                 db,
-                [
-                    {
-                        "id": uid(),
-                        "bank_id": new_bank.id,
-                        "question_id": q.question_id,
-                        "content": deepcopy(q.content),
-                        "status": q.status,
-                        "reviewer": q.reviewer,
-                        "reviewed_at": q.reviewed_at,
-                    }
-                    for q in kept
-                ]
+                _clone_question_payloads(new_bank.id, kept)
                 + [
                     {
                         "id": uid(),

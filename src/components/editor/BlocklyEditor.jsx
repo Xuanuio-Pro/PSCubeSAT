@@ -10,7 +10,7 @@ registerCustomBlocks();
 const theme = Blockly.Theme.defineTheme('ptit', {
   name: 'ptit', base: Blockly.Themes.Classic,
   componentStyles: { workspaceBackgroundColour: '#f7fafc', toolboxBackgroundColour: '#edf3f8', toolboxForegroundColour: '#23425c', flyoutBackgroundColour: '#e6eff6', flyoutForegroundColour: '#23425c', flyoutOpacity: 1, scrollbarColour: '#a5b7c7', scrollbarOpacity: 0.6, insertionMarkerColour: '#2277a5', insertionMarkerOpacity: 0.4 },
-  fontStyle: { family: 'system-ui, sans-serif', weight: '500', size: 12 },
+  fontStyle: { family: "'Plus Jakarta Sans', 'Inter', sans-serif", weight: '500', size: 12 },
 });
 
 export default function BlocklyEditor({ labId = 1, exerciseId = '', storageScope = '', legacyFallback = false, onCodeChange, active = true, workspaceUpdate = null }) {

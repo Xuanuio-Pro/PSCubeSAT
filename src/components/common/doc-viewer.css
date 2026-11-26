@@ -224,7 +224,7 @@
 .doc-content .doc-mermaid-card,
 .doc-mermaid-card,
 .doc-mermaid-modal-canvas {
-  font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+  font-family: inherit;
   font-size: 14px;
   line-height: 1.45;
   overflow-wrap: normal;
@@ -396,7 +396,7 @@
 }
 
 .doc-code-lang {
-  font-family: var(--font-sans, 'Inter', sans-serif);
+  font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   color: #f3f4f6;

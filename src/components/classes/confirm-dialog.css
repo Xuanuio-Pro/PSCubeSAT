@@ -38,7 +38,7 @@
   border-radius: 10px;
   border: 1px solid var(--border-strong, #b7cfe3);
   background: var(--bg-page, #f4f9fd);
-  font-family: ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
   font-size: 0.92rem;
   overflow-wrap: anywhere;
   user-select: all;

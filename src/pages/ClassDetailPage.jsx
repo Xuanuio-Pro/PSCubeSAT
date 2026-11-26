@@ -1,17 +1,9 @@
 import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { request } from '../contexts/auth-api';
+import { request, useAuth } from '../contexts/auth-api';
 import { ClassFields, Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
-
-function toBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return btoa(binary);
-}
+import { toBase64 } from '../utils/base64';
 
 function Members({ classroom }) {
   const [page, setPage] = useState(1);
@@ -122,8 +114,10 @@ export default function ClassDetailPage() {
   const { classId } = useParams();
   const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}`);
   const [message, setMessage] = useState('');
+  const { user } = useAuth();
+  // Only teachers/admins manage several classes; students don't need a back-to-list link.
   return <>
-    <Link to="/classes">Về danh sách lớp</Link>
+    {user?.role !== 'user' && <Link to="/classes">Về danh sách lớp</Link>}
     {loading ? <p role="status">Đang tải thông tin lớp…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
       <header className="lms-heading"><div><span className="lms-secondary">{data.code}{data.term ? ` · ${data.term}` : ''}</span><h1>{data.name}</h1><p>{data.description || 'Chưa có mô tả lớp.'}</p></div><span className={`lms-status ${data.status}`}>{{ active: 'Đang mở', draft: 'Bản nháp', archived: 'Đã lưu trữ' }[data.status]}</span></header>
       <Notice message={message} />

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/auth-api';
 import { loginDestination } from './contexts/auth-session';
@@ -8,6 +8,7 @@ import { CloudProvider } from './contexts/CloudContext';
 import TelemetryControls from './components/groundstation/TelemetryControls';
 import Header from './components/layout/Header';
 import LoadingScreen from './components/common/LoadingScreen';
+import ScrollToTopButton from './components/common/ScrollToTopButton';
 import NotFoundPage from './pages/NotFoundPage';
 import LmsLayout from './components/classes/LmsLayout';
 import LabEntry from './components/classes/LabEntry';
@@ -36,8 +37,12 @@ const GroundStationPage = lazy(() => import('./pages/GroundStationPage'));
 const LabQuestionsPage = lazy(() => import('./pages/LabQuestionsPage'));
 const labLoaders = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => () => import(`./pages/Lab${i}.jsx`));
 const labComponents = labLoaders.map((load) => lazy(load));
-// Warm the legacy Lab chunks so changing Labs does not show the route-level fallback.
-labLoaders.forEach(load => load());
+let legacyLabsWarmed = false;
+function warmLegacyLabs() {
+  if (legacyLabsWarmed) return;
+  legacyLabsWarmed = true;
+  labLoaders.forEach(load => { load(); });
+}
 
 const AUTH_ROUTES = ['/login', '/signup'];
 const APP_ROUTES = ['/', '/profile', ...Array.from({ length: 9 }, (_, index) => `/lab${index}`), ...Array.from({ length: 9 }, (_, index) => `/lab${index}/questions`)];
@@ -93,6 +98,7 @@ function LegacyLabGate({ labId, children }) {
 
 function LegacyLabRoute({ labId }) {
   const { user } = useAuth();
+  useEffect(() => { warmLegacyLabs(); }, []);
   const Component = Number.isInteger(labId) ? labComponents[labId] : null;
   if (!Component) return <NotFoundPage />;
   if (!user && labId === 0) return <ClassLearningPage experience />;
@@ -175,5 +181,5 @@ export default function App() {
       ))}
       <Route path="*" element={<NotFoundPage />} />
     </Route>
-  </Routes></Suspense>;
+  </Routes><ScrollToTopButton /></Suspense>;
 }

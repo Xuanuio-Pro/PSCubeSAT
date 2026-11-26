@@ -33,6 +33,17 @@ def _get_owned_session(session_id: str, user: User) -> SimulationSession:
     return session
 
 
+async def _require_owned_active_session(
+    db: AsyncSession, session_id: str, user: User
+) -> SimulationSession:
+    session = _get_owned_session(session_id, user)
+    if not await DeviceRepository(db).check_user_owns_device(
+        user.id, session.device_uid, enabled_only=True
+    ):
+        raise HTTPException(404, "Thiết bị không còn hoạt động.")
+    return session
+
+
 @router.post("", response_model=SimulationResponse, status_code=status.HTTP_201_CREATED)
 async def create_simulation(
     request: CreateSimulationRequest,
@@ -87,11 +98,7 @@ async def start_simulation(
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
-    session = _get_owned_session(simulation_id, current_user)
-    if not await DeviceRepository(db).check_user_owns_device(
-        current_user.id, session.device_uid, enabled_only=True
-    ):
-        raise HTTPException(404, "Thiết bị không còn hoạt động.")
+    await _require_owned_active_session(db, simulation_id, current_user)
     return _response(await simulation_manager.start(simulation_id))
 
 
@@ -110,11 +117,7 @@ async def resume_simulation(
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
-    session = _get_owned_session(simulation_id, current_user)
-    if not await DeviceRepository(db).check_user_owns_device(
-        current_user.id, session.device_uid, enabled_only=True
-    ):
-        raise HTTPException(404, "Thiết bị không còn hoạt động.")
+    await _require_owned_active_session(db, simulation_id, current_user)
     return _response(await simulation_manager.resume(simulation_id))
 
 

@@ -230,6 +230,33 @@
   color: var(--cubesat-ink);
 }
 
+.lms-attempts-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lms-attempts-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--cubesat-ink);
+}
+
+.lms-shell label.lms-attempts-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.lms-shell label.lms-attempts-toggle input[type="checkbox"] {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
 .lms-shell input,
 .lms-shell select,
 .lms-shell textarea {
@@ -1316,7 +1343,9 @@
 .header.is-lms .header-class-link:hover { background: #094174; color: #fff; }
 
 /* Page background + titles, to match the lab canvas */
-body:has(.lms-shell:not(.is-learning-shell)) {
+body:has(.lms-shell:not(.is-learning-shell)),
+body:has(.profile-page),
+body:has(.home-page) {
   background: linear-gradient(180deg, #eaf3fb 0%, #f4f9fd 340px);
 }
 .lms-shell:not(.is-learning-shell) { padding-top: 40px; }

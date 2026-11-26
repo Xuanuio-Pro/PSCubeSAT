@@ -74,35 +74,31 @@ export function AuthProvider({ children }) {
     return () => { active = false; };
   }, []);
 
-  const login = useCallback(async (email, password, remember = true) => {
-    const data = await request('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+  const applySession = useCallback((data, remember = true) => {
     saveAuthToken(data.access_token, remember);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const loginAdmin = useCallback(async (email, password, remember = true) => {
-    const data = await request('/api/admin/login', {
+  const authenticate = useCallback(async (endpoint, payload, remember = true) => {
+    const data = await request(endpoint, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(payload),
     });
-    saveAuthToken(data.access_token, remember);
-    setUser(data.user);
-    return data.user;
-  }, []);
+    return applySession(data, remember);
+  }, [applySession]);
 
-  const registerAdmin = useCallback(async (email, password, fullName, remember = true) => {
-    const data = await request('/api/admin/signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, full_name: fullName || undefined }),
-    });
-    saveAuthToken(data.access_token, remember);
-    setUser(data.user);
-    return data.user;
-  }, []);
+  const login = useCallback((email, password, remember = true) => (
+    authenticate('/api/auth/login', { email, password }, remember)
+  ), [authenticate]);
+
+  const loginAdmin = useCallback((email, password, remember = true) => (
+    authenticate('/api/admin/login', { email, password }, remember)
+  ), [authenticate]);
+
+  const registerAdmin = useCallback((email, password, fullName, remember = true) => (
+    authenticate('/api/admin/signup', { email, password, full_name: fullName || undefined }, remember)
+  ), [authenticate]);
 
   const register = useCallback(async (email, password, fullName, remember = true) => {
     const data = await request('/api/auth/register', {
@@ -112,20 +108,12 @@ export function AuthProvider({ children }) {
     if (data.verification_required) {
       return { verificationRequired: true, emailSent: data.email_sent !== false, message: data.message };
     }
-    saveAuthToken(data.access_token, remember);
-    setUser(data.user);
-    return data.user;
-  }, []);
+    return applySession(data, remember);
+  }, [applySession]);
 
-  const loginGoogle = useCallback(async (credential, remember = true) => {
-    const data = await request('/api/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ credential }),
-    });
-    saveAuthToken(data.access_token, remember);
-    setUser(data.user);
-    return data.user;
-  }, []);
+  const loginGoogle = useCallback((credential, remember = true) => (
+    authenticate('/api/auth/google', { credential }, remember)
+  ), [authenticate]);
 
   const logout = useCallback(async () => {
     const revoke = request('/api/auth/logout', { method: 'POST' });

@@ -24,7 +24,7 @@ const CALLOUT_TITLES = {
   caution: 'Thận trọng',
 };
 
-const MERMAID_FONT_FAMILY = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const MERMAID_FONT_FAMILY = "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 let mermaidInitialized = false;
 let mermaidSeq = 0;

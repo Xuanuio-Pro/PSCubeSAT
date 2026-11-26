@@ -214,6 +214,27 @@ async def retry(db, access, target, job_id):
     return job_json(job)
 
 
+async def _load_authorized_editable_bank(db, job_id: str, *, lock_job: bool = False):
+    if lock_job:
+        job = (
+            await db.execute(
+                select(QuestionGenerationJob)
+                .where(QuestionGenerationJob.id == job_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one()
+    else:
+        job = await db.get(QuestionGenerationJob, job_id)
+    bank = await db.get(QuestionBank, job.bank_id)
+    user = await db.get(User, job.actor)
+    if not user or user.status != "active":
+        raise ValueError("Actor revoked")
+    access = await require_class_member(roles=["teacher"], write=True)(bank.class_id, user, db)
+    bank = await bank_for(db, access, bank.lesson_id, job.bank_revision, editable=True)
+    return job, bank
+
+
 async def run_job(sessions, provider=None):
     async with sessions() as db:
         job = (
@@ -233,15 +254,7 @@ async def run_job(sessions, provider=None):
     try:
         # Recheck authorization before spending money/sending the selected documents.
         async with sessions() as db:
-            job = await db.get(QuestionGenerationJob, job_id)
-            bank = await db.get(QuestionBank, job.bank_id)
-            user = await db.get(User, job.actor)
-            if not user or user.status != "active":
-                raise ValueError("Actor revoked")
-            access = await require_class_member(roles=["teacher"], write=True)(
-                bank.class_id, user, db
-            )
-            await bank_for(db, access, bank.lesson_id, job.bank_revision, editable=True)
+            await _load_authorized_editable_bank(db, job_id)
         result = await (provider or generator()).generate(sources, count)
         if not isinstance(result, list) or len(result) != count:
             raise ValueError("Unexpected count")
@@ -249,23 +262,7 @@ async def run_job(sessions, provider=None):
         if any(not any(s["lesson_id"] in q["source_reference"] for s in sources) for q in content):
             raise ValueError("Missing source reference")
         async with sessions() as db:
-            job = await db.get(QuestionGenerationJob, job_id)
-            bank = await db.get(QuestionBank, job.bank_id)
-            user = await db.get(User, job.actor)
-            if not user or user.status != "active":
-                raise ValueError("Actor revoked")
-            access = await require_class_member(roles=["teacher"], write=True)(
-                bank.class_id, user, db
-            )
-            bank = await bank_for(db, access, bank.lesson_id, job.bank_revision, editable=True)
-            job = (
-                await db.execute(
-                    select(QuestionGenerationJob)
-                    .where(QuestionGenerationJob.id == job_id)
-                    .with_for_update()
-                    .execution_options(populate_existing=True)
-                )
-            ).scalar_one()
+            job, bank = await _load_authorized_editable_bank(db, job_id, lock_job=True)
             if job.status != "running":
                 return True
             await add_questions(db, bank, content)

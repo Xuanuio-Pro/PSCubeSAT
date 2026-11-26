@@ -1,6 +1,7 @@
 """Email verification for new sign-ups: single-use emailed link, hashed token, expiry."""
 
 import secrets
+import smtplib
 from datetime import datetime, timedelta, timezone
 
 from loguru import logger
@@ -66,10 +67,12 @@ async def issue_and_send(db: AsyncSession, user: User, request_origin: str | Non
         logger.info("[EmailVerification] Sent verification email for {}", mask_email(user.email))
         return True
     except Exception as exc:
+        smtp_code = getattr(exc, "smtp_code", None) if isinstance(exc, smtplib.SMTPResponseException) else None
         logger.warning(
-            "[EmailVerification] SMTP delivery failed for {} ({})",
+            "[EmailVerification] SMTP delivery failed for {} ({}{})",
             mask_email(user.email),
             type(exc).__name__,
+            f" code={smtp_code}" if smtp_code is not None else "",
         )
         return False
 

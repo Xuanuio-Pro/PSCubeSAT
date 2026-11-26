@@ -8,6 +8,7 @@ from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
 from app.services.student_import import _decode_bytes, _parse_xlsx_bytes
+from app.services.xlsx_utils import build_simple_xlsx
 
 QUESTION_TYPE_ALIASES = {
     "single_choice": "single_choice",
@@ -727,63 +728,7 @@ def sample_question_bank_xlsx() -> bytes:
             "Đề mẫu Phần IV",
         ),
     ]
-    col_letters = [chr(ord("A") + idx) for idx in range(len(headers))]
-    row_xml = []
-    for r_idx, row in enumerate(rows, start=1):
-        cells = "".join(
-            f'<c r="{col_letters[c_idx]}{r_idx}" t="inlineStr"><is><t>{escape(str(val))}</t></is></c>'
-            for c_idx, val in enumerate(row)
-        )
-        row_xml.append(f'<row r="{r_idx}">{cells}</row>')
-
-    sheet_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f"<sheetData>{''.join(row_xml)}</sheetData>"
-        "</worksheet>"
-    )
-    content_types = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet1.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        "</Types>"
-    )
-    root_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
-        'Target="xl/workbook.xml"/>'
-        "</Relationships>"
-    )
-    workbook_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '<sheets><sheet name="QuestionBank" sheetId="1" r:id="rId1"/></sheets>'
-        "</workbook>"
-    )
-    workbook_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
-        'Target="worksheets/sheet1.xml"/>'
-        "</Relationships>"
-    )
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("[Content_Types].xml", content_types)
-        zf.writestr("_rels/.rels", root_rels)
-        zf.writestr("xl/workbook.xml", workbook_xml)
-        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
-        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
-    return buffer.getvalue()
+    return build_simple_xlsx(rows, sheet_name="QuestionBank")
 
 
 SAMPLE_QUESTION_ONLY_TEXT = SAMPLE_EXAM_TEXT.split(
@@ -877,60 +822,4 @@ def sample_answer_xlsx() -> bytes:
         ),
         ("8", "31", "IV", "2", "Áp dụng định lý sin trong tam giác ABC được AB xấp xỉ 31m.", ""),
     ]
-    col_letters = [chr(ord("A") + idx) for idx in range(len(rows[0]))]
-    row_xml = []
-    for r_idx, row in enumerate(rows, start=1):
-        cells = "".join(
-            f'<c r="{col_letters[c_idx]}{r_idx}" t="inlineStr"><is><t>{escape(str(val))}</t></is></c>'
-            for c_idx, val in enumerate(row)
-        )
-        row_xml.append(f'<row r="{r_idx}">{cells}</row>')
-
-    sheet_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f"<sheetData>{''.join(row_xml)}</sheetData>"
-        "</worksheet>"
-    )
-    content_types = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet1.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        "</Types>"
-    )
-    root_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
-        'Target="xl/workbook.xml"/>'
-        "</Relationships>"
-    )
-    workbook_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '<sheets><sheet name="Answers" sheetId="1" r:id="rId1"/></sheets>'
-        "</workbook>"
-    )
-    workbook_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
-        'Target="worksheets/sheet1.xml"/>'
-        "</Relationships>"
-    )
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("[Content_Types].xml", content_types)
-        zf.writestr("_rels/.rels", root_rels)
-        zf.writestr("xl/workbook.xml", workbook_xml)
-        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
-        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
-    return buffer.getvalue()
+    return build_simple_xlsx(rows, sheet_name="Answers")

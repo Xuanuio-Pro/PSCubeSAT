@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-const lessonUrl = (slug, id) => `/${slug}?lesson=${encodeURIComponent(id)}`;
 import logoSvg from '../../assets/logo.svg';
 import textLogo from '../../assets/cubeSAT LMS Text_Logo.svg';
-import { labIconUrl } from './lab-icons';
 import { labTitleLines } from './lab-titles';
-import { HomeIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, CheckIcon, LockIcon, CircleIcon } from '../common/HeaderIcons';
+import { HomeIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, CheckIcon, LockIcon } from '../common/HeaderIcons';
+import { LabBadgeFace, LessonStatusIcon } from './SidebarShared';
+import { useScrollRailToActive } from './use-scroll-rail';
 import { isSequentialLesson } from '../lessons/lesson-sequence';
 
-function LabBadgeFace({ labId, active }) {
-  const src = labIconUrl(labId, active);
-  if (!src) return <><span className="lab-badge-tag">LAB</span><span className="lab-badge-num">{labId}</span></>;
-  return <img className="lab-badge-icon" src={src} alt="" draggable="false" />;
-}
+const lessonUrl = (slug, id) => `/${slug}?lesson=${encodeURIComponent(id)}`;
 
 export default function CourseSidebar({ labs, currentLabId, activeLesson, onSelectLesson, progress = [], userRole }) {
   const navigate = useNavigate();
@@ -22,15 +18,9 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
 
   useEffect(() => {
     setExpandedLab(currentLabId);
-    const activeLab = activeLabRef.current;
-    const rail = activeLab?.parentElement;
-    if (rail) {
-      const itemBounds = activeLab.getBoundingClientRect();
-      const railBounds = rail.getBoundingClientRect();
-      if (itemBounds.top < railBounds.top) rail.scrollTop -= railBounds.top - itemBounds.top + 4;
-      else if (itemBounds.bottom > railBounds.bottom) rail.scrollTop += itemBounds.bottom - railBounds.bottom + 4;
-    }
   }, [currentLabId]);
+
+  useScrollRailToActive(activeLabRef, currentLabId);
 
   const toggleLab = (id, slug) => {
     const lab = labs.find(item => item.id === id);
@@ -59,12 +49,6 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
     return { status: 'in-progress', label: `Đang học (${percent}%)`, done: completedLessonsCount, total: lessons.length };
   };
 
-  const statusIcon = status => {
-    if (status === 'completed') return <CheckIcon size={15} />;
-    if (status === 'locked') return <LockIcon size={14} />;
-    return <CircleIcon className="status-dot" size={10} />;
-  };
-
   return (
     <aside className={`player-sidebar ${collapsed ? 'is-collapsed' : ''}`}>
       <div className="course-rail">
@@ -72,10 +56,9 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
           <img src={logoSvg} alt="PTIT CubeSat" className="course-rail-logo" />
         </Link>
         <nav className="course-rail-nav" aria-label="Chọn Lab">
-          {labs.map((lab) => (
-            (() => {
-              const state = getLabState(lab);
-              return <Link
+          {labs.map((lab) => {
+            const state = getLabState(lab);
+            return <Link
               to={`/${lab.slug}`}
               key={lab.id}
               ref={lab.id === currentLabId ? activeLabRef : null}
@@ -90,10 +73,9 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
               title={`Lab ${lab.id}: ${lab.title}`}
             >
               <LabBadgeFace labId={lab.id} active={lab.id === currentLabId} />
-              <span className="lab-badge-status">{statusIcon(state.status)}</span>
+              <span className="lab-badge-status"><LessonStatusIcon status={state.status} /></span>
             </Link>;
-            })()
-          ))}
+          })}
         </nav>
         <Link to="/" className="course-home-link" aria-label="Về trang chủ" title="Về trang chủ">
           <HomeIcon size={19} />
@@ -120,7 +102,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
               <div key={lab.id} className={`accordion-section ${isCurrentLab ? 'current' : ''} is-${labState.status}`}>
                 <button type="button" className={`accordion-header ${isCurrentLab ? 'current' : ''}`} onClick={() => toggleLab(lab.id, lab.slug)} aria-expanded={isExpanded} aria-controls={isExpanded ? `lab-${lab.id}-lessons` : undefined} aria-disabled={labState.status === 'locked' ? 'true' : undefined}>
                   <span className="accordion-label">
-                    <span className="accordion-title"><span className="curriculum-status-icon">{statusIcon(labState.status)}</span>Lab {lab.id}: {lab.title.split('(')[0].trim()}</span>
+                    <span className="accordion-title"><span className="curriculum-status-icon"><LessonStatusIcon status={labState.status} /></span>Lab {lab.id}: {lab.title.split('(')[0].trim()}</span>
                     <span className="curriculum-status-label">{labState.label}</span>
                     <span className="accordion-meta"><span>{lessons.length} phần</span><span>•</span><span>{lessons.filter(lesson => lesson.type === 'practice' || lesson.type === 'components' || lesson.type === 'assembly').length} bài thực hành</span></span>
                   </span>

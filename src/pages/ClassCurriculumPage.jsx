@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
-import { Notice } from '../components/classes/LmsCommon';
+import { MaxAttemptsField, Notice } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { useConfirm } from '../components/classes/use-confirm';
 import { InlineQuestionBank } from './QuestionBankPage';
@@ -139,39 +139,20 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
         const hasParam = Object.prototype.hasOwnProperty.call(lesson.params, key);
         const value = hasParam ? lesson.params[key] : (lesson.content[key] ?? '');
         if (kind === 'attempts') {
-          const isUnlimited = value === null;
           const fallbackAttempts = lesson.type === 'labtest' ? 5 : 3;
-          return <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-            <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--cubesat-ink)' }}>{label}</span>
-            <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
-              <input
-                type="checkbox"
-                checked={isUnlimited}
-                onChange={event => {
-                  const nextParams = { ...lesson.params };
-                  if (event.target.checked) {
-                    nextParams.max_attempts = null;
-                    nextParams.cooldown_minutes = 0;
-                  } else {
-                    nextParams.max_attempts = fallbackAttempts;
-                  }
-                  onChange({ ...lesson, params: nextParams });
-                }}
-              />
-              <span>Không giới hạn lượt</span>
-            </label>
-            {!isUnlimited && (
-              <input
-                type="number"
-                aria-label={label}
-                min={1}
-                max={100}
-                step="1"
-                value={value === '' ? '' : value}
-                onChange={event => param(key, event.target.value === '' ? '' : Number(event.target.value))}
-              />
-            )}
-          </div>;
+          return <MaxAttemptsField
+            key={key}
+            label={label}
+            value={value}
+            fallbackAttempts={fallbackAttempts}
+            onChange={nextValue => {
+              if (nextValue === null) {
+                onChange({ ...lesson, params: { ...lesson.params, max_attempts: null, cooldown_minutes: 0 } });
+              } else {
+                param(key, nextValue);
+              }
+            }}
+          />;
         }
         if (kind === 'cooldown') {
           const effectiveAttempts = Object.prototype.hasOwnProperty.call(lesson.params, 'max_attempts')

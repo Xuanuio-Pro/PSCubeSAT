@@ -7,7 +7,6 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
-from xml.sax.saxutils import escape
 
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import func, select
@@ -22,6 +21,7 @@ from app.models.tables import (
 )
 from app.schemas.classes import MemberImportResponse, MemberImportSkip
 from app.services.classes import audit
+from app.services.xlsx_utils import build_simple_xlsx
 
 MAX_IMPORT_BYTES = 1_000_000
 MAX_UNZIPPED_BYTES = 5_000_000
@@ -362,59 +362,4 @@ def student_template_csv() -> str:
 
 
 def student_template_xlsx() -> bytes:
-    row_xml = []
-    for r_idx, (col_a, col_b) in enumerate(SAMPLE_ROWS, start=1):
-        row_xml.append(
-            f'<row r="{r_idx}">'
-            f'<c r="A{r_idx}" t="inlineStr"><is><t>{escape(col_a)}</t></is></c>'
-            f'<c r="B{r_idx}" t="inlineStr"><is><t>{escape(col_b)}</t></is></c>'
-            f"</row>"
-        )
-    sheet_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f"<sheetData>{''.join(row_xml)}</sheetData>"
-        "</worksheet>"
-    )
-    content_types = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet1.xml" '
-        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        "</Types>"
-    )
-    root_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
-        'Target="xl/workbook.xml"/>'
-        "</Relationships>"
-    )
-    workbook_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '<sheets><sheet name="Students" sheetId="1" r:id="rId1"/></sheets>'
-        "</workbook>"
-    )
-    workbook_rels = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
-        'Target="worksheets/sheet1.xml"/>'
-        "</Relationships>"
-    )
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("[Content_Types].xml", content_types)
-        zf.writestr("_rels/.rels", root_rels)
-        zf.writestr("xl/workbook.xml", workbook_xml)
-        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
-        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
-    return buffer.getvalue()
+    return build_simple_xlsx(SAMPLE_ROWS, sheet_name="Students")

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import logoSvg from '../../assets/logo.svg';
 import textLogo from '../../assets/cubeSAT LMS Text_Logo.svg';
-import { labIconUrl } from '../layout/lab-icons';
 import { labTitleLines } from '../layout/lab-titles';
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, CircleIcon, HomeIcon, LockIcon } from '../common/HeaderIcons';
+import { LabBadgeFace, LessonStatusIcon } from '../layout/SidebarShared';
+import { useScrollRailToActive } from '../layout/use-scroll-rail';
 
 const typeLabels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
 
@@ -18,33 +19,13 @@ function stateFor(lab, unlockedView = false) {
   return { status: 'in-progress', label: `Đang học (${lessons.length ? Math.round((completed / lessons.length) * 100) : 0}%)`, done: completed, total: lessons.length };
 }
 
-function StatusIcon({ status }) {
-  if (status === 'completed') return <CheckIcon size={15} />;
-  if (status === 'locked') return <LockIcon size={14} />;
-  return <CircleIcon className="status-dot" size={10} />;
-}
-
-function LabBadgeFace({ labId, active }) {
-  const src = labIconUrl(labId, active);
-  if (!src) return <><span className="lab-badge-tag">LAB</span><span className="lab-badge-num">{labId}</span></>;
-  return <img className="lab-badge-icon" src={src} alt="" draggable="false" />;
-}
-
 export default function ClassCourseSidebar({ labs, classId, activeLesson, onSelectLesson, homePath = `/classes/${classId}`, unlockedView = false }) {
   const [collapsed, setCollapsed] = useState(false);
   const activeLabRef = useRef(null);
 
   const activeLab = labs.find(lab => lab.lessons?.some(lesson => lesson.id === activeLesson));
 
-  useEffect(() => {
-    const activeLabEl = activeLabRef.current;
-    const rail = activeLabEl?.parentElement;
-    if (!rail) return;
-    const itemBounds = activeLabEl.getBoundingClientRect();
-    const railBounds = rail.getBoundingClientRect();
-    if (itemBounds.top < railBounds.top) rail.scrollTop -= railBounds.top - itemBounds.top + 4;
-    if (itemBounds.bottom > railBounds.bottom) rail.scrollTop += itemBounds.bottom - railBounds.bottom + 4;
-  }, [activeLesson]);
+  useScrollRailToActive(activeLabRef, activeLesson);
 
   const selectLab = lab => {
     if (stateFor(lab, unlockedView).status === 'locked') return;
@@ -73,7 +54,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
             aria-label={`Lab ${lab.id}: ${lab.title}`}
             title={`Lab ${lab.id}: ${lab.title}`}
           >
-            <LabBadgeFace labId={lab.id} active={lab.id === activeLab?.id} /><span className="lab-badge-status"><StatusIcon status={state.status} /></span>
+            <LabBadgeFace labId={lab.id} active={lab.id === activeLab?.id} /><span className="lab-badge-status"><LessonStatusIcon status={state.status} /></span>
           </button>;
         })}
       </nav>
@@ -91,7 +72,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
           return <div key={lab.id} className={`accordion-section ${lab.id === activeLab?.id ? 'current' : ''} is-${state.status}`}>
             <button type="button" className={`accordion-header ${lab.id === activeLab?.id ? 'current' : ''}`} aria-expanded={expanded} disabled={state.status === 'locked'}>
               <span className="accordion-label">
-                <span className="accordion-title"><span className="curriculum-status-icon"><StatusIcon status={state.status} /></span>Lab {lab.id}: {lab.title.split('(')[0].trim()}</span>
+                <span className="accordion-title"><span className="curriculum-status-icon"><LessonStatusIcon status={state.status} /></span>Lab {lab.id}: {lab.title.split('(')[0].trim()}</span>
                 <span className="curriculum-status-label">{state.label}</span>
                 <span className="accordion-meta"><span>{lab.lessons.length} phần</span><span>•</span><span>{lab.lessons.filter(lesson => lesson.type === 'practice').length} bài thực hành</span></span>
               </span>

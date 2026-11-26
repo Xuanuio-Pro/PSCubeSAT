@@ -22,7 +22,7 @@ from app.models.tables import (
     UserRole,
 )
 from app.schemas.classes import ClassResponse, MemberResponse
-from app.services.auth import LOGIN_FAILURES
+from app.services.auth import clear_login_failures_for_email
 from app.services.password_reset import revoke_open_resets
 
 
@@ -109,6 +109,17 @@ async def update_user(db, actor, user_id, changes):
     return target
 
 
+async def _lock_non_deleted_user(db, user_id: int) -> User:
+    target = (
+        await db.execute(
+            select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise LMSError(404, "CONFIG_INVALID", "Không tìm thấy tài khoản.")
+    return target
+
+
 async def delete_user(db, actor, user_id):
     """Soft-delete an account (admin only).
 
@@ -117,13 +128,7 @@ async def delete_user(db, actor, user_id):
     deleted users. The email stays reserved. Active class memberships are closed so the person
     leaves every roster.
     """
-    target = (
-        await db.execute(
-            select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
-        )
-    ).scalar_one_or_none()
-    if target is None:
-        raise LMSError(404, "CONFIG_INVALID", "Không tìm thấy tài khoản.")
+    target = await _lock_non_deleted_user(db, user_id)
     if target.id == actor.id:
         raise LMSError(403, "FORBIDDEN_ROLE", "Không thể tự xóa tài khoản của chính mình.")
     if target.role == UserRole.admin:
@@ -166,20 +171,13 @@ async def delete_user(db, actor, user_id):
     await revoke_open_resets(db, target.id)
     audit(db, actor.id, "user.delete", f"user:{target.id}", before, {"deleted": True})
     await db.commit()
-    LOGIN_FAILURES.reset(f"email:{target.email}")
-    LOGIN_FAILURES.reset_prefix(f"pair:{target.email}:")
+    clear_login_failures_for_email(target.email)
     return {"user_id": target.id, "deleted": True}
 
 
 async def reset_user_password(db, actor, user_id):
     """Replace a forgotten password with a one-time-shown temporary one. Never logged or audited."""
-    target = (
-        await db.execute(
-            select(User).where(User.id == user_id, User.deleted_at.is_(None)).with_for_update()
-        )
-    ).scalar_one_or_none()
-    if target is None:
-        raise LMSError(404, "CONFIG_INVALID", "Không tìm thấy tài khoản.")
+    target = await _lock_non_deleted_user(db, user_id)
     # Admins change their own password in the profile page and never take over another admin.
     if target.id == actor.id or target.role == UserRole.admin:
         raise LMSError(403, "FORBIDDEN_ROLE", "Không thể cấp lại mật khẩu cho tài khoản quản trị.")
@@ -190,8 +188,7 @@ async def reset_user_password(db, actor, user_id):
     audit(db, actor.id, "user.password_reset", f"user:{target.id}", None, None)
     await db.commit()
     # The owner may have locked the email or (email, IP) pair by guessing the forgotten password.
-    LOGIN_FAILURES.reset(f"email:{target.email}")
-    LOGIN_FAILURES.reset_prefix(f"pair:{target.email}:")
+    clear_login_failures_for_email(target.email)
     return {"user_id": target.id, "email": target.email, "temporary_password": temporary_password}
 
 
