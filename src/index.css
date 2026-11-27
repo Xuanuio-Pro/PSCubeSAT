@@ -3046,3 +3046,10 @@ body:has(.groundstation-page) { background: linear-gradient(180deg, #eaf3fb 0%, 
   .fig-comp-label small { display: none; }
   .fig-comp-label strong { font-size: 1rem; }
 }
+
+/* Practice action row under the editor: an even grid, so a narrow column never leaves one button alone on a line */
+.lab-fig .lab-practice-actions.lab-practice-actions--inline {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; width: 100%; justify-content: stretch;
+}
+.lab-fig .lab-practice-actions--inline > *, .lab-fig .lab-practice-actions--inline .btn { width: 100%; justify-content: center; }
+.lab-fig .lab-practice-actions--inline .lab-serial-status { justify-content: center; }

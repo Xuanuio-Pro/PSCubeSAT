@@ -31,6 +31,7 @@ from app.services import classes as service
 from app.services import student_import
 from app.services.auth import get_required_user
 from app.services.curriculum_access import lab_entry as resolve_lab_entry
+from app.services.reports import class_card_summary
 from app.services.permissions import (
     ClassAccess,
     legacy_restricted,
@@ -101,15 +102,17 @@ async def list_classes(
     if status:
         query = query.where(Classroom.status == status)
     rows, total = await service.paginate(db, query.order_by(Classroom.id.desc()), page, page_size)
+    items = []
+    for row, role in rows:
+        can_manage = user.role == UserRole.admin or (
+            user.role == UserRole.teacher and role == MembershipRole.teacher
+        )
+        item = service.class_response(row, can_manage)
+        if can_manage:
+            item = item.model_copy(update=await class_card_summary(db, row, user))
+        items.append(item)
     return {
-        "items": [
-            service.class_response(
-                row,
-                user.role == UserRole.admin
-                or (user.role == UserRole.teacher and role == MembershipRole.teacher),
-            )
-            for row, role in rows
-        ],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,

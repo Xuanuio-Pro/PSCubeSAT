@@ -56,7 +56,10 @@ export default function ClassesPage() {
       {!data.items.length ? <EmptyState icon="class" title={canCreate ? 'Chưa có lớp học' : 'Bạn chưa tham gia lớp nào'}
         text={canCreate ? 'Tạo lớp đầu tiên để thêm sinh viên đã đăng ký tài khoản.' : 'Gửi email tài khoản của bạn cho giảng viên để được thêm vào lớp.'}
         action={canCreate && !creating ? <button className="lms-primary" onClick={() => setCreating(true)}>Tạo lớp học</button> : null} /> :
-        <div className="lms-class-list">{data.items.map(item => <article key={item.id} className="lms-class-row"><div><span className="lms-secondary">{item.code}{item.term ? ` · ${item.term}` : ''}</span><h2><Link className="lms-class-link" to={`/classes/${item.id}`}>{item.name}</Link></h2><p>{item.description || 'Chưa có mô tả lớp.'}</p></div><div className="lms-class-meta"><span className={`lms-status ${item.status}`}>{statusLabels[item.status]}</span><Link to={`/classes/${item.id}`}>{item.can_manage ? 'Quản lý lớp' : 'Xem lớp'}</Link></div></article>)}</div>}
+        <div className="lms-class-list">{data.items.map(item => <article key={item.id} className="lms-class-row"><div><span className="lms-secondary">{item.code}{item.term ? ` · ${item.term}` : ''}</span><h2><Link className="lms-class-link" to={`/classes/${item.id}`}>{item.name}</Link></h2><p>{item.description || 'Chưa có mô tả lớp.'}</p></div>{item.student_count != null && <dl className="lms-class-stats">
+          <div><dt>Sĩ số</dt><dd>{item.student_count} SV</dd></div>
+          <div><dt>Tiến độ TB</dt><dd>{item.average_percent == null ? '—' : `${Math.round(item.average_percent)}%`}</dd></div>
+        </dl>}<div className="lms-class-meta"><span className={`lms-status ${item.status}`}>{statusLabels[item.status]}</span><Link to={`/classes/${item.id}`}>{item.can_manage ? 'Quản lý lớp' : 'Xem lớp'}</Link></div></article>)}</div>}
       <Pagination page={page} total={data.total} onChange={setPage} />
     </>}
   </>;

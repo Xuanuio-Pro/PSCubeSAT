@@ -5,6 +5,7 @@ import CloudCompiler from '../serial/CloudCompiler';
 import WebFlasher from '../serial/WebFlasher';
 import { sourceKey, loadDraft, downloadFile, DEFAULT_ARDUINO_CODE } from './project-files.js';
 import { cppToWorkspace } from './cpp-to-blockly.js';
+import { isBlankSketch } from './sample-code.js';
 
 function restoreDocument(labId, exerciseId, storageScope) {
   try {
@@ -15,11 +16,12 @@ function restoreDocument(labId, exerciseId, storageScope) {
   } catch { return { text: null, origin: 'blocks', legacyManualCode: '' }; }
 }
 
-export default function IDEPanel({ labId, exerciseId = '', storageScope = '', legacyFallback = false, setCode, variant = 'default', showToolbar = true }) {
-  return <LabIDE key={`${labId}:${exerciseId}:${storageScope}`} {...{ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar }} />;
+// loadSample: optional () => Promise<string>; when given, an untouched editor offers "Bắt đầu từ mã mẫu?".
+export default function IDEPanel({ labId, exerciseId = '', storageScope = '', legacyFallback = false, setCode, variant = 'default', showToolbar = true, loadSample = undefined }) {
+  return <LabIDE key={`${labId}:${exerciseId}:${storageScope}`} {...{ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar, loadSample }} />;
 }
 
-function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar }) {
+function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, variant, showToolbar, loadSample }) {
   const [document, setDocument] = useState(() => restoreDocument(labId, exerciseId, storageScope));
   const [tab, setTab] = useState('cpp');
   const [generated, setGenerated] = useState({ code: '', issues: [] });
@@ -27,6 +29,7 @@ function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, vari
   const [workspaceUpdate, setWorkspaceUpdate] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [message, setMessage] = useState('');
+  const [sample, setSample] = useState({ dismissed: false, busy: false, error: '' });
   const expandButtonRef = useRef(null);
   const lastGeneratedCode = useRef(null);
   const id = useId();
@@ -84,6 +87,21 @@ function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, vari
     setSync({ status: 'pending', error: '' });
     setDocument(current => ({ ...current, text, origin: 'cpp' }));
   };
+  // Only offered while the sketch is still the empty starter, so a student's own code is never replaced.
+  const offerSample = Boolean(loadSample) && !sample.dismissed && isBlankSketch(document.text);
+  const useSample = async () => {
+    setSample(current => ({ ...current, busy: true, error: '' }));
+    try {
+      const code = await loadSample();
+      if (!isBlankSketch(document.text)) { setSample({ dismissed: true, busy: false, error: '' }); return; }
+      editCpp(code);
+      setTab('cpp');
+      setSample({ dismissed: true, busy: false, error: '' });
+      setMessage('Đã nạp mã mẫu vào editor. Đọc kỹ, chỉnh theo yêu cầu bài rồi mới nạp xuống mạch.');
+    } catch (error) {
+      setSample(current => ({ ...current, busy: false, error: error.message || 'Không tải được mã mẫu.' }));
+    }
+  };
   const backupCpp = () => { if (document.text) downloadFile(`${fileStem}-cpp-ban-sao.ino`, document.text, 'text/plain'); };
   const restoreLegacy = () => {
     try {
@@ -111,6 +129,13 @@ function LabIDE({ labId, exerciseId, storageScope, legacyFallback, setCode, vari
     <div className="cube-source-state" role="status">
       <span>{exerciseId || `Lab ${labId}`} · C++ ↔ Blockly · {pendingCpp ? sync.status === 'error' ? 'Chưa đồng bộ' : 'Đang đồng bộ…' : generated.issues.length ? 'Blockly cần sửa lỗi' : 'Đã đồng bộ'}</span>
     </div>
+    {offerSample && <div className="blockly-notice sample-offer" role="status">
+      <span>{sample.error || 'Bắt đầu từ mã mẫu? Editor đang trống; bạn có thể nạp mã mẫu của bài để đọc và sửa.'}</span>
+      <span className="sample-offer-actions">
+        <button type="button" disabled={sample.busy} onClick={useSample}>{sample.busy ? 'Đang tải…' : 'Nạp mã mẫu'}</button>
+        <button type="button" onClick={() => setSample(current => ({ ...current, dismissed: true }))}>Tự viết</button>
+      </span>
+    </div>}
     {message && <div className="blockly-notice" role="status">{message}<button onClick={() => setMessage('')}>Đóng</button></div>}
     {pendingCpp && <div className="blockly-notice" role={sync.status === 'error' ? 'alert' : 'status'}>
       <span>{sync.error || 'Đang cập nhật các block từ C++…'} {sync.status === 'error' ? 'Bài Blockly gần nhất được giữ lại. Sửa C++ để tiếp tục đồng bộ.' : ''}</span>

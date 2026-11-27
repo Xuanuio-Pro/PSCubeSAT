@@ -393,3 +393,12 @@ test('disconnect/reconnect never compiles an orphan or duplicates statements', c
     assert.equal(generated(ws), original);
   }
 });
+
+test('blank-sketch check only treats the empty starter as replaceable by sample code', async () => {
+  const { isBlankSketch } = await import('../src/components/editor/sample-code.js');
+  assert.equal(isBlankSketch(null), true);
+  assert.equal(isBlankSketch(DEFAULT_ARDUINO_CODE), true);
+  assert.equal(isBlankSketch('void setup() {\n}\n\nvoid loop() {\n  // TODO\n  delay(500);\n}\n'), true);
+  assert.equal(isBlankSketch('void setup() { pinMode(2, OUTPUT); }\nvoid loop() { delay(1000); }'), false);
+  assert.equal(isBlankSketch('int x = 1;\nvoid setup() {}\nvoid loop() {}'), false);
+});

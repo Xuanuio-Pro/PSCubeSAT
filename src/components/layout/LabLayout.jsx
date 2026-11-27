@@ -101,14 +101,17 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
   };
   const completeLesson = () => sendLessonAction('complete', 'Chưa đủ thời gian học tối thiểu 1 phút.');
   const resetLesson = () => sendLessonAction('reset', 'Không đặt lại được trạng thái bài học.');
+  const fetchExampleSource = async targetId => {
+    const response = await authorizedFetch(`/api/curriculum/exercises/${encodeURIComponent(targetId)}/source`);
+    if (!response.ok) throw new Error(response.status === 401 ? 'Vui lòng đăng nhập lại.' : 'Không tải được mã mẫu. Vui lòng thử lại.');
+    return response.text();
+  };
   const downloadExample = async () => {
     const token = getAuthToken();
     const targetId = activeExerciseId || lesson.id;
     setDownloading(true); setDownloadError('');
     try {
-      const response = await authorizedFetch(`/api/curriculum/exercises/${encodeURIComponent(targetId)}/source`);
-      if (!response.ok) throw new Error(response.status === 401 ? 'Vui lòng đăng nhập lại.' : 'Không tải được mã mẫu. Vui lòng thử lại.');
-      const code = await response.text();
+      const code = await fetchExampleSource(targetId);
       if (token && token === getAuthToken()) downloadFile(`${targetId}.ino`, code, 'text/plain');
     } catch (error) { setDownloadError(error.message); }
     finally { setDownloading(false); }
@@ -147,6 +150,7 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
     key: activeExerciseId || lesson.id,
     exerciseId: lesson.type === 'practice' ? (activeExerciseId || lesson.id) : '',
     legacyFallback: lesson.id === firstPractice?.id && activeExerciseIndex === 0,
+    loadSample: lesson.type === 'practice' && isAuthenticated ? () => fetchExampleSource(activeExerciseId || lesson.id) : undefined,
   }) : editorPanel;
 
   // Practice: the requirement and its links sit in "Mục tiêu bài học" at the top; the device bar only appears here.

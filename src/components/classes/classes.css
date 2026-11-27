@@ -1629,3 +1629,10 @@ body:has(.home-page) {
   border-right: 2px solid #094174; border-bottom: 2px solid #094174; transform: rotate(-45deg); transition: transform var(--transition-fast);
 }
 .curriculum-lab[open] > summary::after, .curriculum-lesson[open] > summary::after { transform: rotate(45deg); margin-top: -8px; }
+
+/* Class card: head count and average progress (managers only) */
+.lms-class-stats { display: flex; gap: 10px; margin: 0; flex: none; }
+.lms-class-stats div { min-width: 92px; padding: 8px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.75); text-align: center; }
+.lms-class-stats dt { font-size: 0.75rem; font-weight: 700; color: #2f5172; }
+.lms-class-stats dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 800; color: #094174; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .lms-class-stats div { flex: 1; } }

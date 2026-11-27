@@ -102,6 +102,9 @@ class ClassResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     can_manage: bool = False
+    # Only filled in the class list, and only for classes the caller manages.
+    student_count: int | None = None
+    average_percent: float | None = None
 
 
 class ClassModeInput(InputModel):

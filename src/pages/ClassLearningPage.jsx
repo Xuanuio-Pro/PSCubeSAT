@@ -75,7 +75,8 @@ function Practice({ lesson, labId, classId, preview, staffView, onRefresh, exerc
       <div className={`lab-practice-panels lab-practice-panels--${variant}`}>
         <div className="lab-practice-editor">
           <div className="lab-practice-editor-frame">
-            <IDEPanel labId={labId} exerciseId={exerciseId} storageScope={storageScope} setCode={setCode} variant="workspace" showToolbar={false} />
+            <IDEPanel labId={labId} exerciseId={exerciseId} storageScope={storageScope} setCode={setCode} variant="workspace" showToolbar={false}
+              loadSample={content.mode === 'hardware' ? () => fetchSource(activeExercise?.id || content.exercise_id || lesson.id, classId) : undefined} />
           </div>
           <div key={exerciseId} className="lab-practice-actions lab-practice-actions--inline" aria-label="Thao tác thực hành">
             <LabPracticeActions code={code} labId={labId} classId={Number(classId)} lessonId={lesson.id} configuredBoard={content.board || ''} />

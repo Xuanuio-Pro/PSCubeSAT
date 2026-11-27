@@ -185,6 +185,20 @@ class ReportAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(removed["students"][0]["membership_status"], "removed")
         self.assertEqual(removed["summary"]["active_students"], 0)
 
+    async def test_class_list_cards_show_head_count_and_average_to_managers_only(self):
+        await self.learning.complete(0)
+        report = (await self.call(2, "GET", self.base + "/reports")).json()["summary"]
+        for manager in (1, 2):
+            items = (await self.call(manager, "GET", "/api/classes")).json()["items"]
+            item = next(row for row in items if row["id"] == self.class_a)
+            self.assertEqual(item["student_count"], report["active_students"], manager)
+            self.assertEqual(item["average_percent"], report["average_percent"], manager)
+            self.assertGreater(item["average_percent"], 0)
+        listed = (await self.call(4, "GET", "/api/classes")).json()["items"]
+        student = next(row for row in listed if row["id"] == self.class_a)
+        self.assertIsNone(student["student_count"])
+        self.assertIsNone(student["average_percent"])
+
     async def test_dashboard_counts_and_activity_definition(self):
         await self.add_user(7)
         added = await self.call(2, "POST", self.base + "/members", {"email": "user7@example.com"})

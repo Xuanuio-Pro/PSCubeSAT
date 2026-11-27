@@ -42,3 +42,8 @@
   .blockly-canvas .blocklyTreeRow { padding-right: 5px; }
   .cube-ide--expanded { inset: 4px; }
 }
+.sample-offer { background: #e0f2fe; color: #0b3a66; font-size: 13px; }
+.sample-offer-actions { display: inline-flex; flex: 0 0 auto !important; gap: 6px; }
+.sample-offer button { min-height: 30px; padding: 0 12px; border: 0.3px solid #094174; border-radius: 999px; background: #fff; color: #094174; font: inherit; font-weight: 700; cursor: pointer; }
+.sample-offer button:first-child { border-color: transparent; background: linear-gradient(180deg, #3e54a0, #1c7caf); color: #fff; }
+.sample-offer button:disabled { opacity: 0.6; cursor: wait; }

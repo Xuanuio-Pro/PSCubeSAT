@@ -155,6 +155,36 @@ async def class_report(db, access):
     }
 
 
+class _ManagerView:
+    """Read-only access used to summarise a class the caller already manages (checked by the caller)."""
+
+    can_manage = True
+
+    def __init__(self, classroom, user):
+        self.classroom = classroom
+        self.user = user
+        self.membership = None
+
+
+async def class_card_summary(db, classroom, user):
+    """Active student count and their average course progress for the class list cards.
+
+    Only call for classes the user manages. A class without a usable curriculum still reports
+    its head count; its average is None."""
+    access = _ManagerView(classroom, user)
+    members = [m for m, _ in await class_members(db, access) if m.status == MembershipStatus.active]
+    summary = {"student_count": len(members), "average_percent": None}
+    if not members:
+        return summary
+    try:
+        config = await raw_config(db, access)
+    except LMSError:
+        return summary
+    paths = await member_paths(db, config, members)
+    summary["average_percent"] = round(sum(paths[m.id]["percent"] for m in members) / len(members), 2)
+    return summary
+
+
 def safe_cell(value):
     # Spreadsheet formula injection: names/emails are user-controlled.
     text = "" if value is None else str(value)
