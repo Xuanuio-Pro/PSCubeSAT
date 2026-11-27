@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, Outlet, Routes, Route, useLocation, useParams } from 'react-router-dom';
+import { Navigate, Outlet, Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/auth-api';
 import { loginDestination } from './contexts/auth-session';
 import { SerialProvider } from './contexts/SerialContext';
@@ -12,6 +12,7 @@ import ScrollToTopButton from './components/common/ScrollToTopButton';
 import NotFoundPage from './pages/NotFoundPage';
 import LmsLayout from './components/classes/LmsLayout';
 import LabEntry from './components/classes/LabEntry';
+import { classRouteTarget } from './components/classes/class-route';
 
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
@@ -105,9 +106,14 @@ function LegacyLabRoute({ labId }) {
   return <LegacyLabGate labId={labId}><Component /></LegacyLabGate>;
 }
 
-function LegacyLabAliasRedirect() {
-  const { labId } = useParams();
-  return <Navigate to={`/lab${labId}`} replace />;
+// Runs before any /classes/:classId page fetches: "lab3" is the old lab alias, other non-numeric ids are a 404
+// (React Router v6 cannot match a partial segment such as "lab:labId", so the API used to get "lab3" and answer 422).
+function ClassIdGuard() {
+  const location = useLocation();
+  const target = classRouteTarget(location.pathname);
+  if (target.kind === 'redirect') return <Navigate to={`${target.to}${location.search}`} replace />;
+  if (target.kind === 'not-found') return <NotFoundPage />;
+  return <Outlet />;
 }
 
 function ServiceLayout() {
@@ -157,17 +163,18 @@ export default function App() {
       <Route path="/profile" element={<ProfilePage />} />
       <Route element={<LmsLayout />}>
         <Route path="/classes" element={<ClassesPage />} />
-        <Route path="/classes/lab:labId" element={<LegacyLabAliasRedirect />} />
-        <Route path="/classes/:classId" element={<ClassDetailPage />} />
-        <Route element={<LmsLayout nested roles={['admin', 'teacher']} />}>
-          <Route path="/classes/:classId/curriculum" element={<ClassCurriculumPage />} />
-          <Route path="/classes/:classId/labs/:labId/questions" element={<QuestionBankPage />} />
-          <Route path="/classes/:classId/lessons/:lessonId/questions" element={<QuestionBankPage />} />
-          <Route path="/classes/:classId/progress" element={<ClassProgressPage />} />
-          <Route path="/classes/:classId/report" element={<ClassReportPage />} />
+        <Route element={<ClassIdGuard />}>
+          <Route path="/classes/:classId" element={<ClassDetailPage />} />
+          <Route element={<LmsLayout nested roles={['admin', 'teacher']} />}>
+            <Route path="/classes/:classId/curriculum" element={<ClassCurriculumPage />} />
+            <Route path="/classes/:classId/labs/:labId/questions" element={<QuestionBankPage />} />
+            <Route path="/classes/:classId/lessons/:lessonId/questions" element={<QuestionBankPage />} />
+            <Route path="/classes/:classId/progress" element={<ClassProgressPage />} />
+            <Route path="/classes/:classId/report" element={<ClassReportPage />} />
+          </Route>
+          <Route path="/classes/:classId/learn" element={<ClassLearningPage experience={false} />} />
+          <Route path="/classes/:classId/path" element={<LearningPathPage />} />
         </Route>
-        <Route path="/classes/:classId/learn" element={<ClassLearningPage experience={false} />} />
-        <Route path="/classes/:classId/path" element={<LearningPathPage />} />
       </Route>
       <Route element={<LmsLayout roles={['admin']} />}>
         <Route path="/admin/users" element={<AdminUsersPage />} />
@@ -179,7 +186,8 @@ export default function App() {
       {labComponents.map((_, labId) => (
         <Route key={`questions-${labId}`} path={`/lab${labId}/questions`} element={<LegacyLabGate labId={labId}><LabQuestionsPage labId={labId} /></LegacyLabGate>} />
       ))}
-      <Route path="*" element={<NotFoundPage />} />
     </Route>
+    {/* Outside ProtectedServices: an unknown URL is a 404 for guests too, not a redirect to /login. */}
+    <Route path="*" element={<NotFoundPage />} />
   </Routes><ScrollToTopButton /></Suspense>;
 }
