@@ -76,7 +76,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
                 const locked = !unlockedView && (lesson.access === 'locked' || !lesson.content);
                 const completed = !locked && ['completed', 'waived'].includes(lesson.progress?.status);
                 const subCount = (lesson.content?.exercises || []).length;
-                return <button type="button" key={lesson.id} className={`sub-lesson-item ${lesson.id === activeLesson ? 'active' : ''} is-${locked ? 'locked' : completed ? 'completed' : 'available'}`} disabled={locked} aria-current={lesson.id === activeLesson ? 'step' : undefined} onClick={() => onSelectLesson(lesson.id)}>
+                return <button type="button" key={lesson.id} className={`sub-lesson-item ${lesson.id === activeLesson ? 'active' : ''} is-${locked ? 'locked' : completed ? 'completed' : 'available'}`} disabled={locked} title={lesson.title} aria-current={lesson.id === activeLesson ? 'step' : undefined} onClick={() => onSelectLesson(lesson.id)}>
                   <span className="sub-lesson-icon">{completed ? <CheckIcon size={14} /> : locked ? <LockIcon size={13} /> : <CircleIcon className="status-dot" size={10} />}</span>
                   <span className="sub-lesson-copy">
                     <small>{locked ? 'Chưa mở' : typeLabels[lesson.type]}{subCount > 1 ? ` · ${subCount} bài con` : ''}{lesson.progress?.status === 'pending_review' ? ' · Chờ chấm' : ''}</small>

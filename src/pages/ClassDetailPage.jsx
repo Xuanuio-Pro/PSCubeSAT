@@ -4,6 +4,7 @@ import { request, useAuth } from '../contexts/auth-api';
 import { ClassFields, Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { toBase64 } from '../utils/base64';
+import EmptyState from '../components/common/EmptyState';
 
 function Members({ classroom }) {
   const [page, setPage] = useState(1);
@@ -85,7 +86,7 @@ function Members({ classroom }) {
     {removing && <section className="lms-confirm"><p>Xóa <strong>{removing.email}</strong> khỏi lớp? Tài khoản sẽ mất quyền truy cập lớp; dữ liệu được giữ lại.</p><div className="lms-actions"><button disabled={busy} onClick={() => mutate('DELETE', { user_id: removing.user_id }, 'Đã xóa sinh viên khỏi lớp.')}>Xóa khỏi lớp</button><button disabled={busy} onClick={() => setRemoving(null)}>Hủy</button></div></section>}
     {loading ? <p role="status">Đang tải thành viên…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
       <div className="lms-table-wrap"><table><caption className="sr-only">Danh sách thành viên lớp</caption><thead><tr><th>Thành viên</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody>{data.items.map(member => <tr key={member.id}><td><strong>{member.full_name || 'Chưa có tên'}</strong><span className="lms-secondary">{member.email}</span></td><td>{member.role === 'teacher' ? 'Giảng viên' : 'Sinh viên'}</td><td>{writable && member.role === 'student' && (status === 'active' ? <button disabled={busy} onClick={() => setRemoving(member)}>Xóa khỏi lớp</button> : <button disabled={busy} onClick={() => mutate('POST', { email: member.email }, 'Đã phục hồi sinh viên vào lớp.')}>Thêm lại</button>)}</td></tr>)}</tbody></table></div>
-      {!data.items.length && <p className="lms-empty">Chưa có thành viên trong danh sách này.</p>}
+      {!data.items.length && <EmptyState icon="people" compact text="Chưa có thành viên trong danh sách này. Thêm sinh viên bằng email hoặc nhập danh sách ở trên." />}
       <Pagination page={page} total={data.total} onChange={setPage} disabled={busy} />
     </>}
   </section>;

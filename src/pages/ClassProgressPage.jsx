@@ -3,6 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
+import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
+
+// Heatmap step so slow students stand out: 0, 1–49, 50–99, 100.
+const heat = lab => lab.completed || lab.percent >= 100 ? 'heat-4' : lab.percent >= 50 ? 'heat-3' : lab.percent > 0 ? 'heat-2' : 'heat-1';
 
 function Review({ classId, submissionId, onDone }) {
   const { data, error, loading } = useLmsResource(`/api/classes/${classId}/submissions/${submissionId}`);
@@ -55,11 +59,13 @@ export default function ClassProgressPage() {
   const selectedMember = data.members.find(item => String(item.membership_id) === target);
   return <>
     <header className="lms-heading"><div><h1>Tiến độ và bài chờ chấm</h1><p>Theo dõi sinh viên theo từng lab và duyệt kết quả thực hành.</p></div><Link to={`/classes/${classId}`}>Về lớp học</Link></header>
-    <div className="lms-table-wrap"><table><caption className="sr-only">Tiến độ sinh viên theo lab</caption><thead><tr><th>Sinh viên</th>{labs.map(lab => <th key={lab.id}>Lab {lab.id}</th>)}</tr></thead><tbody>{data.members.map(member => <tr key={member.membership_id}><td><strong>{member.full_name || member.email}</strong><span className="lms-secondary">{member.email}{member.membership_status === 'removed' ? ' · Đã xóa khỏi lớp' : ''}</span></td>{member.labs.map(lab => <td key={lab.id} title={lab.reason}>{lab.completed ? '✓ ' : lab.access === 'locked' ? '🔒 ' : ''}{lab.percent}%</td>)}</tr>)}</tbody></table></div>
+    <p className="progress-legend" aria-hidden="true"><span className="heat-1">0%</span><span className="heat-2">1–49%</span><span className="heat-3">50–99%</span><span className="heat-4">Đạt</span><span><LockIcon size={12} /> Chưa mở</span></p>
+    <div className="lms-table-wrap progress-table"><table><caption className="sr-only">Tiến độ sinh viên theo lab</caption><thead><tr><th>Sinh viên</th>{labs.map(lab => <th key={lab.id}>Lab {lab.id}</th>)}</tr></thead><tbody>{data.members.map(member => <tr key={member.membership_id}><th scope="row"><strong>{member.full_name || member.email}</strong><span className="lms-secondary report-email" title={member.email}>{member.email}{member.membership_status === 'removed' ? ' · Đã xóa khỏi lớp' : ''}</span></th>{member.labs.map(lab => <td key={lab.id} className={`progress-cell ${heat(lab)}${lab.access === 'locked' ? ' is-locked' : ''}`} title={lab.reason || undefined}>
+      {lab.completed ? <CheckIcon size={13} /> : lab.access === 'locked' ? <LockIcon size={12} /> : null}{lab.completed ? <span className="sr-only">Đạt, </span> : lab.access === 'locked' ? <span className="sr-only">Chưa mở, </span> : null}{lab.percent}%</td>)}</tr>)}</tbody></table></div>
     {!data.members.length && <p>Chưa có sinh viên trong lớp.</p>}
     <section className="lms-panel"><h2>{data.pending_submissions.length} bài đang chờ chấm</h2>{data.pending_submissions.map(item => <div className="pending-submission" key={item.id}><span>{data.members.find(member => member.membership_id === item.membership_id)?.email} · {item.lesson_id} · v{item.revision}</span><button onClick={() => setReview(item.id)}>Mở và chấm bài</button></div>)}</section>
     {review && <Review key={review} classId={classId} submissionId={review} onDone={() => { setReview(null); reload(); }} />}
-    <form className="lms-panel" onSubmit={override}><h2>Miễn yêu cầu hoặc mở khóa riêng</h2><p>Mở khóa chỉ cấp quyền truy cập; miễn bài được lưu thành kết quả waived, kèm lý do.</p><div className="lms-form-grid">
+    <form className="lms-panel" onSubmit={override}><h2>Miễn yêu cầu hoặc mở khóa riêng</h2><p>Mở khóa chỉ cấp quyền truy cập; miễn bài được lưu thành kết quả “được miễn”, kèm lý do.</p><div className="lms-form-grid">
       <label>Sinh viên<select required value={target} onChange={event => { setTarget(event.target.value); setLesson(''); setLabId(''); }}><option value="">Chọn sinh viên</option>{data.members.filter(item => item.membership_status === 'active').map(member => <option value={member.membership_id} key={member.membership_id}>{member.email}</option>)}</select></label>
       <label>Thao tác<select value={action} onChange={event => setAction(event.target.value)}><option value="waive">Miễn một bài</option><option value="unlock">Mở khóa một lab</option></select></label>
       {action === 'waive' ? <label>Bài học<select required value={lesson} onChange={event => setLesson(event.target.value)}><option value="">Chọn bài</option>{selectedMember?.labs.flatMap(lab => lab.lessons.map(item => <option value={item.id} key={item.id}>Lab {lab.id}: {item.title}</option>))}</select></label> : <label>Lab<select required value={labId} onChange={event => setLabId(event.target.value)}><option value="">Chọn lab</option>{selectedMember?.labs.map(lab => <option key={lab.id} value={lab.id}>Lab {lab.id}</option>)}</select></label>}

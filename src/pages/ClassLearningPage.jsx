@@ -4,6 +4,7 @@ import { request, useAuth } from '../contexts/auth-api';
 import { TelemetryContext } from '../contexts/telemetry-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
+import EmptyState from '../components/common/EmptyState';
 import DocViewer from '../components/common/DocViewer';
 import VideoPlayer from '../components/common/VideoPlayer';
 import TelemetryControls from '../components/groundstation/TelemetryControls';
@@ -37,16 +38,19 @@ function PracticeBrief({ lesson, classId, exercises = [], activeExercise = null 
       downloadFile(`${downloadId}.ino`, response, 'text/plain');
     } catch (failure) { setError(failure.message); }
   }
+  const hasDownload = content.mode === 'hardware' && downloadId;
+  // Nothing written for this lesson yet: hide the "Mục tiêu bài học" box instead of showing an internal note.
+  if (!content.instructions && !activeExercise?.description && !content.evidence && !content.rubric && !hasDownload) return null;
   return <div className="fig-goal-practice">
     <div>
       {activeExercise && exercises.length > 1 && (
         <p className="practice-brief-active"><strong>Bài con đang chọn:</strong> <code>{activeExercise.id}</code> — {activeExercise.description}</p>
       )}
-      {content.instructions ? <DocViewer content={content.instructions} docPath={undefined} /> : <p>{activeExercise?.description || 'Giảng viên chưa bổ sung hướng dẫn chi tiết cho bài này.'}</p>}
+      {content.instructions ? <DocViewer content={content.instructions} docPath={undefined} /> : activeExercise?.description ? <p>{activeExercise.description}</p> : null}
       {content.evidence && <p><strong>Minh chứng:</strong> {content.evidence}</p>}
       {content.rubric && <details className="fig-goal-rubric"><summary>Tiêu chí chấm</summary><DocViewer content={content.rubric} docPath={undefined} /></details>}
     </div>
-    {content.mode === 'hardware' && downloadId && <div className="lesson-example-links">
+    {hasDownload && <div className="lesson-example-links">
       <button type="button" className="btn btn-sm btn-outline" onClick={download}>Tải mã mẫu ESP32 (.ino)</button><Notice error={error} />
     </div>}
   </div>;
@@ -179,9 +183,13 @@ function LessonContent({ lesson, labId, classId, preview, staffView = false, onR
   const unmeasuredVideo = lesson.type === 'video' && !preview && !lesson.content.confirmation_allowed && !/\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(lesson.content.url || '');
   const bodyNode = lesson.type === 'practice' ? <Practice lesson={lesson} labId={labId} classId={classId} preview={preview} staffView={staffView} onRefresh={onRefresh} exercises={exercises} activeExercise={activeExercise} onSelectExercise={onSelectExercise} />
     : lesson.type === 'quiz' ? (preview || !lesson.content.bank_ready
-      ? <p className="lesson-achieved" role="status">{preview ? 'Chế độ xem toàn bộ không tạo lượt làm bài.' : 'Câu hỏi kiểm tra của mục này chưa sẵn sàng.'} {staffView && <Link to={`/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/questions`}>Soạn câu hỏi</Link>}</p>
+      ? <EmptyState icon="question" compact
+        text={staffView ? 'Giảng viên và quản trị viên không làm bài ở đây (không tạo lượt làm bài). Mở ngân hàng câu hỏi để xem và soạn câu hỏi của mục này.' : preview ? 'Chế độ xem thử không tạo lượt làm bài.' : 'Câu hỏi kiểm tra của mục này chưa sẵn sàng. Giảng viên sẽ bổ sung sớm.'}
+        action={staffView ? <Link to={`/classes/${classId}/lessons/${encodeURIComponent(lesson.id)}/questions`}>Mở ngân hàng câu hỏi</Link> : null} />
       : <Suspense fallback={<p>Đang tải câu hỏi…</p>}><QuizPanel classId={classId} labId={labId} lessonId={lesson.id} title={lesson.title} policySummary={lesson.content} onRefresh={onRefresh} /></Suspense>)
-      : lesson.type === 'labtest' ? (preview ? <p>Chế độ xem toàn bộ dành cho Giảng viên / Quản trị viên không tạo lượt thi sinh viên. Mỗi đề thi gồm tối đa {lesson.content.num_questions || 20} câu rút ngẫu nhiên ({lesson.content.time_limit_minutes || 20} phút · đạt từ {lesson.content.pass_score || 16} câu đúng · {lesson.content.max_attempts == null ? 'không giới hạn lượt' : `${lesson.content.max_attempts} lượt/đợt${lesson.content.cooldown_minutes > 0 ? ` (chờ ${lesson.content.cooldown_minutes} phút khi hết lượt)` : ''}`}). <Link to={`/classes/${classId}/labs/${labId}/questions`}>Mở ngân hàng câu hỏi Lab {labId}</Link></p> : <Suspense fallback={<p>Đang tải bài kiểm tra…</p>}><QuizPanel classId={classId} labId={labId} policySummary={lesson.content} onRefresh={onRefresh} /></Suspense>)
+      : lesson.type === 'labtest' ? (preview ? <EmptyState icon="question" compact
+        text={`${staffView ? 'Giảng viên / quản trị viên không làm bài ở đây (không tạo lượt thi sinh viên). ' : 'Chế độ xem thử không tạo lượt thi. '}Mỗi đề gồm tối đa ${lesson.content.num_questions || 20} câu rút ngẫu nhiên · ${lesson.content.time_limit_minutes || 20} phút · đạt từ ${lesson.content.pass_score || 16} câu đúng · ${lesson.content.max_attempts == null ? 'không giới hạn lượt' : `${lesson.content.max_attempts} lượt/đợt${lesson.content.cooldown_minutes > 0 ? ` (chờ ${lesson.content.cooldown_minutes} phút khi hết lượt)` : ''}`}.`}
+        action={staffView ? <Link to={`/classes/${classId}/labs/${labId}/questions`}>Mở ngân hàng câu hỏi Lab {labId}</Link> : null} /> : <Suspense fallback={<p>Đang tải bài kiểm tra…</p>}><QuizPanel classId={classId} labId={labId} policySummary={lesson.content} onRefresh={onRefresh} /></Suspense>)
         : null;
   return <LabFigView {...fig} lesson={lesson}
     noticeNode={<>{fig.noticeNode}<Notice {...notice} />

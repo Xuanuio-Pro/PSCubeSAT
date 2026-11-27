@@ -118,6 +118,7 @@ export default function CourseSidebar({ labs, currentLabId, activeLesson, onSele
                         <button
                           type="button"
                           key={lesson.id}
+                          title={lesson.title}
                           className={`sub-lesson-item ${isLessonActive ? 'active' : ''} is-${lessonStatus}`}
                           disabled={locked}
                           aria-current={isLessonActive ? 'step' : undefined}

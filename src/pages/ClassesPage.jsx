@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { request, useAuth } from '../contexts/auth-api';
 import { ClassFields, Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
+import EmptyState from '../components/common/EmptyState';
+import { usePageTitle } from '../utils/page-title';
 
 const statusLabels = { draft: 'Bản nháp', active: 'Đang mở', archived: 'Đã lưu trữ' };
 
@@ -26,6 +28,7 @@ export default function ClassesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const canCreate = ['admin', 'teacher'].includes(user.role);
+  usePageTitle(canCreate ? 'Lớp học' : 'Lớp của tôi');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ code: '', name: '', description: '', term: '', status: 'draft' });
@@ -50,8 +53,10 @@ export default function ClassesPage() {
       <Notice error={failure} /><button className="lms-primary" disabled={busy}>{busy ? 'Đang tạo…' : 'Tạo lớp'}</button>
     </form>}
     {loading ? <p role="status">Đang tải lớp học…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
-      {!data.items.length ? <section className="lms-empty"><h2>{canCreate ? 'Chưa có lớp học' : 'Bạn chưa tham gia lớp nào'}</h2><p>{canCreate ? 'Tạo lớp đầu tiên để thêm sinh viên đã đăng ký tài khoản.' : 'Gửi email tài khoản của bạn cho giảng viên để được thêm vào lớp.'}</p></section> :
-        <div className="lms-class-list">{data.items.map(item => <article key={item.id} className="lms-class-row"><div><span className="lms-secondary">{item.code}{item.term ? ` · ${item.term}` : ''}</span><h2><Link to={`/classes/${item.id}`}>{item.name}</Link></h2><p>{item.description || 'Chưa có mô tả lớp.'}</p></div><div className="lms-class-meta"><span className={`lms-status ${item.status}`}>{statusLabels[item.status]}</span><Link to={`/classes/${item.id}`}>{item.can_manage ? 'Quản lý lớp' : 'Xem lớp'}</Link></div></article>)}</div>}
+      {!data.items.length ? <EmptyState icon="class" title={canCreate ? 'Chưa có lớp học' : 'Bạn chưa tham gia lớp nào'}
+        text={canCreate ? 'Tạo lớp đầu tiên để thêm sinh viên đã đăng ký tài khoản.' : 'Gửi email tài khoản của bạn cho giảng viên để được thêm vào lớp.'}
+        action={canCreate && !creating ? <button className="lms-primary" onClick={() => setCreating(true)}>Tạo lớp học</button> : null} /> :
+        <div className="lms-class-list">{data.items.map(item => <article key={item.id} className="lms-class-row"><div><span className="lms-secondary">{item.code}{item.term ? ` · ${item.term}` : ''}</span><h2><Link className="lms-class-link" to={`/classes/${item.id}`}>{item.name}</Link></h2><p>{item.description || 'Chưa có mô tả lớp.'}</p></div><div className="lms-class-meta"><span className={`lms-status ${item.status}`}>{statusLabels[item.status]}</span><Link to={`/classes/${item.id}`}>{item.can_manage ? 'Quản lý lớp' : 'Xem lớp'}</Link></div></article>)}</div>}
       <Pagination page={page} total={data.total} onChange={setPage} />
     </>}
   </>;

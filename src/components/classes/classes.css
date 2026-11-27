@@ -1488,3 +1488,109 @@ body:has(.home-page) {
   .header.is-lms .header-search { display: none; }
 }
 
+/* ===== Row "⋯" menu ===== */
+.lms-action-menu { position: relative; display: inline-flex; }
+.lms-shell:not(.is-learning-shell) .lms-action-menu-toggle,
+.lms-action-menu-toggle {
+  width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; display: inline-grid; place-items: center;
+  border-radius: 10px; font-size: 1.1rem; line-height: 1;
+}
+.lms-action-menu-list {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 50; min-width: 220px; display: grid; gap: 2px; padding: 6px;
+  border: 1px solid #d8e5ee; border-radius: 14px; background: #fff; box-shadow: 0 16px 32px -4px rgba(12, 12, 13, 0.18);
+}
+.lms-shell:not(.is-learning-shell) .lms-action-menu-list button,
+.lms-action-menu-list button {
+  width: 100%; min-height: 38px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; box-shadow: none;
+  color: #094174; font-size: 0.85rem; font-weight: 600; text-align: left; white-space: nowrap;
+}
+.lms-shell:not(.is-learning-shell) .lms-action-menu-list button:hover:not(:disabled) { background: #edf5fc; box-shadow: none; }
+.lms-shell:not(.is-learning-shell) .lms-action-menu-list button.is-danger { margin-top: 4px; border-top: 1px solid #eef2f6; border-radius: 0 0 9px 9px; color: #b42318; }
+.lms-shell:not(.is-learning-shell) .lms-action-menu-list button.is-danger:hover:not(:disabled) { background: #fef3f2; color: #b42318; }
+
+/* Disabled buttons look disabled (pagination with a single page, busy rows) */
+.lms-shell button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* ===== Account table → cards under 768px ===== */
+@media (max-width: 767px) {
+  .lms-shell:not(.is-learning-shell) .admin-users-table { overflow: visible; background: transparent; box-shadow: none; }
+  .lms-shell:not(.is-learning-shell) .admin-users-table table { min-width: 0; }
+  .admin-users-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .admin-users-table table, .admin-users-table tbody, .admin-users-table tr, .admin-users-table td { display: block; width: 100%; }
+  .admin-users-table tr { margin-bottom: 12px; padding: 14px 16px; border-radius: 20px; background: var(--fig-surface); box-shadow: var(--fig-shadow); }
+  .lms-shell:not(.is-learning-shell) .admin-users-table td { padding: 4px 0; border: 0; white-space: normal; min-width: 0; }
+  .admin-users-table td[data-label] { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .admin-users-table td[data-label]::before { content: attr(data-label); font-size: 0.78rem; font-weight: 700; opacity: 0.7; }
+  .admin-users-table td[data-label="Thao tác"] { padding-top: 10px; }
+  .lms-shell:not(.is-learning-shell) .admin-users-table .lms-actions { justify-content: flex-end; flex-wrap: nowrap; }
+}
+
+/* ===== Report & progress tables: student column stays put while scrolling sideways ===== */
+.lms-shell .report-table tbody th, .lms-shell .progress-table tbody th { font-weight: 400; text-align: left; text-transform: none; letter-spacing: normal; }
+.lms-shell:not(.is-learning-shell) .report-table tbody th,
+.lms-shell:not(.is-learning-shell) .progress-table tbody th { background: #f3f5fb; color: var(--fig-navy); }
+.report-table thead th:first-child, .report-table tbody th,
+.progress-table thead th:first-child, .progress-table tbody th {
+  position: sticky; left: 0; z-index: 2; min-width: 200px; max-width: 260px; box-shadow: 1px 0 0 rgba(9, 65, 116, 0.12);
+}
+.lms-shell:not(.is-learning-shell) .report-table thead th:first-child,
+.lms-shell:not(.is-learning-shell) .progress-table thead th:first-child { background: #e4ebf3; }
+.lms-shell:not(.is-learning-shell) td .report-email,
+.lms-shell:not(.is-learning-shell) th .report-email { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+@media (max-width: 640px) {
+  .lms-shell:not(.is-learning-shell) th .report-email { white-space: normal; overflow-wrap: anywhere; }
+  .report-table tbody th, .progress-table tbody th { min-width: 150px; }
+}
+.report-scores { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+.report-scores li { width: 30px; display: grid; justify-items: center; padding: 3px 0; border-radius: 8px; background: #e3edf7; color: #094174; }
+.report-scores small { font-size: 0.68rem; font-weight: 700; opacity: 0.75; }
+.report-scores b { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.report-scores li.is-done { background: #d1fae5; color: #065f46; }
+.report-scores li.is-empty { background: transparent; box-shadow: inset 0 0 0 1px rgba(9, 65, 116, 0.18); }
+
+/* Progress heatmap */
+.lms-shell .progress-cell { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.progress-cell svg { vertical-align: -2px; margin-right: 4px; }
+.lms-shell:not(.is-learning-shell) .progress-cell.heat-1 { background: #fef3f2; color: #b42318; }
+.lms-shell:not(.is-learning-shell) .progress-cell.heat-2 { background: #fffaeb; color: #93370d; }
+.lms-shell:not(.is-learning-shell) .progress-cell.heat-3 { background: #e0f2fe; color: #075985; }
+.lms-shell:not(.is-learning-shell) .progress-cell.heat-4 { background: #d1fae5; color: #065f46; }
+.lms-shell:not(.is-learning-shell) .progress-cell.is-locked { background: #f2f4f7; color: #475467; }
+.progress-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; font-size: 0.8rem; font-weight: 600; }
+.progress-legend span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; background: #f2f4f7; color: #475467; }
+.progress-legend .heat-1 { background: #fef3f2; color: #b42318; }
+.progress-legend .heat-2 { background: #fffaeb; color: #93370d; }
+.progress-legend .heat-3 { background: #e0f2fe; color: #075985; }
+.progress-legend .heat-4 { background: #d1fae5; color: #065f46; }
+
+/* ===== Learning path: collapsible labs, lesson type icons ===== */
+.path-lab { flex: 1; min-width: 0; padding: 18px 24px; border-radius: 22px; background: rgba(255, 255, 255, 0.95); box-shadow: 0 8px 24px -6px rgba(10, 65, 116, 0.08); }
+.lms-shell:not(.is-learning-shell) .path-lab { background: var(--fig-card); box-shadow: var(--fig-shadow); }
+.path-locked .path-lab { opacity: 0.92; }
+.path-lab > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none; cursor: pointer; }
+.path-lab > summary::-webkit-details-marker { display: none; }
+.path-lab-head { display: grid; gap: 2px; min-width: 0; }
+.lms-shell .path-lab-head h2 { margin: 0; font-size: 1.1rem; }
+.path-lab-meta { font-size: 0.85rem; font-weight: 600; color: #3d5a73; }
+.path-chevron { flex: none; width: 10px; height: 10px; border-right: 2px solid #094174; border-bottom: 2px solid #094174; transform: rotate(-45deg); transition: transform var(--transition-fast); }
+.path-lab[open] .path-chevron { transform: rotate(45deg); }
+.path-lab > summary:focus-visible { outline: 3px solid rgba(9, 65, 116, 0.35); outline-offset: 4px; border-radius: 12px; }
+.path-open-lab { display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px; border-radius: 999px; background: linear-gradient(180deg, #3e54a0, #1c7caf); color: #fff; font-weight: 700; font-size: 0.85rem; }
+.path-open-lab:hover { color: #fff; filter: brightness(1.08); }
+.path-reason svg, .path-lesson small svg { vertical-align: -2px; }
+.path-lesson-icon { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: #e3edf7; color: #094174; }
+.path-lesson-completed .path-lesson-icon { background: #d1fae5; color: #065f46; }
+.path-lesson-locked .path-lesson-icon { background: #f2f4f7; color: #667085; }
+.lms-shell .path-lesson small { font-size: 0.8rem; color: #3d5a73; white-space: nowrap; }
+.path-lesson-completed small { color: #067647; }
+.path-pending { margin-top: 10px; font-size: 0.88rem; font-weight: 600; color: #93370d; }
+.path-state svg { display: block; }
+.path-completed .path-state { background: linear-gradient(135deg, #067647, #10b981); }
+
+/* Whole class card is clickable (stretched link); the meta buttons stay on top */
+.lms-class-row { position: relative; cursor: pointer; }
+.lms-class-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.lms-class-meta { position: relative; z-index: 1; }
+.lms-class-link:focus-visible { outline: none; }
+.lms-class-row:has(.lms-class-link:focus-visible) { outline: 3px solid rgba(9, 65, 116, 0.35); outline-offset: 2px; }
+

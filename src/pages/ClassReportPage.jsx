@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { authorizedFetch } from '../contexts/auth-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
+import EmptyState from '../components/common/EmptyState';
 
 const dateTime = value => value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
 
@@ -38,18 +39,23 @@ export default function ClassReportPage() {
     </dl>
     <div className="lms-actions"><button className="lms-primary" disabled={busy || !data.students.length} onClick={exportCsv}>{busy ? 'Đang xuất…' : 'Xuất CSV'}</button><button disabled={busy} onClick={reload}>Cập nhật</button></div>
     <Notice error={failure} />
-    {!data.students.length ? <p className="lms-empty">Lớp chưa có sinh viên.</p> : <div className="lms-table-wrap"><table>
+    {!data.students.length ? <EmptyState icon="people" text="Lớp chưa có sinh viên nên chưa có số liệu báo cáo." action={<Link to={`/classes/${classId}`}>Thêm sinh viên</Link>} /> : <div className="lms-table-wrap report-table"><table>
       <caption className="sr-only">Tiến độ, điểm Lab Test và hoạt động của từng sinh viên</caption>
-      <thead><tr><th>Sinh viên</th><th>Tiến độ</th><th>Lab đạt</th><th>Lượt thi</th><th>Chờ duyệt</th><th>Hoạt động gần nhất</th>{labs.map(lab => <th key={lab.id}>Lab {lab.id}<span className="lms-secondary">điểm cao nhất</span></th>)}</tr></thead>
+      <thead><tr><th>Sinh viên</th><th>Tiến độ</th><th>Lab đạt</th><th>Lượt thi</th><th>Chờ duyệt</th><th>Hoạt động gần nhất</th>{labs.length > 0 && <th>Lab Test<span className="lms-secondary">điểm cao nhất, Lab {labs[0].id}–{labs[labs.length - 1].id}</span></th>}</tr></thead>
       <tbody>{data.students.map(student => <tr key={student.membership_id}>
-        <td><strong>{student.full_name || student.email}</strong><span className="lms-secondary">{student.email}{student.membership_status === 'removed' ? ' · Đã xóa khỏi lớp' : ''}</span>
-          {student.legacy_compiled_labs.length > 0 && <span className="lms-secondary">Lịch sử biên dịch cũ: Lab {student.legacy_compiled_labs.join(', ')} (không tính hoàn thành)</span>}</td>
+        <th scope="row"><strong>{student.full_name || student.email}</strong><span className="lms-secondary report-email" title={student.email}>{student.email}{student.membership_status === 'removed' ? ' · Đã xóa khỏi lớp' : ''}</span>
+          {student.legacy_compiled_labs.length > 0 && <span className="lms-secondary">Lịch sử biên dịch cũ: Lab {student.legacy_compiled_labs.join(', ')} (không tính hoàn thành)</span>}</th>
         <td>{student.percent}%</td>
         <td>{student.completed_labs}/{student.total_labs}</td>
         <td>{student.attempts_total}</td>
         <td>{student.pending_reviews}</td>
         <td>{dateTime(student.last_activity_at)}</td>
-        {student.labs.map(lab => <td key={lab.id}>{lab.completed ? '✓ ' : ''}{lab.best_score === null ? '—' : `${lab.best_score}/5`}{lab.attempts > 0 && <span className="lms-secondary">{lab.attempts} lượt</span>}</td>)}
+        {student.labs.length > 0 && <td><ol className="report-scores">{student.labs.map(lab => {
+          const label = `Lab ${lab.id}: ${lab.best_score === null ? 'chưa thi' : `${lab.best_score}/5`}${lab.attempts > 0 ? `, ${lab.attempts} lượt` : ''}${lab.completed ? ', đã đạt lab' : ''}`;
+          return <li key={lab.id} className={lab.completed ? 'is-done' : lab.best_score === null ? 'is-empty' : ''} title={label} aria-label={label}>
+            <small aria-hidden="true">{lab.id}</small><b aria-hidden="true">{lab.best_score === null ? '—' : lab.best_score}</b>
+          </li>;
+        })}</ol></td>}
       </tr>)}</tbody>
     </table></div>}
     <p className="lms-secondary">Lịch sử biên dịch từ hệ thống cũ chỉ để tham khảo. Nếu SV đã hoàn thành tương đương, dùng “Miễn một bài” kèm lý do ở trang chấm bài.</p>

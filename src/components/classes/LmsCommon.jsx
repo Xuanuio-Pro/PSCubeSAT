@@ -1,3 +1,5 @@
+import { useEffect, useId, useRef, useState } from 'react';
+
 export function Notice({ error = '', message = '' }) {
   if (error) return <p className="lms-notice lms-error" role="alert">{error}</p>;
   if (message) return <p className="lms-notice" role="status">{message}</p>;
@@ -11,6 +13,31 @@ export function Pagination({ page, total, pageSize = 20, onChange, disabled = fa
     <button disabled={disabled || page <= 1} onClick={() => onChange(page - 1)}>Trang trước</button>
     <button disabled={disabled || page >= pages} onClick={() => onChange(page + 1)}>Trang sau</button>
   </nav>;
+}
+
+// "⋯" menu for secondary row actions; items: [{ label, onSelect, danger?, disabled? }].
+export function ActionMenu({ label = 'Thao tác khác', items, disabled = false }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const menuId = useId();
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = event => { if (event.key === 'Escape') setOpen(false); };
+    const onPointer = event => { if (ref.current && !ref.current.contains(event.target)) setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onPointer); };
+  }, [open]);
+  const visible = items.filter(Boolean);
+  if (!visible.length) return null;
+  return <div className="lms-action-menu" ref={ref}>
+    <button type="button" className="lms-action-menu-toggle" aria-label={label} title={label} aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} disabled={disabled} onClick={() => setOpen(value => !value)}>
+      <span aria-hidden="true">⋯</span>
+    </button>
+    {open && <div className="lms-action-menu-list" role="menu" id={menuId}>
+      {visible.map(item => <button key={item.label} type="button" role="menuitem" className={item.danger ? 'is-danger' : ''} disabled={item.disabled} onClick={() => { setOpen(false); item.onSelect(); }}>{item.label}</button>)}
+    </div>}
+  </div>;
 }
 
 export function ClassFields({ value, onChange, creating = false }) {

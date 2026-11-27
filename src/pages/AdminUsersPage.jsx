@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { request, useAuth } from '../contexts/auth-api';
-import { Notice, Pagination } from '../components/classes/LmsCommon';
+import { ActionMenu, Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import ConfirmDialog from '../components/classes/ConfirmDialog';
 
@@ -81,6 +81,7 @@ export default function AdminUsersPage() {
     <Notice {...notice} />
     {pending && <ConfirmDialog
       tone={pending.remove || pending.change?.status === 'locked' ? 'danger' : 'info'}
+      icon={pending.change?.status === 'locked' ? 'lock' : ''}
       title={`${pending.label} tài khoản ${pending.user.email}?`}
       message={confirmMessage(pending)}
       confirmLabel={pending.remove ? 'Xóa tài khoản' : pending.change?.status === 'locked' ? 'Khóa tài khoản' : 'Xác nhận'}
@@ -111,22 +112,25 @@ export default function AdminUsersPage() {
     </ConfirmDialog>}
     {loading ? <div className="admin-page-panel"><p role="status">Đang tải tài khoản…</p></div> : error ? <div className="admin-page-panel"><Notice error={error} /><button onClick={reload}>Thử lại</button></div> : <>
       <section className="admin-panel">
-        <div className="lms-table-wrap"><table><caption className="sr-only">Danh sách tài khoản</caption><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <div className="lms-table-wrap admin-users-table"><table><caption className="sr-only">Danh sách tài khoản</caption><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
           <tbody>{data.items.map(user => <tr key={user.id}>
             <td>
               <strong>{user.full_name || 'Chưa có tên'}</strong>
               <span className="lms-secondary">{user.email}</span>
               {user.pending_password_reset && <span className="admin-reset-badge">Đang chờ cấp lại mật khẩu</span>}
             </td>
-            <td>{roleLabels[user.role]}</td><td><span className={`lms-status ${user.status}`}>{user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}</span></td>
-            <td><div className="lms-actions">
+            <td data-label="Vai trò">{roleLabels[user.role]}</td><td data-label="Trạng thái"><span className={`lms-status ${user.status}`}>{user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}</span></td>
+            <td data-label="Thao tác"><div className="lms-actions">
               {user.id === currentUser?.id && <span className="lms-secondary">Tài khoản của bạn</span>}
               {user.role === 'admin' && user.id !== currentUser?.id && <span className="lms-secondary">Tài khoản quản trị</span>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: user.role === 'teacher' ? 'user' : 'teacher' }, label: user.role === 'teacher' ? 'Thu hồi quyền giảng viên của' : 'Cấp quyền giảng viên cho' }); }}>{user.role === 'teacher' ? 'Thu hồi quyền GV' : 'Cấp quyền GV'}</button>}
-              {user.id !== currentUser?.id && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); }}>{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>}
-              {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, resetLink: true, label: 'Cấp link đặt lại mật khẩu cho' }); }}>Cấp link đặt lại</button>}
-              {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, reset: true, label: 'Cấp mật khẩu tạm cho' }); }}>Cấp mật khẩu tạm</button>}
-              {user.role !== 'admin' && <button className="admin-danger-btn" disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, remove: true, label: 'Xóa' }); }}>Xóa</button>}
+              {/* Nobody can lock themselves out: the own row has no lock action (the server refuses it too). */}
+              {user.id !== currentUser?.id && <ActionMenu label={`Thao tác khác cho ${user.email}`} disabled={busy} items={[
+                { label: user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản', onSelect: () => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); } },
+                user.role !== 'admin' && { label: 'Cấp link đặt lại mật khẩu', onSelect: () => { setNotice({}); setIssued(null); setPending({ user, resetLink: true, label: 'Cấp link đặt lại mật khẩu cho' }); } },
+                user.role !== 'admin' && { label: 'Cấp mật khẩu tạm', onSelect: () => { setNotice({}); setIssued(null); setPending({ user, reset: true, label: 'Cấp mật khẩu tạm cho' }); } },
+                user.role !== 'admin' && { label: 'Xóa tài khoản', danger: true, onSelect: () => { setNotice({}); setIssued(null); setPending({ user, remove: true, label: 'Xóa' }); } },
+              ]} />}
             </div></td>
           </tr>)}</tbody></table></div>
         {!data.items.length && <p className="admin-empty">Không có tài khoản phù hợp. Hãy thử tên, email hoặc bộ lọc khác.</p>}

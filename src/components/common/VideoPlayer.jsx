@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import EmptyState from './EmptyState';
 
 function NativeVideo({ url, initialPosition, onSegment }) {
   const player = useRef(null);
@@ -39,7 +40,7 @@ function NativeVideo({ url, initialPosition, onSegment }) {
 }
 
 export default function VideoPlayer({ url, initialPosition = 0, onSegment = undefined, trackingMode = 'native' }) {
-  if (!url) return <div className="video-player"><div className="video-placeholder"><span>Video bài giảng sẽ được cập nhật</span></div></div>;
+  if (!url) return <EmptyState icon="video" compact text="Video bài giảng của phần này đang được cập nhật. Bạn có thể đọc tài liệu và tiếp tục các phần khác." />;
   const native = /\.(mp4|webm|ogg|ogv)(?:\?|#|$)/i.test(url);
   if (native) return <div className="video-player"><NativeVideo url={url} initialPosition={initialPosition} onSegment={trackingMode === 'native' ? onSegment : undefined} /></div>;
   return <div className="video-player"><iframe src={url} title="Video bài giảng" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>;
