@@ -6,18 +6,9 @@ import { labTitleLines } from '../layout/lab-titles';
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, CircleIcon, HomeIcon, LockIcon } from '../common/HeaderIcons';
 import { LabBadgeFace, LessonStatusIcon } from '../layout/SidebarShared';
 import { useScrollRailToActive } from '../layout/use-scroll-rail';
+import { classLabEntryLesson, stateFor } from './class-lab-state';
 
 const typeLabels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
-
-function stateFor(lab, unlockedView = false) {
-  const lessons = lab.lessons || [];
-  const allLessonsLocked = lessons.length > 0 && lessons.every(item => item.access === 'locked' || !item.content);
-  if (!unlockedView && (lab.access === 'locked' || allLessonsLocked)) return { status: 'locked', label: 'Đang khóa', done: 0, total: lessons.length };
-  if (unlockedView) return { status: 'in-progress', label: 'Mở toàn bộ', done: lessons.filter(item => ['completed', 'waived'].includes(item.progress?.status)).length, total: lessons.length };
-  const completed = lessons.filter(item => item.access !== 'locked' && ['completed', 'waived'].includes(item.progress?.status)).length;
-  if (lessons.length > 0 && completed === lessons.length) return { status: 'completed', label: 'Đã hoàn thành', done: completed, total: lessons.length };
-  return { status: 'in-progress', label: `Đang học (${lessons.length ? Math.round((completed / lessons.length) * 100) : 0}%)`, done: completed, total: lessons.length };
-}
 
 export default function ClassCourseSidebar({ labs, classId, activeLesson, onSelectLesson, homePath = `/classes/${classId}`, unlockedView = false }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -29,9 +20,7 @@ export default function ClassCourseSidebar({ labs, classId, activeLesson, onSele
 
   const selectLab = lab => {
     if (stateFor(lab, unlockedView).status === 'locked') return;
-    const targetLesson = lab.lessons?.find(item => unlockedView || (item.access === 'available' && item.content))
-      || lab.lessons?.find(item => unlockedView || (item.access !== 'locked' && item.content))
-      || lab.lessons?.[0];
+    const targetLesson = classLabEntryLesson(lab, unlockedView);
     if (!targetLesson) return;
     onSelectLesson(targetLesson.id);
   };

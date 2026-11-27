@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { request } from '../contexts/auth-api';
+import { request, useAuth } from '../contexts/auth-api';
 import { Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import ConfirmDialog from '../components/classes/ConfirmDialog';
@@ -14,6 +14,7 @@ function confirmMessage(pending) {
 }
 
 export default function AdminUsersPage() {
+  const { user: currentUser } = useAuth();
   const [filters, setFilters] = useState({ search: '', role: '', status: '', pending_reset: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -119,9 +120,10 @@ export default function AdminUsersPage() {
             </td>
             <td>{roleLabels[user.role]}</td><td><span className={`lms-status ${user.status}`}>{user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}</span></td>
             <td><div className="lms-actions">
-              {user.role === 'admin' && <span className="lms-secondary">Tài khoản quản trị</span>}
+              {user.id === currentUser?.id && <span className="lms-secondary">Tài khoản của bạn</span>}
+              {user.role === 'admin' && user.id !== currentUser?.id && <span className="lms-secondary">Tài khoản quản trị</span>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { role: user.role === 'teacher' ? 'user' : 'teacher' }, label: user.role === 'teacher' ? 'Thu hồi quyền giảng viên của' : 'Cấp quyền giảng viên cho' }); }}>{user.role === 'teacher' ? 'Thu hồi quyền GV' : 'Cấp quyền GV'}</button>}
-              <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); }}>{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>
+              {user.id !== currentUser?.id && <button disabled={busy} onClick={() => { setNotice({}); setPending({ user, change: { status: user.status === 'active' ? 'locked' : 'active' }, label: user.status === 'active' ? 'Khóa' : 'Mở khóa' }); }}>{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, resetLink: true, label: 'Cấp link đặt lại mật khẩu cho' }); }}>Cấp link đặt lại</button>}
               {user.role !== 'admin' && <button disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, reset: true, label: 'Cấp mật khẩu tạm cho' }); }}>Cấp mật khẩu tạm</button>}
               {user.role !== 'admin' && <button className="admin-danger-btn" disabled={busy} onClick={() => { setNotice({}); setIssued(null); setPending({ user, remove: true, label: 'Xóa' }); }}>Xóa</button>}

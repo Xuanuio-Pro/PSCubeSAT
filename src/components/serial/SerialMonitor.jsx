@@ -14,8 +14,9 @@ function SerialLine({ line, showTimestamp }) {
 // Rows are memoized so a burst of new lines does not re-render the hundreds already on screen.
 const Line = memo(SerialLine);
 
-/** @param {{height?: number|string, variant?: string, baudRate?: number}} props */
-export default function SerialMonitor({ height = 350, variant = 'default', baudRate = 115200 }) {
+// showConnect: only pages without the device bar (ground station) draw their own connect button here.
+/** @param {{height?: number|string, variant?: string, baudRate?: number, showConnect?: boolean}} props */
+export default function SerialMonitor({ height = 350, variant = 'default', baudRate = 115200, showConnect = false }) {
   const { isConnected, lines, send, clearLines, connect, serialSupport } = useSerial();
   const [input, setInput] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -55,7 +56,7 @@ export default function SerialMonitor({ height = 350, variant = 'default', baudR
   return (
     <div className={`card serial-card serial-card--${variant}`} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : 'auto' }}>
       <div className="card-header">
-        <h3>{variant === 'workspace' ? 'Serial Monitor' : '📟 Serial Monitor'}</h3>
+        <h3>Serial Monitor</h3>
         {variant !== 'workspace' && <div className="flex gap-sm items-center" style={{ flexWrap: 'wrap' }}>
           {button(frozen ? '▶ Tiếp tục' : '⏸ Tạm dừng', () => setFrozen(current => current ? null : lines), { title: 'Đóng băng màn hình để đọc; dữ liệu mới vẫn được nhận', active: !frozen })}
           {button(copied ? 'Đã chép' : 'Sao chép', copyAll, { title: 'Chép toàn bộ nội dung đang hiển thị', disabled: shown.length === 0 })}
@@ -75,8 +76,8 @@ export default function SerialMonitor({ height = 350, variant = 'default', baudR
         >
           {!isConnected && shown.length === 0 && serialSupport.available && (
             <div style={{ color: 'var(--text-muted)', padding: '1rem', textAlign: 'center' }}>
-              {variant === 'workspace' ? 'Đang kết nối Serial...' : <>Nhấn "Kết nối Serial" để bắt đầu<br /></>}
-              {variant !== 'workspace' && <button
+              {variant === 'workspace' ? 'Đang kết nối Serial...' : showConnect ? <>Nhấn "Kết nối" để bắt đầu<br /></> : 'Chưa kết nối mạch. Dùng nút kết nối trên trang này để bắt đầu nhận dữ liệu.'}
+              {variant !== 'workspace' && showConnect && <button
                 className="btn btn-sm btn-primary"
                 style={{ marginTop: '8px' }}
                 onClick={() => connect(baudRate)}

@@ -18,7 +18,7 @@ export default function LabQuestionsPage({ labId }) {
   const { data, error, loading } = useLmsResource(
     lab ? `/api/curriculum/legacy/labs/${lab.id}/questions` : null,
   );
-  if (!lab || !set) return <NotFoundPage />;
+  if (!lab || !set) return <NotFoundPage withChrome={false} />;
 
   const serverLessons = data?.lessons || [];
   const activeItem = serverLessons.find(item => item.lesson_id === activeLessonId) || null;

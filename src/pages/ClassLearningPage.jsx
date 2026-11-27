@@ -9,6 +9,8 @@ import VideoPlayer from '../components/common/VideoPlayer';
 import TelemetryControls from '../components/groundstation/TelemetryControls';
 import { downloadFile } from '../components/editor/project-files';
 import ClassCourseSidebar from '../components/classes/ClassCourseSidebar';
+import { classLabEntryLesson, stateFor as classLabState } from '../components/classes/class-lab-state';
+import { MobileLabPicker } from '../components/layout/SidebarShared';
 import LabFigView from '../components/layout/LabFigView';
 import PracticeExerciseTabs from '../components/lessons/PracticeExerciseTabs';
 import {
@@ -276,6 +278,9 @@ export default function ClassLearningPage({ experience = false }) {
     <ClassCourseSidebar labs={data?.labs || []} classId={classId} homePath={experience ? '/' : `/classes/${classId}`} activeLesson={selected?.lesson.id} onSelectLesson={selectLesson} unlockedView={isPrivileged} />
     <div className="player-main" ref={mainRef}>
       {selected && <div className="lab-mobile-lessons lab-mobile-lessons--curriculum">
+        <MobileLabPicker id={`class-${classId}-lab`} labs={data?.labs || []} currentLabId={selected.lab.id}
+          isLocked={lab => classLabState(lab, isPrivileged).status === 'locked'}
+          onPick={labId => { const lab = data.labs.find(item => item.id === labId); const target = lab && classLabEntryLesson(lab, isPrivileged); if (target) selectLesson(target.id); }} />
         <label htmlFor={`class-${classId}-lesson`}>Nội dung Lab {selected.lab.id} · {activeLessons.length} phần</label>
         <select id={`class-${classId}-lesson`} value={selected.lesson.id} onChange={event => selectLesson(event.target.value)}>
           {activeLessons.map((lesson, index) => <option key={lesson.id} value={lesson.id} disabled={!isPrivileged && (lesson.access === 'locked' || !lesson.content)}>{index + 1}. {types[lesson.type]} · {lesson.title}</option>)}

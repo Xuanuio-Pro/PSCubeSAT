@@ -1,6 +1,8 @@
 import { cloneElement, isValidElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import CourseSidebar from './CourseSidebar';
+import { legacyLabState } from './lab-state';
+import { MobileLabPicker } from './SidebarShared';
 import LabFigView from './LabFigView';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
@@ -32,6 +34,7 @@ export default function LabLayout(props) {
 }
 
 function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null, practiceActions = null, practiceVariant = 'split' }) {
+  const navigate = useNavigate();
   const mainRef = useRef(null);
   const [downloadError, setDownloadError] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -200,12 +203,18 @@ function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null,
     </ul>
   </div> : null;
 
+  const labPicker = <MobileLabPicker id={`lab-${lab.id}-lab`} labs={catalog} currentLabId={lab.id}
+    isLocked={item => legacyLabState(catalog, item, progress, user?.role).status === 'locked'}
+    onPick={labId => { const target = catalog.find(item => item.id === labId); if (target) navigate(`/${target.slug}`); }} />;
+
   return <div className="player-layout">
     <CourseSidebar labs={catalog} currentLabId={lab.id} activeLesson={lesson.id} onSelectLesson={selectLesson} progress={progress} userRole={user?.role} />
     <div className="player-main" ref={mainRef}>
+      {lab.id === 0 && <div className="lab-mobile-lessons lab-mobile-lessons--curriculum lab-mobile-labs">{labPicker}</div>}
       {lab.id === 0 ? <nav className="lab-mobile-lessons" aria-label="Nội dung Lab 0">
         {lessons.map(item => <button key={item.id} type="button" className={lesson.id === item.id ? 'active' : ''} aria-current={lesson.id === item.id ? 'page' : undefined} onClick={() => selectLesson(item.id)}>{item.title}</button>)}
       </nav> : <div className="lab-mobile-lessons lab-mobile-lessons--curriculum">
+        {labPicker}
         <label htmlFor={`lab-${lab.id}-lesson`}>Nội dung Lab {lab.id} · {lessons.length} phần</label>
         <select id={`lab-${lab.id}-lesson`} value={lesson.id} onChange={event => selectLesson(event.target.value)}>
           {lessons.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.label} · {item.exerciseCode || item.title}</option>)}

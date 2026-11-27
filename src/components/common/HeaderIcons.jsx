@@ -69,3 +69,11 @@ export function LockIcon({ size = 16, ...props }) {
 export function CircleIcon({ size = 16, className = '', ...props }) {
   return <span className={className} style={{ width: size, height: size }} aria-hidden="true" {...props} />;
 }
+
+export function MenuIcon({ size = 20, ...props }) {
+  return <StrokeIcon size={size} {...props}><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></StrokeIcon>;
+}
+
+export function CloseIcon({ size = 20, ...props }) {
+  return <StrokeIcon size={size} {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></StrokeIcon>;
+}

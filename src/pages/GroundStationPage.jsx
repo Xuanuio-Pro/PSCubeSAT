@@ -155,7 +155,7 @@ export default function GroundStationPage() {
 
     <section aria-label="Dữ liệu thu từ vệ tinh">
       <p className="practice-note">Dòng hiển thị là dữ liệu thật mà module LoRa của trạm mặt đất nhận được. Không có dòng nào nghĩa là chưa thu được gì.</p>
-      <SerialMonitor height={360} baudRate={baudRate} />
+      <SerialMonitor height={360} baudRate={baudRate} showConnect />
     </section>
   </div>;
 }

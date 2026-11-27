@@ -125,14 +125,16 @@ function ServiceLayout() {
   const isLabRoute = /^\/lab[0-8]$/.test(normalizedPath);
   const isClassLearningRoute = /^\/classes\/\d+\/learn$/.test(normalizedPath);
 
+  // A 404 (e.g. /classes/abc) draws its own header and <main>.
+  if (isNotFoundRoute) return <Suspense fallback={<LoadingScreen />}><Outlet /></Suspense>;
   return (
     <>
       <Suspense fallback={<LoadingScreen />}>
         <div className="app-container">
-          {!isAuthRoute && !isNotFoundRoute && <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>}
-          {!isAuthRoute && !isNotFoundRoute && <Header />}
-          <main id="main-content" className={isAuthRoute || isNotFoundRoute ? '' : `main-content${isLabRoute || isClassLearningRoute ? ' is-lab-route' : ''}`}>
-            {!isAuthRoute && !isNotFoundRoute && !isLabRoute && !isClassRoute && normalizedPath !== '/profile' && <TelemetryControls />}
+          {!isAuthRoute && <a className="skip-link" href="#main-content">Bỏ qua đến nội dung chính</a>}
+          {!isAuthRoute && <Header />}
+          <main id="main-content" className={isAuthRoute ? '' : `main-content${isLabRoute || isClassLearningRoute ? ' is-lab-route' : ''}`}>
+            {!isAuthRoute && !isLabRoute && !isClassRoute && normalizedPath !== '/profile' && <TelemetryControls />}
             <Outlet />
           </main>
         </div>

@@ -18,6 +18,8 @@ const BODY_TABS = {
   labtest: { icon: iconGoal, label: 'Lab Test' },
 };
 
+const LESSON_KIND_LABELS = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', assembly: 'Thực hành lắp ráp', quiz: 'Câu hỏi', labtest: 'Lab Test', summary: 'Tổng hợp', components: 'Khám phá 3D' };
+
 function Tab({ icon, label = '', small = false, square = false, flip = false }) {
   return <div className={`fig-tab${small ? ' fig-tab--small' : ''}${square ? ' fig-tab--square' : ''}`}>
     <img src={icon} alt="" className={`fig-tab-icon${flip ? ' is-flipped' : ''}`} draggable="false" />
@@ -32,7 +34,9 @@ export default function LabFigView({
   showComplete = true, canComplete = false, completed = false, completeLesson = undefined, resetLesson = null, completeError = '', remainingSeconds = 0,
   completeLabel = '',
 }) {
-  const number = `${lab.id}.${lessonIndex + 1}`;
+  // Big number is the lab only; the lesson position is a small "Phần n/N" so it is not mistaken for a doc number.
+  const partText = lessons.length > 0 && lessonIndex >= 0 ? `Phần ${lessonIndex + 1}/${lessons.length}` : '';
+  const typeText = LESSON_KIND_LABELS[lesson.type] || '';
   const title = lesson.id === 'overview' ? lab.title : lesson.type === 'components' ? COMPONENTS_TITLE : lesson.title;
   const previous = lessons[lessonIndex - 1];
   const next = lessons[lessonIndex + 1];
@@ -51,8 +55,11 @@ export default function LabFigView({
   return <div className="lab-course-view lab-fig animate-fadeInUp" key={`${lab.id}:${lesson.id}`}>
     <header className="fig-title">
       <img src={labWordmark} alt="" className="fig-title-lab" draggable="false" />
-      <span className="fig-title-number" aria-hidden="true">{number}</span>
-      <h1 className="fig-title-text"><span className="sr-only">Lab {number}: </span>{title}{lesson.exerciseCode && <code className="fig-title-code">{lesson.exerciseCode}</code>}</h1>
+      <span className="fig-title-number" aria-hidden="true">{lab.id}</span>
+      <div className="fig-title-copy">
+        {(partText || typeText) && <p className="fig-title-part">Lab {lab.id}{partText && ` · ${partText}`}{typeText && ` · ${typeText}`}</p>}
+        <h1 className="fig-title-text"><span className="sr-only">Lab {lab.id}{partText && `, ${partText}`}: </span>{title}{lesson.exerciseCode && <code className="fig-title-code">{lesson.exerciseCode}</code>}</h1>
+      </div>
     </header>
 
     {goal && <section className="fig-card fig-card--soft fig-card--goal" aria-label="Mục tiêu bài học">

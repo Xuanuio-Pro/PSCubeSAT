@@ -7,7 +7,7 @@ const LABELS = { offline: 'Offline', waiting: 'Chờ dữ liệu', live: 'Đang 
 export default function TelemetryControls() {
   const { mode, deviceId, serialBinding, devices, status, link, error, deviceError, lastReceivedAt,
     now, activity, rejectedCount, selectSource, selectDevice, refreshDevices } = useTelemetry();
-  const { connect, disconnect, isConnected, isConnecting } = useSerial();
+  const { connect, disconnect, isConnected, isConnecting, isFlashing, serialSupport } = useSerial();
   const { user } = useAuth();
   const selected = mode === 'serial' ? serialBinding : deviceId;
   const age = lastReceivedAt === null ? null : Math.max(0, Math.floor((now - lastReceivedAt) / 1000));
@@ -29,9 +29,13 @@ export default function TelemetryControls() {
         {devices.map(device => <option key={device.device_uid} value={device.device_uid}>{device.device_name} · {device.device_uid}</option>)}
       </select>
     </label>
-    {mode === 'serial' && <button type="button" className="btn btn-sm btn-outline" disabled={isConnecting} onClick={() => isConnected ? disconnect() : connect()}>
-      {isConnecting ? 'Đang kết nối...' : isConnected ? 'Ngắt USB' : 'Kết nối USB'}
-    </button>}
+    {/* The page's only board-connect button: Serial Monitor, flashing and USB telemetry all use this port. */}
+    <button type="button" className={`btn btn-sm ${isConnected ? 'btn-outline' : 'btn-primary'}`}
+      disabled={isConnecting || isFlashing || (!isConnected && !serialSupport.available)} aria-pressed={isConnected}
+      title={!isConnected && !serialSupport.available ? serialSupport.message : isConnected ? 'Ngắt kết nối mạch' : 'Chọn cổng USB của mạch'}
+      onClick={() => isConnected ? disconnect() : connect()}>
+      {isConnecting ? 'Đang kết nối…' : isConnected ? 'Ngắt USB' : 'Kết nối USB'}
+    </button>
     {user && mode !== 'demo' && <button type="button" className="btn btn-sm btn-outline" onClick={refreshDevices}>Tải lại thiết bị</button>}
     <div className={`telemetry-link telemetry-link--${status}`} role="status" aria-live="polite">
       <strong>{link === 'connecting' ? 'Đang kết nối...' : logsOnly ? 'Đang nhận log Serial' : LABELS[status]}</strong>
