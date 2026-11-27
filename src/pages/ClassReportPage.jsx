@@ -4,10 +4,12 @@ import { authorizedFetch } from '../contexts/auth-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import EmptyState from '../components/common/EmptyState';
+import { usePageTitle } from '../utils/page-title';
 
 const dateTime = value => value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
 
 export default function ClassReportPage() {
+  usePageTitle('Báo cáo lớp');
   const { classId } = useParams();
   const url = `/api/classes/${classId}/reports`;
   const { data, error, loading, reload } = useLmsResource(url);

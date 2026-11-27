@@ -6,16 +6,18 @@ import PasswordInput from '../components/common/PasswordInput';
 import GoogleSignIn from '../components/common/GoogleSignIn';
 import ResendVerification from '../components/common/ResendVerification';
 import { useAuth } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
+  usePageTitle('Đăng nhập');
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [submitting, setSubmitting] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
@@ -53,7 +55,7 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <h1 className="auth-title">Chào mừng trở lại</h1>
-      <p className="auth-subtitle">Vui lòng đăng nhập để truy cập Dashboard</p>
+      <p className="auth-subtitle">Đăng nhập để tiếp tục lộ trình học CubeSat</p>
 
       <GoogleSignIn remember={remember} />
 
@@ -85,7 +87,7 @@ export default function LoginPage() {
             id="password"
             required
             autoComplete="current-password"
-            placeholder="********"
+            placeholder="Nhập mật khẩu"
             hasError={Boolean(errors.password)}
             aria-invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? 'login-password-error' : undefined}
@@ -99,7 +101,7 @@ export default function LoginPage() {
         <div className="auth-row-between">
           <label className="auth-checkbox">
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            Lưu thiết bị này
+            Ghi nhớ đăng nhập trên thiết bị này
           </label>
           <Link to="/forgot-password" className="auth-link-btn">
             Quên mật khẩu?

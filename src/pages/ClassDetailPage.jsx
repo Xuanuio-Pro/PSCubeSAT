@@ -5,6 +5,8 @@ import { ClassFields, Notice, Pagination } from '../components/classes/LmsCommon
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { toBase64 } from '../utils/base64';
 import EmptyState from '../components/common/EmptyState';
+import FileInput from '../components/common/FileInput';
+import { usePageTitle } from '../utils/page-title';
 
 function Members({ classroom }) {
   const [page, setPage] = useState(1);
@@ -69,7 +71,7 @@ function Members({ classroom }) {
           <span className="lms-secondary">Cột bắt buộc: <code>email</code>, cột tùy chọn: <code>full_name</code> · <a href="/templates/class-students.xlsx" download>Tải mẫu Excel (.xlsx)</a> · <a href="/templates/class-students.csv" download>Tải mẫu CSV (.csv)</a></span>
         </div>
         <form className="lms-filters" onSubmit={importStudents}>
-          <label>Tệp danh sách sinh viên (.xlsx, .csv)<input ref={fileInputRef} type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required onChange={event => setImportFile(event.target.files?.[0] || null)} /></label>
+          <FileInput label="Tệp danh sách sinh viên (.xlsx, .csv)" inputRef={fileInputRef} accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required fileName={importFile?.name || ''} onChange={event => setImportFile(event.target.files?.[0] || null)} />
           <button disabled={busy || !importFile}>Nhập từ tệp</button>
         </form>
       </div>
@@ -83,9 +85,9 @@ function Members({ classroom }) {
         <tbody>{importReport.skipped.map(item => <tr key={`${item.row}:${item.email}`}><td>{item.row}</td><td>{item.email || '—'}</td><td>{item.full_name || '—'}</td><td>{item.reason}</td></tr>)}</tbody>
       </table>
     </div>}
-    {removing && <section className="lms-confirm"><p>Xóa <strong>{removing.email}</strong> khỏi lớp? Tài khoản sẽ mất quyền truy cập lớp; dữ liệu được giữ lại.</p><div className="lms-actions"><button disabled={busy} onClick={() => mutate('DELETE', { user_id: removing.user_id }, 'Đã xóa sinh viên khỏi lớp.')}>Xóa khỏi lớp</button><button disabled={busy} onClick={() => setRemoving(null)}>Hủy</button></div></section>}
+    {removing && <section className="lms-confirm"><p>Xóa <strong>{removing.email}</strong> khỏi lớp? Tài khoản sẽ mất quyền truy cập lớp; dữ liệu được giữ lại.</p><div className="lms-actions"><button className="admin-danger-btn" disabled={busy} onClick={() => mutate('DELETE', { user_id: removing.user_id }, 'Đã xóa sinh viên khỏi lớp.')}>Xóa khỏi lớp</button><button disabled={busy} onClick={() => setRemoving(null)}>Hủy</button></div></section>}
     {loading ? <p role="status">Đang tải thành viên…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
-      <div className="lms-table-wrap"><table><caption className="sr-only">Danh sách thành viên lớp</caption><thead><tr><th>Thành viên</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody>{data.items.map(member => <tr key={member.id}><td><strong>{member.full_name || 'Chưa có tên'}</strong><span className="lms-secondary">{member.email}</span></td><td>{member.role === 'teacher' ? 'Giảng viên' : 'Sinh viên'}</td><td>{writable && member.role === 'student' && (status === 'active' ? <button disabled={busy} onClick={() => setRemoving(member)}>Xóa khỏi lớp</button> : <button disabled={busy} onClick={() => mutate('POST', { email: member.email }, 'Đã phục hồi sinh viên vào lớp.')}>Thêm lại</button>)}</td></tr>)}</tbody></table></div>
+      <div className="lms-table-wrap"><table><caption className="sr-only">Danh sách thành viên lớp</caption><thead><tr><th>Thành viên</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody>{data.items.map(member => <tr key={member.id}><td><strong>{member.full_name || 'Chưa có tên'}</strong><span className="lms-secondary">{member.email}</span></td><td>{member.role === 'teacher' ? 'Giảng viên' : 'Sinh viên'}</td><td>{writable && member.role === 'student' && (status === 'active' ? <button className="admin-danger-btn" disabled={busy} onClick={() => setRemoving(member)}>Xóa khỏi lớp</button> : <button disabled={busy} onClick={() => mutate('POST', { email: member.email }, 'Đã phục hồi sinh viên vào lớp.')}>Thêm lại</button>)}</td></tr>)}</tbody></table></div>
       {!data.items.length && <EmptyState icon="people" compact text="Chưa có thành viên trong danh sách này. Thêm sinh viên bằng email hoặc nhập danh sách ở trên." />}
       <Pagination page={page} total={data.total} onChange={setPage} disabled={busy} />
     </>}
@@ -112,6 +114,7 @@ function ClassEditor({ classroom, onSaved }) {
 }
 
 export default function ClassDetailPage() {
+  usePageTitle('Quản lý lớp');
   const { classId } = useParams();
   const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}`);
   const [message, setMessage] = useState('');

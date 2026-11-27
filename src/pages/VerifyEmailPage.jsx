@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import { request } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 export default function VerifyEmailPage() {
+  usePageTitle('Xác minh email');
   const [searchParams] = useSearchParams();
   const token = (searchParams.get('token') || '').trim();
   const [state, setState] = useState(token ? 'checking' : 'error');
@@ -16,7 +18,7 @@ export default function VerifyEmailPage() {
       .then(() => { if (active) setState('done'); })
       .catch((err) => {
         if (!active) return;
-        setError(err.message || 'Liên kết xác minh không hợp lệ hoặc đã hết hạn.');
+        setError(err.status === 429 || err.status >= 500 ? err.message : 'Liên kết xác minh không hợp lệ hoặc đã hết hạn.');
         setState('error');
       });
     return () => { active = false; };

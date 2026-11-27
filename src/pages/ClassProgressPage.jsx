@@ -4,6 +4,7 @@ import { request } from '../contexts/auth-api';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
+import { usePageTitle } from '../utils/page-title';
 
 // Heatmap step so slow students stand out: 0, 1–49, 50–99, 100.
 const heat = lab => lab.completed || lab.percent >= 100 ? 'heat-4' : lab.percent >= 50 ? 'heat-3' : lab.percent > 0 ? 'heat-2' : 'heat-1';
@@ -31,6 +32,7 @@ function Review({ classId, submissionId, onDone }) {
 }
 
 export default function ClassProgressPage() {
+  usePageTitle('Tiến độ lớp');
   const { classId } = useParams();
   const { data, error, loading, reload } = useLmsResource(`/api/classes/${classId}/progress`);
   const [review, setReview] = useState(null);

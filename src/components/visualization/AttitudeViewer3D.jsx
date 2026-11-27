@@ -160,7 +160,7 @@ export default function AttitudeViewer3D({ height = 350 }) {
   return (
     <div className="card" style={{ opacity: status === 'live' && imuFresh ? 1 : 0.65 }}>
       <div className="card-header">
-        <h3>🛰️ 3D Attitude Viewer {!imuFresh && <small>· {link !== 'connected' ? 'mất kết nối' : waiting ? 'chờ IMU' : 'chưa có mẫu IMU mới'}</small>}</h3>
+        <h3 className="attitude-title">Tư thế vệ tinh (3D) {!imuFresh && <small>· {link !== 'connected' ? 'mất kết nối' : waiting ? 'chờ IMU' : 'chưa có mẫu IMU mới'}</small>}</h3>
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)' }}>
           <span style={{ color: 'var(--accent-red)' }}>P: {display(shown.pitch)}°</span>
           <span style={{ color: 'var(--accent-green)' }}>R: {display(shown.roll)}°</span>

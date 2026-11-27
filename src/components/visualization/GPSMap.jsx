@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -12,9 +12,12 @@ const cubesatIcon = L.divIcon({
   iconSize: [30, 30],
 });
 
-// Map stays visible without a fix; centred on PTIT Hà Đông until the first valid position.
+// Without any fix the map shows all of Vietnam (mainland, Hoàng Sa and Trường Sa), not a street view
+// that looks like a real position.
 /** @type {import('leaflet').LatLngTuple} */
-const DEFAULT_CENTER = [20.9806, 105.7873];
+const VIETNAM_CENTER = [15.2, 109.6];
+const VIETNAM_ZOOM = 5;
+const FIX_ZOOM = 16;
 
 // Leaflet measures its container once; a resized dashboard widget needs a re-measure or tiles stay grey.
 function MapResizer() {
@@ -34,11 +37,21 @@ function VietnamLayers() {
   return null;
 }
 
-function MapUpdater({ center }) {
+// Follows the satellite until the user drags the map; "Về vị trí vệ tinh" turns following back on.
+function MapFollower({ center, follow, onUserMove }) {
   const map = useMap();
+  const zoomedIn = useRef(false);
   useEffect(() => {
-    if (center) map.panTo(center, { animate: false });
-  }, [center, map]);
+    const stop = () => onUserMove();
+    map.on('dragstart', stop);
+    return () => { map.off('dragstart', stop); };
+  }, [map, onUserMove]);
+  useEffect(() => {
+    if (!center || !follow) return;
+    // First fix (or re-centre request): jump to street level once; afterwards only pan, keeping the user's zoom.
+    if (!zoomedIn.current) { map.setView(center, Math.max(map.getZoom(), FIX_ZOOM), { animate: false }); zoomedIn.current = true; }
+    else map.panTo(center, { animate: false });
+  }, [center, follow, map]);
   return null;
 }
 
@@ -53,11 +66,14 @@ export default function GPSMap({ height = 350 }) {
   const position = validGPS(latest) ? /** @type {import('leaflet').LatLngTuple} */ ([latest.gpsLat, latest.gpsLon]) : null;
   const trail = history.filter(validGPS).map(sample => /** @type {import('leaflet').LatLngTuple} */ ([sample.gpsLat, sample.gpsLon]));
   const display = (value, decimals) => value == null ? '—' : value.toFixed(decimals);
+  const [follow, setFollow] = useState(true);
+  const stopFollowing = useRef(() => setFollow(false)).current;
+  const target = position ?? (lastKnown ? /** @type {import('leaflet').LatLngTuple} */ ([lastKnown.gpsLat, lastKnown.gpsLon]) : null);
 
   return (
     <div className="card" style={{ opacity: status === 'offline' && !position ? 0.65 : 1 }}>
       <div className="card-header">
-        <h3>🌍 GPS Map</h3>
+        <h3>Bản đồ GPS</h3>
         <div style={{ display: 'flex', gap: '12px', fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
           <span>Lat: {display(latest?.gpsLat, 6)}</span>
           <span>Lng: {display(latest?.gpsLon, 6)}</span>
@@ -69,15 +85,16 @@ export default function GPSMap({ height = 350 }) {
       <div style={height === '100%' ? { flex: 1, minHeight: 160, position: 'relative' } : { height, position: 'relative' }}>
         <MapContainer
           key={generation}
-          center={position ?? (lastKnown ? /** @type {import('leaflet').LatLngTuple} */ ([lastKnown.gpsLat, lastKnown.gpsLon]) : DEFAULT_CENTER)}
-          zoom={16}
+          center={target ?? VIETNAM_CENTER}
+          zoom={target ? FIX_ZOOM : VIETNAM_ZOOM}
+          dragging={true}
           style={{ position: 'absolute', inset: 0, borderRadius: '0 0 12px 12px' }}
           zoomControl={true}
           attributionControl={true}
         >
           <VietnamLayers />
           <MapResizer />
-          {position && <MapUpdater center={position} />}
+          <MapFollower center={target} follow={follow} onUserMove={stopFollowing} />
           {position && <Marker position={position} icon={cubesatIcon}>
             <Popup>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
@@ -95,6 +112,7 @@ export default function GPSMap({ height = 350 }) {
             />
           )}
         </MapContainer>
+        {target && !follow && <button type="button" className="gps-recenter" onClick={() => setFollow(true)}>Về vị trí vệ tinh</button>}
       </div>
     </div>
   );

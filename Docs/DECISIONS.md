@@ -314,3 +314,13 @@ Nguồn: "Báo cáo phản hồi và xác nhận đồng bộ phần cứng PTIT
 - Lab4-06: Roll/Pitch trong dòng `TELEM:` dựng tư thế 3D khi sketch không in dòng `Accel:` (bản upstream).
 - Ảnh camera qua MQTT: bo báo thêm `host=<host>:<port>` trong `[CLOUD] CFG?`; trình duyệt chỉ trả `KEEP` khi broker trùng với `mqtt_broker` từ `/api/devices/cloud` (không bí mật), nếu không thì cấp lại cấu hình. Bo còn lưu broker cũ (p-tech) trong NVS trước đây nhận `KEEP` và gửi ảnh thất bại mãi. Khi `PHOTO FAIL ... mqtt-state=` trình duyệt tự cấp lại cấu hình một lần mỗi phiên Serial.
 - Lab 5.1 và Lab 8 có nút mở cửa sổ Trạm mặt đất; Lab 5.1 đếm gói `PACKET #n` và ước tính gói mất. Bộ lệnh ở trạm mặt đất theo bài: Lab 5 (ping, battery…), Lab 7 (a–f, p, r), Lab 8 (lệnh tự nhập; dashboard dựng từ dữ liệu LoRa).
+
+## 2026-11-27 — Sửa giao diện theo bản đánh giá UI (3 đợt)
+- Đăng nhập: ô "Ghi nhớ đăng nhập trên thiết bị này" mặc định **không tích** (máy phòng lab dùng chung); không tích thì phiên lưu `sessionStorage`, đóng tab là đăng xuất.
+- Thêm `GET /api/admin/signup/status` công khai, chỉ trả `{ "signup_open": bool }` (chưa có admin nào). Trang `/admin/login` chỉ hiện link tạo admin đầu tiên khi `signup_open`. `POST /api/admin/signup` vẫn tự chặn khi đã có admin, nên endpoint mới không mở thêm quyền.
+- Trang thực hành chỉ còn **một** nút kết nối mạch: "Kết nối USB" trên thanh thiết bị (TelemetryControls), hiện ở mọi nguồn dữ liệu. Hàng nút dưới editor chỉ hiện trạng thái; Serial Monitor chỉ có nút kết nối riêng khi trang không có thanh thiết bị (`showConnect`, hiện chưa trang nào dùng). Trạm mặt đất giữ nút ở thẻ "Kết nối trạm mặt đất". Nút Serial trên header vẫn giữ.
+- Admin không thấy thao tác Khóa trên dòng của chính mình (server đã chặn sẵn bằng `FORBIDDEN_ROLE`).
+- "Lab tiên quyết" trong cấu hình chương trình chỉ liệt kê các lab đứng trước; lab sau chỉ còn hiện nếu cấu hình cũ đã chọn nó, để không âm thầm xóa dữ liệu.
+- Ô tìm kiếm trên header tìm theo tên/phụ đề 9 lab (không dấu cũng được) và mở `/labN`; không tìm trong nội dung bài vì giáo trình đầy đủ chỉ có sau API có phân quyền.
+- Bản đồ GPS: chưa từng có fix thì hiện toàn cảnh Việt Nam (zoom 5); có fix thì bám theo vệ tinh cho đến khi người dùng kéo bản đồ, sau đó hiện nút "Về vị trí vệ tinh".
+- Chưa làm (cần dữ liệu backend hoặc cần xác nhận): sĩ số + tiến độ trung bình trên thẻ lớp (`/api/classes` chưa trả), nạp sẵn mã mẫu vào editor C++, bố cục 50/50 trang thực hành.

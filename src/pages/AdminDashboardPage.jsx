@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
+import { usePageTitle } from '../utils/page-title';
 
 const roles = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Người dùng' };
 const statuses = { active: 'Đang mở', draft: 'Bản nháp', archived: 'Đã lưu trữ' };
 const modes = {
-  enabled: 'Đang bật học theo lớp',
-  read_only: 'Chỉ đọc — tạm dừng ghi',
-  off: 'Tắt — SV dùng luồng cũ',
+  enabled: 'Bật — học theo lớp',
+  read_only: 'Tạm dừng — chỉ xem',
+  off: 'Tắt — học như trước',
 };
 const percent = value => value === null ? '—' : `${Math.round(value * 100)}%`;
 
@@ -28,8 +29,13 @@ function ClassModes() {
     } catch (failure) { setNotice({ error: failure.message }); }
     finally { setBusy(false); }
   }
-  return <section className="lms-panel"><h2>Chế độ pilot theo lớp</h2>
-    <p>“Chỉ đọc” là phương án rollback: mọi thao tác ghi của lớp bị chặn, dữ liệu và kết quả được giữ, SV dùng nội dung trải nghiệm. “Tắt” đưa SV của lớp về luồng ổn định cũ.</p>
+  return <section className="lms-panel"><h2>Chế độ học theo lớp (thí điểm)</h2>
+    <p>Chọn cách từng lớp dùng hệ thống mới. Đổi chế độ luôn hỏi lại và cần ghi lý do.</p>
+    <ul className="admin-mode-help">
+      <li><strong>Bật:</strong> sinh viên học theo lộ trình, tiến độ và Lab Test của lớp.</li>
+      <li><strong>Tạm dừng:</strong> giữ nguyên dữ liệu và kết quả, nhưng không ai làm bài hay nộp bài được; sinh viên chỉ xem lại và học nội dung trải nghiệm. Dùng khi cần dừng khẩn cấp.</li>
+      <li><strong>Tắt:</strong> sinh viên của lớp quay về cách học trước đây (các trang Lab cũ).</li>
+    </ul>
     <Notice {...notice} />{error && <Notice error={error} />}
     {loading ? <p role="status">Đang tải danh sách lớp…</p> : data && <><div className="lms-table-wrap"><table><caption className="sr-only">Chế độ học theo lớp</caption>
       <thead><tr><th>Lớp</th><th>Trạng thái</th><th>Chế độ</th></tr></thead>
@@ -46,6 +52,7 @@ function ClassModes() {
 }
 
 export default function AdminDashboardPage() {
+  usePageTitle('Tổng quan');
   const { data, error, loading, reload } = useLmsResource('/api/admin/dashboard');
   if (loading) return <div className="admin-page-shell"><div className="admin-page-panel"><p role="status">Đang tổng hợp số liệu…</p></div></div>;
   if (error) return <div className="admin-page-shell"><div className="admin-page-panel"><Notice error={error} /><button onClick={reload}>Thử lại</button></div></div>;
@@ -59,13 +66,13 @@ export default function AdminDashboardPage() {
     </header>
 
     <div className="admin-summary-grid">
-      <article className="admin-card admin-card--accent"><span>Tài khoản</span><strong>{total}</strong><small>Tổng số người dùng</small></article>
+      <article className="admin-card"><span>Tài khoản</span><strong>{total}</strong><small>Tổng số người dùng</small></article>
       <article className="admin-card"><span>Lớp đang mở</span><strong>{data.classes.by_status.active}</strong><small>Học theo lớp</small></article>
       <article className="admin-card"><span>SV hoạt động 7 ngày</span><strong>{data.active_students.last_7_days}</strong><small>Nhịp độ gần đây</small></article>
       <article className="admin-card"><span>SV hoạt động 30 ngày</span><strong>{data.active_students.last_30_days}</strong><small>Khung 1 tháng</small></article>
     </div>
 
-    <p className="admin-note">{data.definitions.active_students}</p>
+    <p className="admin-note admin-note--readable">{data.definitions.active_students}</p>
 
     <section className="admin-panel">
       <h2>Tài khoản theo vai trò</h2>

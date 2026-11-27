@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { LABS } from '../data/lab-metadata';
+import { useAuth } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 const LAB_SYLLABUS_META = {
   0: {
@@ -67,6 +69,8 @@ const SUBSYSTEM_BUS = [
 ];
 
 export default function HomePage() {
+  usePageTitle('Trang chủ');
+  const { user } = useAuth();
   const foundationLab = LABS[0];
   const coreLabs = LABS.slice(1);
   const foundationMeta = LAB_SYLLABUS_META[0];
@@ -84,6 +88,7 @@ export default function HomePage() {
             <Link to="/lab0" className="home-primary-cta">
               Bắt đầu lộ trình <span aria-hidden="true">→</span>
             </Link>
+            {!user && <Link to="/preview" className="home-secondary-cta">Học thử miễn phí</Link>}
             <a href="#course-title" className="home-secondary-cta">
               Cấu trúc 9 bài Lab
             </a>
@@ -200,6 +205,19 @@ export default function HomePage() {
           })}
         </div>
       </section>
+
+      <footer className="home-footer">
+        <div>
+          <strong>CubeSAT · PTIT LMS</strong>
+          <span>Nền tảng học thực hành vệ tinh CubeSat 1U — Học viện Công nghệ Bưu chính Viễn thông (PTIT).</span>
+        </div>
+        <nav aria-label="Liên kết cuối trang">
+          {!user && <Link to="/preview">Học thử</Link>}
+          {user ? <Link to="/profile">Hồ sơ</Link> : <Link to="/login">Đăng nhập</Link>}
+          <a href="https://ptit.edu.vn" target="_blank" rel="noreferrer">ptit.edu.vn ↗</a>
+        </nav>
+        <small>© {new Date().getFullYear()} PTIT STEM CubeSat. Bảo lưu mọi quyền.</small>
+      </footer>
     </div>
   );
 }

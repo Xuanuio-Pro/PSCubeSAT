@@ -168,6 +168,18 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(me.status_code, 200)
         self.assertEqual(me.json()["full_name"], "Nguyễn Văn A")
 
+    async def test_admin_signup_status_closes_after_first_admin(self):
+        before = await self.client.get("/api/admin/signup/status")
+        self.assertEqual(before.status_code, 200, before.text)
+        self.assertEqual(before.json(), {"signup_open": True})
+        signup = await self.client.post(
+            "/api/admin/signup",
+            json={"email": "admin@ptit.edu.vn", "password": "Secret123!", "full_name": "Admin"},
+        )
+        self.assertEqual(signup.status_code, 201, signup.text)
+        after = await self.client.get("/api/admin/signup/status")
+        self.assertEqual(after.json(), {"signup_open": False})
+
     async def test_admin_login_requires_admin_route(self):
         signup = await self.client.post(
             "/api/admin/signup",

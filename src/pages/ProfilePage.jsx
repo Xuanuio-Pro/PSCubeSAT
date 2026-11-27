@@ -8,6 +8,7 @@ import PasswordRequirements from '../components/common/PasswordRequirements';
 import { validatePassword } from '../utils/passwordPolicy';
 
 import DeviceManager from '../components/profile/DeviceManager';
+import { usePageTitle } from '../utils/page-title';
 
 const FIELD_LABEL_STYLE = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' };
 const ROLE_LABEL = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Học viên' };
@@ -77,7 +78,7 @@ function ChangePasswordForm() {
     <div className="card">
       <div className="card-header">Đổi mật khẩu</div>
       <div className="card-body">
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '520px' }}>
           <div>
             <label htmlFor="profile-current-password" style={FIELD_LABEL_STYLE}>Mật khẩu hiện tại</label>
             <PasswordInput id="profile-current-password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required aria-invalid={Boolean(error)} aria-describedby={error ? 'profile-password-error' : undefined} />
@@ -173,7 +174,7 @@ function LearningProgress({ user }) {
               }
 
               const status = done ? 'completed' : isLocked ? 'locked' : 'in-progress';
-              const label = done ? 'Đã hoàn thành' : isLocked ? 'Đang khóa' : `Đang học (${percent}%)`;
+              const label = done ? 'Đã hoàn thành' : isLocked ? 'Chưa mở' : percent === 0 ? 'Chưa bắt đầu' : `Đang học (${percent}%)`;
 
               return (
                 <button
@@ -256,6 +257,7 @@ function LearningProgress({ user }) {
 }
 
 export default function ProfilePage() {
+  usePageTitle('Hồ sơ');
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 

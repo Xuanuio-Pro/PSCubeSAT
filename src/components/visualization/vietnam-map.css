@@ -10,3 +10,9 @@
 .vn-map-label--city span { font-size: 11px; color: #1f2937; }
 .vn-map-label--sea span { font-size: 14px; font-style: italic; font-weight: 600; letter-spacing: .08em; color: #1d6fa5; }
 .vn-map-label--sea-small span { font-size: 10px; font-style: italic; color: #1d6fa5; }
+.gps-recenter {
+  position: absolute; right: 10px; bottom: 26px; z-index: 500; min-height: 34px; padding: 0 14px;
+  border: 0.3px solid #094174; border-radius: 999px; background: #fff; color: #094174;
+  font: 700 0.8rem 'Plus Jakarta Sans', sans-serif; box-shadow: 0 4px 12px rgba(9, 65, 116, 0.2); cursor: pointer;
+}
+.gps-recenter:hover { background: #edf5fc; }

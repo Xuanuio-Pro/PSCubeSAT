@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rate_limit import client_ip
@@ -36,6 +36,17 @@ router = APIRouter(
     prefix="/api/admin",
     tags=["admin"],
 )
+
+
+@router.get("/signup/status")
+async def admin_signup_status(db: AsyncSession = Depends(get_db)):
+    """Public: whether the one-time bootstrap admin signup is still open (no admin account yet).
+
+    Only a boolean is returned, so the admin login page can hide its "create admin" link."""
+    admin_count = await db.scalar(
+        select(func.count(User.id)).where(User.role == UserRole.admin, User.deleted_at.is_(None))
+    )
+    return {"signup_open": not admin_count}
 
 
 @router.post("/signup", response_model=AuthTokenResponse, status_code=201)

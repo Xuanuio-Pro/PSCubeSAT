@@ -8,10 +8,12 @@ import LegacyQuizPanel from '../components/lessons/LegacyQuizPanel';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import './lab-questions.css';
+import { usePageTitle } from '../utils/page-title';
 
 const lessonUrl = (slug, lessonId) => `/${slug}?lesson=${encodeURIComponent(lessonId)}`;
 
 export default function LabQuestionsPage({ labId }) {
+  usePageTitle(`Câu hỏi Lab ${labId}`);
   const lab = getLabById(labId);
   const set = getLabQuestionSet(labId);
   const [activeLessonId, setActiveLessonId] = useState(null);

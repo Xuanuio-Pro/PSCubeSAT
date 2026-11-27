@@ -5,8 +5,10 @@ import PasswordInput from '../components/common/PasswordInput';
 import PasswordRequirements from '../components/common/PasswordRequirements';
 import { validatePassword } from '../utils/passwordPolicy';
 import { request } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 export default function ResetPasswordPage() {
+  usePageTitle('Đặt lại mật khẩu');
   const [searchParams] = useSearchParams();
   const token = (searchParams.get('token') || '').trim();
   const [checking, setChecking] = useState(true);
@@ -36,7 +38,8 @@ export default function ResetPasswordPage() {
       .catch((err) => {
         if (active) {
           setTokenValid(false);
-          setTokenError(err.message || 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+          // A malformed token comes back as a generic 422; tell the user what it means for them.
+          setTokenError(err.status === 429 || err.status >= 500 ? err.message : 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
         }
       })
       .finally(() => {
@@ -109,7 +112,7 @@ export default function ResetPasswordPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              placeholder="********"
+              placeholder="Nhập mật khẩu"
               hasError={Boolean(error)}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? 'reset-password-requirements reset-password-error' : 'reset-password-requirements'}
@@ -126,7 +129,7 @@ export default function ResetPasswordPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              placeholder="********"
+              placeholder="Nhập lại mật khẩu"
               hasError={Boolean(error)}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? 'reset-password-error' : undefined}

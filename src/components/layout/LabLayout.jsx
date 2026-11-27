@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import CourseSidebar from './CourseSidebar';
 import { legacyLabState } from './lab-state';
 import { MobileLabPicker } from './SidebarShared';
+import { usePageTitle } from '../../utils/page-title';
 import LabFigView from './LabFigView';
 import VideoPlayer from '../common/VideoPlayer';
 import DocViewer from '../common/DocViewer';
@@ -35,6 +36,7 @@ export default function LabLayout(props) {
 
 function LoadedLabLayout({ lab, catalog, editorPanel, visualizationPanel = null, practiceActions = null, practiceVariant = 'split' }) {
   const navigate = useNavigate();
+  usePageTitle(`Lab ${lab.id}: ${lab.title}`);
   const mainRef = useRef(null);
   const [downloadError, setDownloadError] = useState('');
   const [downloading, setDownloading] = useState(false);

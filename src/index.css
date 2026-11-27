@@ -2987,3 +2987,62 @@ body:has(.groundstation-page) { background: linear-gradient(180deg, #eaf3fb 0%, 
 }
 .empty-state-action a { border: 0.3px solid #094174; background: rgba(255, 255, 255, 0.9); color: #094174; }
 
+/* ===== File picker (Vietnamese, drag & drop) ===== */
+.file-input { display: grid; gap: 6px; min-width: 0; }
+.file-input-label { font-weight: 600; font-size: 0.88rem; }
+.file-input-zone {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px;
+  border: 1.5px dashed rgba(9, 65, 116, 0.35); border-radius: 16px; background: rgba(255, 255, 255, 0.7);
+}
+.file-input.is-dragging .file-input-zone { border-color: #1c7caf; background: #e0f2fe; }
+.file-input.is-disabled .file-input-zone { opacity: 0.6; }
+.file-input-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.file-input-native:focus-visible + .file-input-button { outline: 3px solid rgba(9, 65, 116, 0.35); outline-offset: 2px; }
+.file-input-button {
+  flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px; border: 0.3px solid #094174;
+  border-radius: 999px; background: #fff; color: #094174; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
+.file-input.is-disabled .file-input-button { cursor: not-allowed; }
+.file-input-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2f5172; font-size: 0.85rem; }
+.card-header:has(.attitude-title) { flex-wrap: wrap; gap: 6px 14px; }
+.attitude-title { white-space: nowrap; }
+.attitude-title small { white-space: nowrap; }
+
+/* Auth pages: small logo above the form that leads home (the brand panel is hidden on phones) */
+.auth-home-link { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 18px; color: #094174; }
+.auth-home-link img { width: 34px; height: 38px; object-fit: contain; }
+.auth-home-link span { display: grid; line-height: 1.15; }
+.auth-home-link strong { font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.auth-home-link small { font-size: 0.78rem; font-weight: 600; color: #2f5172; }
+.auth-home-link:hover small { text-decoration: underline; }
+
+/* ===== Home: footer, phone fixes for the bus card, lab badges and CTAs ===== */
+.home-footer {
+  display: grid; grid-template-columns: 1fr auto; gap: 10px 24px; align-items: center; margin-top: 56px; padding: 24px 28px;
+  border-radius: 24px; background: rgba(221, 232, 243, 0.6); color: #094174; font-size: 0.88rem;
+}
+.home-footer > div { display: grid; gap: 4px; }
+.home-footer > div span { color: #2f5172; }
+.home-footer nav { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.home-footer nav a { color: #094174; font-weight: 700; }
+.home-footer small { grid-column: 1 / -1; color: #2f5172; font-size: 0.8rem; }
+.lab-index-badge { white-space: nowrap; }
+@media (max-width: 640px) {
+  .home-footer { grid-template-columns: 1fr; padding: 20px; }
+  .home-hero-actions { flex-direction: column; align-items: stretch; align-self: stretch; width: 100%; }
+  .home-hero-actions a { justify-content: center; width: 100%; }
+}
+@media (max-width: 480px) {
+  .schematic-node { grid-template-columns: 52px minmax(0, 1fr); row-gap: 6px; }
+  .schematic-node-info strong, .schematic-node-info small { white-space: normal; overflow: visible; text-overflow: clip; }
+  .schematic-node-bus { grid-column: 2; justify-self: start; }
+  .lab-subsystem-code { white-space: normal; overflow: visible; text-overflow: clip; }
+}
+
+/* Lab 0 subsystem buttons on phones: one per row, no tiny sub-line, names never cut */
+@media (max-width: 560px) {
+  .fig-components .component-explorer-list { grid-template-columns: 1fr; gap: 8px; }
+  .fig-comp-item { height: auto; min-height: 52px; padding-right: 10px; }
+  .fig-comp-label small { display: none; }
+  .fig-comp-label strong { font-size: 1rem; }
+}

@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { MaxAttemptsField, Notice } from '../components/classes/LmsCommon';
+import FileInput from '../components/common/FileInput';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { useConfirm } from '../components/classes/use-confirm';
 import { toBase64 } from '../utils/base64';
 import '../components/classes/quiz.css';
+import { usePageTitle } from '../utils/page-title';
 
 const labels = { draft: 'Nháp', approved: 'Đã duyệt', retired: 'Đã thu hồi', published: 'Đã xuất bản', queued: 'Chờ xử lý', running: 'Đang tạo', succeeded: 'Đã tạo nháp', failed: 'Thất bại' };
 const QUESTION_TYPE_LABELS = {
@@ -116,6 +118,8 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
   const [reason, setReason] = useState('');
   const [retire, setRetire] = useState('');
   const [questionFile, setQuestionFile] = useState(null);
+  const [listSearch, setListSearch] = useState('');
+  const [listType, setListType] = useState('');
   const guard = useRef(false);
   const { ask: askConfirm, dialog: confirmDialog } = useConfirm();
   const base = bankBase(classId, labId, lessonId);
@@ -256,7 +260,7 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
     {confirmDialog}
     {!inline && <>
       <header className="lms-heading"><div><h1>{bankTitle(bank, labId)}</h1><p>Phiên bản {bank.version} · {labels[bank.status]} · {bank.approved_count} câu đã duyệt</p></div><Link to={`/classes/${classId}/curriculum`}>Cấu hình chương trình</Link></header>
-      {!lessonId && <nav className="lms-actions" aria-label="Ngân hàng theo lab">{Array.from({ length: 9 }, (_, id) => <Link key={id} aria-current={id === Number(labId) ? 'page' : undefined} to={`/classes/${classId}/labs/${id}/questions`}>Lab {id}</Link>)}</nav>}
+      {!lessonId && <nav className="lms-nav bank-lab-tabs" aria-label="Ngân hàng theo lab">{Array.from({ length: 9 }, (_, id) => <Link key={id} className={id === Number(labId) ? 'active' : ''} aria-current={id === Number(labId) ? 'page' : undefined} to={`/classes/${classId}/labs/${id}/questions`}>Lab {id}</Link>)}</nav>}
     </>}
     {inline && <div className="lms-heading" style={{ margin: '12px 0' }}>
       <div>
@@ -293,8 +297,16 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
       <aside>
         <h2>Câu hỏi ({bank.questions.length})</h2>
         {draft && <button type="button" disabled={busy} onClick={() => select(null)}>+ Thêm câu hỏi mới</button>}
+        {bank.questions.length > 0 && <div className="bank-list-filters">
+          <label><span className="sr-only">Tìm câu hỏi</span><input type="search" value={listSearch} onChange={event => setListSearch(event.target.value)} placeholder="Tìm theo nội dung câu hỏi" maxLength={200} /></label>
+          <label><span className="sr-only">Lọc theo dạng câu</span><select value={listType} onChange={event => setListType(event.target.value)}>
+            <option value="">Mọi dạng câu</option>
+            {Object.entries(QUESTION_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select></label>
+        </div>}
         <div className="bank-list">
-          {bank.questions.map((q, index) => (
+          {bank.questions.map((q, index) => ({ q, index })).filter(({ q }) => (!listType || (q.question_type || 'single_choice') === listType)
+            && (!listSearch.trim() || q.prompt.toLowerCase().includes(listSearch.trim().toLowerCase()))).map(({ q, index }) => (
             <div className="bank-row" key={q.id}>
               <button type="button" aria-current={selected === q.id ? 'true' : undefined} onClick={() => select(q)}>
                 <small>Câu {index + 1} · {QUESTION_TYPE_LABELS[q.question_type || 'single_choice']} · {labels[q.status]}</small>
@@ -306,6 +318,7 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
             </div>
           ))}
         </div>
+        {bank.questions.length > 0 && (listSearch.trim() || listType) && <p className="lms-secondary bank-list-count">Đang lọc từ {bank.questions.length} câu.</p>}
         {!bank.questions.length && <p>Ngân hàng trống. Thêm câu hỏi trực tiếp bên phải hoặc nhập từ tệp đề mẫu bên dưới.</p>}
       </aside>
       <form onSubmit={save} className="bank-editor">
@@ -427,10 +440,7 @@ export function BankEditor({ initial, classId, labId, lessonId = null, reload, i
         
       </p>
       <form className="lms-filters" onSubmit={importFile}>
-        <label>
-          File câu hỏi gộp đáp án và giải thích (.csv hoặc .xlsx)
-          <input type="file" accept=".xlsx,.csv" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
-        </label>
+        <FileInput label="Tệp câu hỏi gộp đáp án và giải thích (.csv hoặc .xlsx)" accept=".xlsx,.csv" fileName={questionFile?.name || ''} onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
         <button className="lms-primary" disabled={busy || !questionFile}>Kiểm tra và nhập câu hỏi</button>
       </form>
     </section>}
@@ -664,10 +674,7 @@ export function InlineQuestionBank({
       {draft ? (
         <>
           <form className="lms-filters" onSubmit={handleImport} style={{ marginTop: '12px' }}>
-            <label>
-              File câu hỏi gộp đáp án và giải thích (.csv hoặc .xlsx)
-              <input type="file" accept=".xlsx,.csv" onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
-            </label>
+            <FileInput label="Tệp câu hỏi gộp đáp án và giải thích (.csv hoặc .xlsx)" accept=".xlsx,.csv" fileName={questionFile?.name || ''} onChange={event => setQuestionFile(event.target.files?.[0] || null)} required />
             <button className="lms-primary" disabled={busy || !questionFile}>Thêm file câu hỏi</button>
           </form>
           <div className="lms-actions" style={{ marginTop: '10px' }}>
@@ -701,6 +708,7 @@ export function InlineQuestionBank({
 }
 
 export default function QuestionBankPage() {
+  usePageTitle('Ngân hàng câu hỏi');
   const { classId, labId, lessonId } = useParams();
   const { data, loading, error, reload } = useLmsResource(bankBase(classId, labId, lessonId) + '/question-bank');
   if (loading) return <p role="status">Đang tải ngân hàng…</p>;

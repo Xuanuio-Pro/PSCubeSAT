@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { request } from '../contexts/auth-api';
 import { MaxAttemptsField, Notice } from '../components/classes/LmsCommon';
+import FileInput from '../components/common/FileInput';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { useConfirm } from '../components/classes/use-confirm';
 import { InlineQuestionBank } from './QuestionBankPage';
+import { usePageTitle } from '../utils/page-title';
 
 const labels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
 const fields = {
@@ -90,7 +92,7 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
     )
   );
   return <details className="curriculum-lesson" open={lesson.type === 'labtest'}>
-    <summary><span><small>{labels[lesson.type]}</small><strong>{lesson.title}</strong><code>{lesson.id}</code></span><span>{lesson.enabled ? lesson.required ? 'Bắt buộc' : 'Tùy chọn' : 'Đã tắt'}</span></summary>
+    <summary title={`Mã nội bộ: ${lesson.id}`}><span><small>{labels[lesson.type]}</small><strong>{lesson.title}</strong></span><span>{lesson.enabled ? lesson.required ? 'Bắt buộc' : 'Tùy chọn' : 'Đã tắt'}</span></summary>
     <fieldset disabled={disabled}>
       <legend className="sr-only">Cấu hình {lesson.title}</legend>
       <div className="curriculum-switches">
@@ -129,9 +131,7 @@ function LessonSettings({ lesson, labId, classId, onChange, onReload, onBankChan
         </p>
       )}
       {lesson.type === 'document' && <div className="lms-import-box">
-        <label>Nhập từ tệp Word (.docx) hoặc PDF
-          <input type="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={importing} onChange={importDocument} />
-        </label>
+        <FileInput label="Nhập từ tệp Word (.docx) hoặc PDF" keepName={false} accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={importing} onChange={importDocument} />
         <p className="lms-secondary">Tệp tối đa 10 MB. Nội dung được chuyển thành Markdown để bạn xem lại và chỉnh sửa trước khi lưu; hình ảnh không được nhập. {importing && 'Đang đọc tệp…'}</p>
         <Notice {...importNotice} />
       </div>}
@@ -367,7 +367,9 @@ function Editor({ initial, classId, onReload }) {
         <div className="curriculum-prereq-group" role="group" aria-label={`Lab tiên quyết cho Lab ${lab.id}`}>
           <span className="curriculum-prereq-title">Lab tiên quyết cần hoàn thành trước</span>
           <div className="curriculum-prereq-list">
-            {config.labs.filter(item => item.id !== lab.id).map(item => {
+            {!config.labs.some(item => item.id < lab.id) && !lab.prerequisites.length && <span className="lms-secondary">Lab đầu tiên, không cần lab tiên quyết.</span>}
+            {/* Only earlier labs can be prerequisites (a later one is kept only if an old config already uses it). */}
+            {config.labs.filter(item => item.id < lab.id || (item.id !== lab.id && lab.prerequisites.includes(item.id))).map(item => {
               const checked = lab.prerequisites.includes(item.id);
               return (
                 <label key={item.id} className={`curriculum-prereq-item${checked ? ' is-selected' : ''}`}>
@@ -394,6 +396,7 @@ function Editor({ initial, classId, onReload }) {
 }
 
 export default function ClassCurriculumPage() {
+  usePageTitle('Cấu hình chương trình');
   const { classId } = useParams();
   const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}/curriculum?draft=true`);
   if (loading) return <p role="status">Đang tải cấu hình chương trình…</p>;

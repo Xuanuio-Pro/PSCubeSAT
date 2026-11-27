@@ -41,7 +41,7 @@ export default function CommandPanel({ commands = [] }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3>🎮 Command Uplink · USB Serial</h3>
+        <h3>Gửi lệnh (uplink) · USB Serial</h3>
       </div>
       <div className="card-body">
         {/* Preset buttons */}

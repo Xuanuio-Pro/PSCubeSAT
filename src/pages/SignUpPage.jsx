@@ -8,10 +8,12 @@ import { validatePassword } from '../utils/passwordPolicy';
 import { useAuth } from '../contexts/auth-api';
 import GoogleSignIn from '../components/common/GoogleSignIn';
 import ResendVerification from '../components/common/ResendVerification';
+import { usePageTitle } from '../utils/page-title';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpPage() {
+  usePageTitle('Đăng ký');
   const navigate = useNavigate();
   const location = useLocation();
   const { register } = useAuth();
@@ -128,7 +130,7 @@ export default function SignUpPage() {
             required
             minLength={8}
             autoComplete="new-password"
-            placeholder="********"
+            placeholder="Nhập mật khẩu"
             hasError={Boolean(errors.password)}
             aria-invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? 'signup-password-requirements signup-password-error' : 'signup-password-requirements'}
@@ -146,7 +148,7 @@ export default function SignUpPage() {
             required
             minLength={8}
             autoComplete="new-password"
-            placeholder="********"
+            placeholder="Nhập lại mật khẩu"
             hasError={Boolean(errors.confirmPassword)}
             aria-invalid={Boolean(errors.confirmPassword)}
             aria-describedby={errors.confirmPassword ? 'signup-confirm-error' : undefined}

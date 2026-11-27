@@ -5,8 +5,10 @@ import PasswordInput from '../components/common/PasswordInput';
 import PasswordRequirements from '../components/common/PasswordRequirements';
 import { validatePassword } from '../utils/passwordPolicy';
 import { useAuth } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 export default function AdminSignUpPage() {
+  usePageTitle('Tạo tài khoản quản trị');
   const navigate = useNavigate();
   const { registerAdmin } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });

@@ -239,6 +239,7 @@ class ClassAPITests(unittest.IsolatedAsyncioTestCase):
             "/api/auth/verify-email",
             "/api/auth/resend-verification",
             "/api/admin/signup",
+            "/api/admin/signup/status",
             "/api/admin/login",
             "/api/curriculum/preview",
         }

@@ -14,6 +14,7 @@ import { classLabEntryLesson, stateFor as classLabState } from '../components/cl
 import { MobileLabPicker } from '../components/layout/SidebarShared';
 import LabFigView from '../components/layout/LabFigView';
 import PracticeExerciseTabs from '../components/lessons/PracticeExerciseTabs';
+import { usePageTitle } from '../utils/page-title';
 import {
   buildGroupedSubmissionCode,
   getLessonExercises,
@@ -240,6 +241,7 @@ export default function ClassLearningPage({ experience = false }) {
   const selected = (!requestedLocked && requestedItem) || continueItem || firstAvailableItem || allLessons[0] || null;
   const selectedLabId = selected?.lab?.id;
   const selectedLessonId = selected?.lesson?.id;
+  usePageTitle(selected ? `Lab ${selected.lab.id} · ${selected.lesson.title}` : experience ? 'Học thử' : 'Bài học');
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [selectedLabId, selectedLessonId]);

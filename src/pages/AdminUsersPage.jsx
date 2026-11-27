@@ -3,6 +3,7 @@ import { request, useAuth } from '../contexts/auth-api';
 import { ActionMenu, Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import ConfirmDialog from '../components/classes/ConfirmDialog';
+import { usePageTitle } from '../utils/page-title';
 
 const roleLabels = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Người dùng' };
 
@@ -14,6 +15,7 @@ function confirmMessage(pending) {
 }
 
 export default function AdminUsersPage() {
+  usePageTitle('Quản lý tài khoản');
   const { user: currentUser } = useAuth();
   const [filters, setFilters] = useState({ search: '', role: '', status: '', pending_reset: '' });
   const [search, setSearch] = useState('');

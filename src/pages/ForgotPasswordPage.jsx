@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import { request } from '../contexts/auth-api';
+import { usePageTitle } from '../utils/page-title';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordPage() {
+  usePageTitle('Quên mật khẩu');
   const [email, setEmail] = useState('');
   const [smtpEnabled, setSmtpEnabled] = useState(null);
   const [ttlMinutes, setTtlMinutes] = useState(30);

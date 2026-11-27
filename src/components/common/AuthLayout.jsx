@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import logo from '../../assets/logo.svg';
 
 export default function AuthLayout({ children, variant = 'user' }) {
@@ -7,8 +8,8 @@ export default function AuthLayout({ children, variant = 'user' }) {
       <div className={`auth-visual${isAdmin ? ' auth-visual--admin' : ''}`}>
         <div className="auth-visual-inner">
           <div className="auth-visual-header">
-            <span className="auth-badge">{isAdmin ? 'CUBESAT // ADMIN CONSOLE' : 'PTIT STEM // CUBESAT 1U LMS'}</span>
-            <span className="auth-status-pill">SYS NOMINAL</span>
+            <span className="auth-badge">{isAdmin ? 'CUBESAT // QUẢN TRỊ' : 'PTIT STEM // CUBESAT 1U LMS'}</span>
+            <span className="auth-status-pill">Hệ thống sẵn sàng</span>
           </div>
           <div className="auth-visual-brand">
             <img src={logo} alt="PTIT CubeSat LMS" className="auth-visual-logo" />
@@ -29,7 +30,12 @@ export default function AuthLayout({ children, variant = 'user' }) {
         </div>
       </div>
       <div className={`auth-panel${isAdmin ? ' auth-panel--admin' : ''}`}>
-        <div className={`auth-form-wrap${isAdmin ? ' auth-form-wrap--admin' : ''}`}>{children}</div>
+        <div className={`auth-form-wrap${isAdmin ? ' auth-form-wrap--admin' : ''}`}>
+          <Link to="/" className="auth-home-link" aria-label="Về trang chủ CubeSAT PTIT LMS">
+            <img src={logo} alt="" /><span><strong>CubeSAT</strong><small>Về trang chủ</small></span>
+          </Link>
+          {children}
+        </div>
       </div>
     </div>
   );
