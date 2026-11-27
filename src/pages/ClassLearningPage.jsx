@@ -15,6 +15,7 @@ import { MobileLabPicker } from '../components/layout/SidebarShared';
 import LabFigView from '../components/layout/LabFigView';
 import PracticeExerciseTabs from '../components/lessons/PracticeExerciseTabs';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 import {
   buildGroupedSubmissionCode,
   getLessonExercises,
@@ -221,7 +222,7 @@ export default function ClassLearningPage({ experience = false }) {
   const mainRef = useRef(null);
   const preview = experience || search.get('preview') === 'true';
   const path = experience ? '/api/curriculum/preview' : `/api/classes/${classId}/curriculum${preview ? '?draft=true&student_view=true' : '?student_view=true'}`;
-  const { data, loading, error, reload } = useLmsResource(path, true);
+  const { data, loading, error, errorInfo, reload } = useLmsResource(path, true);
   const isPrivileged = user?.role === 'teacher' || user?.role === 'admin' || Boolean(data && !data.learning_path && !experience);
   const allLessons = data?.labs.flatMap(lab => lab.lessons.map(lesson => ({ lab, lesson }))) || [];
   const requestedLessonParam = search.get('lesson') || '';
@@ -256,7 +257,7 @@ export default function ClassLearningPage({ experience = false }) {
     }
   }, [requestedLocked, selected, search, setSearch]);
   if (loading && !data) return <p role="status">Đang tải chương trình học…</p>;
-  if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home={experience ? '/' : '/classes'} homeLabel={experience ? 'Về trang chủ' : 'Về danh sách lớp'} />;
   const activeLessons = selected?.lab?.lessons || [];
   const lessonIndex = selected ? activeLessons.findIndex(lesson => lesson.id === selected.lesson.id) : -1;
   const selectedExercises = selected ? getLessonExercises(selected.lesson) : [];

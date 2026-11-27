@@ -7,6 +7,7 @@ import { useLmsResource } from '../components/classes/use-lms-resource';
 import { useConfirm } from '../components/classes/use-confirm';
 import { InlineQuestionBank } from './QuestionBankPage';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 const labels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
 const fields = {
@@ -398,9 +399,9 @@ function Editor({ initial, classId, onReload }) {
 export default function ClassCurriculumPage() {
   usePageTitle('Cấu hình chương trình');
   const { classId } = useParams();
-  const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}/curriculum?draft=true`);
+  const { data, loading, error, errorInfo, reload } = useLmsResource(`/api/classes/${classId}/curriculum?draft=true`);
   if (loading) return <p role="status">Đang tải cấu hình chương trình…</p>;
-  if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button><Link to={`/classes/${classId}`}>Về lớp học</Link></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home={`/classes/${classId}`} homeLabel="Về lớp học" />;
   return <Editor key={`${classId}:${data.version}`} initial={data} classId={classId} onReload={reload} />;
 }
 

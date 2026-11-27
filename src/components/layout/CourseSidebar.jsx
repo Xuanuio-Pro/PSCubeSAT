@@ -8,10 +8,12 @@ import { LabBadgeFace, LessonStatusIcon } from './SidebarShared';
 import { useScrollRailToActive } from './use-scroll-rail';
 import { isSequentialLesson } from '../lessons/lesson-sequence';
 import { legacyLabState } from './lab-state';
+import { useRegisterPlayerSidebar } from './player-chrome';
 
 const lessonUrl = (slug, id) => `/${slug}?lesson=${encodeURIComponent(id)}`;
 
 export default function CourseSidebar({ labs, currentLabId, activeLesson, onSelectLesson, progress = [], userRole }) {
+  useRegisterPlayerSidebar();
   const navigate = useNavigate();
   const [expandedLab, setExpandedLab] = useState(currentLabId);
   const [collapsed, setCollapsed] = useState(false);

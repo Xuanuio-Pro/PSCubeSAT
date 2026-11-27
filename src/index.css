@@ -3053,3 +3053,22 @@ body:has(.groundstation-page) { background: linear-gradient(180deg, #eaf3fb 0%, 
 }
 .lab-fig .lab-practice-actions--inline > *, .lab-fig .lab-practice-actions--inline .btn { width: 100%; justify-content: center; }
 .lab-fig .lab-practice-actions--inline .lab-serial-status { justify-content: center; }
+
+/* ===== Page load error: message + back / home (+ retry when it can help) ===== */
+.load-error {
+  width: min(560px, calc(100% - 32px)); margin: 48px auto; padding: 32px 28px; display: flex; flex-direction: column; align-items: center;
+  text-align: center; border-radius: 28px; background: rgba(221, 232, 243, 0.6); color: #094174;
+  box-shadow: 0 16px 32px -4px rgba(12, 12, 13, 0.1), 0 4px 4px -4px rgba(12, 12, 13, 0.05); font-family: 'Plus Jakarta Sans', var(--font-sans);
+}
+.load-error-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; background: #fff; color: #b54708; box-shadow: 0 2px 8px rgba(9, 65, 116, 0.08); }
+.load-error h1, .lms-shell .load-error h1 { margin: 14px 0 6px; font-size: 1.35rem; font-weight: 800; color: #094174; }
+.load-error p, .lms-shell .load-error p { margin: 0 auto; max-width: 46ch; color: #2f5172; font-size: 0.95rem; line-height: 1.6; }
+.load-error-actions { margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.load-error-actions a, .load-error-actions button,
+.lms-shell:not(.is-learning-shell) .load-error-actions button {
+  display: inline-flex; align-items: center; min-height: 42px; padding: 0 20px; border-radius: 999px; font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  border: 0.3px solid #094174; background: rgba(255, 255, 255, 0.9); color: #094174; box-shadow: none;
+}
+.load-error-actions .load-error-home { border-color: transparent; background: linear-gradient(180deg, #3e54a0, #1c7caf); color: #fff; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25); }
+.load-error-actions .load-error-home:hover { color: #fff; filter: brightness(1.08); }
+.load-error-actions button:hover { background: #fff; }

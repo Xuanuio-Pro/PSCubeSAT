@@ -4,6 +4,7 @@ import { SerialContext } from '../../contexts/serial-api';
 import { useAuth } from '../../contexts/auth-api';
 import { getLabBySlug } from '../../data/lab-metadata';
 import { searchLabs } from './header-search';
+import { usePlayerSidebarMounted } from './player-chrome';
 import '../classes/classes.css';
 import logoSvg from '../../assets/logo.svg';
 import notificationIcon from '../../assets/lab-ui/Notification 1.svg';
@@ -87,7 +88,9 @@ export default function Header() {
   const menuRef = useRef(null);
   const lab = getLabBySlug(location.pathname.replace('/', ''));
   const isClassLearningRoute = /^\/(?:classes\/\d+\/learn|preview)\/?$/.test(location.pathname);
-  const isLearningRoute = Boolean(lab || isClassLearningRoute);
+  const sidebarMounted = usePlayerSidebarMounted();
+  // Learning layout only next to a lesson sidebar; loading / error states keep the standard header.
+  const isLearningRoute = Boolean(lab || isClassLearningRoute) && sidebarMounted;
   // Every page outside the learning player shares the floating pill header (auth screens draw none).
   const isLmsRoute = !isLearningRoute;
 
@@ -127,7 +130,7 @@ export default function Header() {
           <HomeIcon size={17} />
         </Link>
         <Link to="/lab0" className="header-text-action header-route-action header-secondary-action header-desktop-only" title="Danh sách bài lab">Bài Lab</Link>
-        {lab && !serial.missing && (
+        {lab && isLearningRoute && !serial.missing && (
           <span className="header-lab-tools">
             {lab.id === 0 ? (
               <SerialConnectButton className="header-lab-message" {...serialProps}>

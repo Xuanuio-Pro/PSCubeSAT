@@ -1,17 +1,17 @@
 import { Link, useParams } from 'react-router-dom';
 import { useLmsResource } from '../components/classes/use-lms-resource';
-import { Notice } from '../components/classes/LmsCommon';
 import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
 import { LessonTypeIcon } from '../components/classes/LessonTypeIcon';
 import { LESSON_TYPE_NAMES } from '../components/classes/lesson-types';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 export default function LearningPathPage() {
   const { classId } = useParams();
   usePageTitle('Lộ trình học tập');
-  const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}/learning-path`);
+  const { data, loading, error, errorInfo, reload } = useLmsResource(`/api/classes/${classId}/learning-path`);
   if (loading) return <p role="status">Đang tải lộ trình…</p>;
-  if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} />;
   const lessonUrl = id => `/classes/${classId}/learn?lesson=${encodeURIComponent(id)}`;
   // Only the lab being studied starts open; the others collapse to one line so the page stays short.
   const currentLabId = data.labs.find(lab => lab.lessons.some(item => item.id === data.continue_lesson_id))?.id

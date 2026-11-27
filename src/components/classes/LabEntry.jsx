@@ -3,6 +3,7 @@ import LoadingScreen from '../common/LoadingScreen';
 import { useLmsResource } from './use-lms-resource';
 import { Notice } from './LmsCommon';
 import './classes.css';
+import LoadError from '../common/LoadError';
 
 function lessonQuery(lesson) {
   return lesson ? `?lesson=${encodeURIComponent(lesson)}` : '';
@@ -12,9 +13,9 @@ function lessonQuery(lesson) {
 export default function LabEntry({ labId, children }) {
   const [search] = useSearchParams();
   const lesson = search.get('lesson');
-  const { data, error, loading, reload } = useLmsResource(`/api/lms/lab-entry?lab_id=${labId}`, true);
+  const { data, error, errorInfo, loading, reload } = useLmsResource(`/api/lms/lab-entry?lab_id=${labId}`, true);
   if (loading) return <LoadingScreen />;
-  if (error) return <section className="lms-shell"><Notice error={error} /><button onClick={reload}>Thử lại</button> <Link to="/classes">Lớp của tôi</Link></section>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} />;
   if (data.target === 'legacy') {
     return children;
   }

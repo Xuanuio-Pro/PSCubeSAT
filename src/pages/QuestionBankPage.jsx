@@ -8,6 +8,7 @@ import { useConfirm } from '../components/classes/use-confirm';
 import { toBase64 } from '../utils/base64';
 import '../components/classes/quiz.css';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 const labels = { draft: 'Nháp', approved: 'Đã duyệt', retired: 'Đã thu hồi', published: 'Đã xuất bản', queued: 'Chờ xử lý', running: 'Đang tạo', succeeded: 'Đã tạo nháp', failed: 'Thất bại' };
 const QUESTION_TYPE_LABELS = {
@@ -710,8 +711,8 @@ export function InlineQuestionBank({
 export default function QuestionBankPage() {
   usePageTitle('Ngân hàng câu hỏi');
   const { classId, labId, lessonId } = useParams();
-  const { data, loading, error, reload } = useLmsResource(bankBase(classId, labId, lessonId) + '/question-bank');
+  const { data, loading, error, errorInfo, reload } = useLmsResource(bankBase(classId, labId, lessonId) + '/question-bank');
   if (loading) return <p role="status">Đang tải ngân hàng…</p>;
-  if (error) return <><Notice error={error} /><Link to={`/classes/${classId}/curriculum`}>Về cấu hình chương trình</Link><button onClick={reload}>Thử lại</button></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home={`/classes/${classId}/curriculum`} homeLabel="Về cấu hình chương trình" />;
   return <BankEditor key={`${classId}:${lessonId || labId}:${data.revision}`} initial={data} classId={classId} labId={labId} lessonId={lessonId} reload={reload} />;
 }

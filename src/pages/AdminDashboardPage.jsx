@@ -4,6 +4,7 @@ import { request } from '../contexts/auth-api';
 import { Notice, Pagination } from '../components/classes/LmsCommon';
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 const roles = { admin: 'Quản trị viên', teacher: 'Giảng viên', user: 'Người dùng' };
 const statuses = { active: 'Đang mở', draft: 'Bản nháp', archived: 'Đã lưu trữ' };
@@ -53,9 +54,9 @@ function ClassModes() {
 
 export default function AdminDashboardPage() {
   usePageTitle('Tổng quan');
-  const { data, error, loading, reload } = useLmsResource('/api/admin/dashboard');
+  const { data, error, errorInfo, loading, reload } = useLmsResource('/api/admin/dashboard');
   if (loading) return <div className="admin-page-shell"><div className="admin-page-panel"><p role="status">Đang tổng hợp số liệu…</p></div></div>;
-  if (error) return <div className="admin-page-shell"><div className="admin-page-panel"><Notice error={error} /><button onClick={reload}>Thử lại</button></div></div>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home="/admin/users" homeLabel="Về quản lý tài khoản" />;
   const total = Object.values(data.users).reduce((sum, item) => sum + Object.values(item).reduce((a, b) => a + b, 0), 0);
   return <div className="admin-page-shell">
     <header className="admin-page-header">

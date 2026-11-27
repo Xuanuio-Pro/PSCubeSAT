@@ -5,6 +5,7 @@ import { ClassFields, Notice, Pagination } from '../components/classes/LmsCommon
 import { useLmsResource } from '../components/classes/use-lms-resource';
 import EmptyState from '../components/common/EmptyState';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 const statusLabels = { draft: 'Bản nháp', active: 'Đang mở', archived: 'Đã lưu trữ' };
 
@@ -35,7 +36,7 @@ export default function ClassesPage() {
   const [teacher, setTeacher] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
-  const { data, error, loading, reload } = useLmsResource(`/api/classes?page=${page}`);
+  const { data, error, errorInfo, loading, reload } = useLmsResource(`/api/classes?page=${page}`);
   async function create(event) {
     event.preventDefault(); setBusy(true); setFailure('');
     try {
@@ -52,7 +53,7 @@ export default function ClassesPage() {
       {user.role === 'admin' && <TeacherPicker value={teacher} onChange={setTeacher} />}
       <Notice error={failure} /><button className="lms-primary" disabled={busy}>{busy ? 'Đang tạo…' : 'Tạo lớp'}</button>
     </form>}
-    {loading ? <p role="status">Đang tải lớp học…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
+    {loading ? <p role="status">Đang tải lớp học…</p> : error ? <LoadError error={error} info={errorInfo} onRetry={reload} home="/" homeLabel="Về trang chủ" /> : <>
       {!data.items.length ? <EmptyState icon="class" title={canCreate ? 'Chưa có lớp học' : 'Bạn chưa tham gia lớp nào'}
         text={canCreate ? 'Tạo lớp đầu tiên để thêm sinh viên đã đăng ký tài khoản.' : 'Gửi email tài khoản của bạn cho giảng viên để được thêm vào lớp.'}
         action={canCreate && !creating ? <button className="lms-primary" onClick={() => setCreating(true)}>Tạo lớp học</button> : null} /> :

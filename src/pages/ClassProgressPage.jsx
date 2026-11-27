@@ -5,6 +5,7 @@ import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import { CheckIcon, LockIcon } from '../components/common/HeaderIcons';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 // Heatmap step so slow students stand out: 0, 1–49, 50–99, 100.
 const heat = lab => lab.completed || lab.percent >= 100 ? 'heat-4' : lab.percent >= 50 ? 'heat-3' : lab.percent > 0 ? 'heat-2' : 'heat-1';
@@ -34,7 +35,7 @@ function Review({ classId, submissionId, onDone }) {
 export default function ClassProgressPage() {
   usePageTitle('Tiến độ lớp');
   const { classId } = useParams();
-  const { data, error, loading, reload } = useLmsResource(`/api/classes/${classId}/progress`);
+  const { data, error, errorInfo, loading, reload } = useLmsResource(`/api/classes/${classId}/progress`);
   const [review, setReview] = useState(null);
   const [target, setTarget] = useState('');
   const [action, setAction] = useState('waive');
@@ -55,7 +56,7 @@ export default function ClassProgressPage() {
     finally { setBusy(false); }
   }
   if (loading) return <p role="status">Đang tải tiến độ lớp…</p>;
-  if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home={`/classes/${classId}`} homeLabel="Về lớp học" />;
   if (!data.members) return <><h1>Tiến độ của tôi</h1><Link to={`/classes/${classId}/path`}>Mở lộ trình học tập</Link></>;
   const labs = data.members[0]?.labs || [];
   const selectedMember = data.members.find(item => String(item.membership_id) === target);

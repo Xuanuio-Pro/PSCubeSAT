@@ -5,6 +5,7 @@ import { useLmsResource } from '../components/classes/use-lms-resource';
 import { Notice } from '../components/classes/LmsCommon';
 import EmptyState from '../components/common/EmptyState';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 const dateTime = value => value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
 
@@ -12,7 +13,7 @@ export default function ClassReportPage() {
   usePageTitle('Báo cáo lớp');
   const { classId } = useParams();
   const url = `/api/classes/${classId}/reports`;
-  const { data, error, loading, reload } = useLmsResource(url);
+  const { data, error, errorInfo, loading, reload } = useLmsResource(url);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   async function exportCsv() {
@@ -29,7 +30,7 @@ export default function ClassReportPage() {
     finally { setBusy(false); }
   }
   if (loading) return <p role="status">Đang tổng hợp báo cáo lớp…</p>;
-  if (error) return <><Notice error={error} /><button onClick={reload}>Thử lại</button></>;
+  if (error) return <LoadError error={error} info={errorInfo} onRetry={reload} home={`/classes/${classId}`} homeLabel="Về lớp học" />;
   const labs = data.students[0]?.labs || [];
   return <>
     <header className="lms-heading"><div><h1>Báo cáo lớp</h1><p>Cập nhật lúc {dateTime(data.generated_at)}. {data.activity_definition}</p></div><div className="lms-actions"><Link to={`/classes/${classId}`}>Về lớp học</Link><Link to={`/classes/${classId}/progress`}>Chấm bài và miễn trừ</Link></div></header>

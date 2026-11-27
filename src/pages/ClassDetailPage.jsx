@@ -7,6 +7,7 @@ import { toBase64 } from '../utils/base64';
 import EmptyState from '../components/common/EmptyState';
 import FileInput from '../components/common/FileInput';
 import { usePageTitle } from '../utils/page-title';
+import LoadError from '../components/common/LoadError';
 
 function Members({ classroom }) {
   const [page, setPage] = useState(1);
@@ -116,13 +117,13 @@ function ClassEditor({ classroom, onSaved }) {
 export default function ClassDetailPage() {
   usePageTitle('Quản lý lớp');
   const { classId } = useParams();
-  const { data, loading, error, reload } = useLmsResource(`/api/classes/${classId}`);
+  const { data, loading, error, errorInfo, reload } = useLmsResource(`/api/classes/${classId}`);
   const [message, setMessage] = useState('');
   const { user } = useAuth();
   // Only teachers/admins manage several classes; students don't need a back-to-list link.
   return <>
     {user?.role !== 'user' && <Link to="/classes">Về danh sách lớp</Link>}
-    {loading ? <p role="status">Đang tải thông tin lớp…</p> : error ? <><Notice error={error} /><button onClick={reload}>Thử lại</button></> : <>
+    {loading ? <p role="status">Đang tải thông tin lớp…</p> : error ? <LoadError error={error} info={errorInfo} onRetry={reload} /> : <>
       <header className="lms-heading"><div><span className="lms-secondary">{data.code}{data.term ? ` · ${data.term}` : ''}</span><h1>{data.name}</h1><p>{data.description || 'Chưa có mô tả lớp.'}</p></div><span className={`lms-status ${data.status}`}>{{ active: 'Đang mở', draft: 'Bản nháp', archived: 'Đã lưu trữ' }[data.status]}</span></header>
       <Notice message={message} />
       <div className="lms-actions curriculum-links"><Link to={`/classes/${classId}/path`}>Lộ trình học tập</Link><Link to={`/classes/${classId}/learn`}>Mở chương trình học</Link>{data.can_manage && <><Link to={`/classes/${classId}/curriculum`}>Cấu hình chương trình</Link><Link to={`/classes/${classId}/progress`}>Tiến độ và chấm bài</Link><Link to={`/classes/${classId}/report`}>Báo cáo lớp</Link></>}</div>

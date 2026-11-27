@@ -7,10 +7,12 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, CircleIc
 import { LabBadgeFace, LessonStatusIcon } from '../layout/SidebarShared';
 import { useScrollRailToActive } from '../layout/use-scroll-rail';
 import { classLabEntryLesson, stateFor } from './class-lab-state';
+import { useRegisterPlayerSidebar } from '../layout/player-chrome';
 
 const typeLabels = { video: 'Video', document: 'Tài liệu', practice: 'Thực hành', quiz: 'Câu hỏi', labtest: 'Lab test' };
 
 export default function ClassCourseSidebar({ labs, classId, activeLesson, onSelectLesson, homePath = `/classes/${classId}`, unlockedView = false }) {
+  useRegisterPlayerSidebar();
   const [collapsed, setCollapsed] = useState(false);
   const activeLabRef = useRef(null);
 
