@@ -593,4 +593,10 @@ test('Lab4-06 TELEM roll/pitch reach the 3D model even without an Accel line', (
   const attitude = result.events.find(event => event.group === 'attitude');
   assert.deepEqual([attitude.roll, attitude.pitch, attitude.heading], [12.5, -3, null]);
   assert.equal(decode(entry('TELEM: T: nanC | P: nanhPa | Roll: nan | Pitch: nan | GPS: (no fix, 0sats)')).events.some(event => event.group === 'attitude'), false);
+  // Captured on hardware 2026-11-26: upstream prints 0,0 with 0 satellites before the first fix.
+  const noFix = decode(entry('TELEM: T: 31.5C | P: 1019.6hPa | Roll: 3.3 | Pitch: -0.8 | GPS: (0.0000, 0.0000, 0sats)'));
+  assert.deepEqual([noFix.frame.gpsLat, noFix.frame.gpsLon, noFix.frame.temperatureC], [null, null, 31.5]);
+  assert.ok(noFix.invalidate.includes('gpsLat'));
+  assert.deepEqual(noFix.events.filter(event => event.group === 'gps').map(event => [event.phase, event.satellites]), [['waiting', 0]]);
+  assert.equal(decode(entry('TELEM: T: 31.5C | P: 1019.6hPa | Roll: 3.3 | Pitch: -0.8 | GPS: (20.9806, 105.7873, 7sats)')).frame.gpsLat, 20.9806);
 });

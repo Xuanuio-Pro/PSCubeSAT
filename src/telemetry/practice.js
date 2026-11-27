@@ -369,8 +369,10 @@ export function createPracticeDecoder(exerciseId = '', { groundStation = false }
       // Lab3-03's "TELEM: #0001 | V: .. | T: .." is simulated and never reaches here (scheduler branch above).
       if (/^telem: t: /.test(lower)) {
         add('temperature', '\\bt'); add('pressure', '\\bp');
-        const fix = new RegExp(`gps: \\(${NUMBER}, ${NUMBER}, \\d+\\s*sats\\)`).exec(lower);
-        if (fix) { data.lat = Number(fix[1]); data.lng = Number(fix[2]); }
+        const fix = new RegExp(`gps: \\(${NUMBER}, ${NUMBER}, (\\d+)\\s*sats\\)`).exec(lower);
+        // Upstream Lab4-06 prints "(0.0000, 0.0000, 0sats)" before the first fix: that is "no fix", not a position.
+        if (fix && Number(fix[3]) > 0 && !(Number(fix[1]) === 0 && Number(fix[2]) === 0)) { data.lat = Number(fix[1]); data.lng = Number(fix[2]); }
+        else if (fix) { event('gps', 'waiting', { satellites: Number(fix[3]) }); result.invalidate.push('gpsLat', 'gpsLon', 'gpsAlt'); }
         // Roll/Pitch computed by the library from the accelerometer: the 3D model's only tilt source when the
         // sketch (upstream Lab4-06) prints no "Accel:" line.
         const roll = valueAfter(lower, '\\broll');
